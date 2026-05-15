@@ -1,0 +1,110 @@
+backend:
+  name: git-gateway
+  branch: main
+
+media_folder: "images/uploads"
+public_folder: "/images/uploads"
+
+collections:
+
+  - name: "infos"
+    label: "Infos du bistrot"
+    files:
+
+      - name: "general"
+        label: "Présentation & Contact"
+        file: "_data/general.json"
+        fields:
+          - { label: "Nom du bistrot", name: "nom", widget: "string" }
+          - { label: "Accroche (slogan)", name: "accroche", widget: "string" }
+          - { label: "Téléphone", name: "telephone", widget: "string" }
+          - { label: "Adresse", name: "adresse", widget: "string" }
+          - { label: "Email", name: "email", widget: "string" }
+          - { label: "Lien Google Maps", name: "maps_url", widget: "string" }
+
+      - name: "horaires"
+        label: "Horaires d'ouverture"
+        file: "_data/horaires.json"
+        fields:
+          - label: "Horaires"
+            name: "jours"
+            widget: "list"
+            fields:
+              - { label: "Jour(s)", name: "jour", widget: "string" }
+              - { label: "Heures", name: "heures", widget: "string" }
+              - { label: "Fermé", name: "ferme", widget: "boolean", default: false }
+
+  - name: "photos"
+    label: "Photos"
+    files:
+
+      - name: "hero"
+        label: "Photo principale"
+        file: "_data/hero.json"
+        fields:
+          - { label: "Photo principale", name: "image", widget: "image" }
+          - { label: "Texte alternatif", name: "alt", widget: "string" }
+
+      - name: "galerie"
+        label: "Galerie de photos"
+        file: "_data/galerie.json"
+        fields:
+          - label: "Photos"
+            name: "photos"
+            widget: "list"
+            max: 12
+            fields:
+              - { label: "Photo", name: "image", widget: "image" }
+              - { label: "Légende", name: "legende", widget: "string", required: false }
+
+  - name: "menu"
+    label: "Carte du restaurant"
+    files:
+
+      - name: "entrees"
+        label: "Entrées"
+        file: "_data/menu_entrees.json"
+        fields:
+          - label: "Entrées"
+            name: "plats"
+            widget: "list"
+            fields:
+              - { label: "Nom du plat", name: "nom", widget: "string" }
+              - { label: "Description", name: "description", widget: "text", required: false }
+              - { label: "Prix", name: "prix", widget: "string" }
+
+      - name: "plats"
+        label: "Plats"
+        file: "_data/menu_plats.json"
+        fields:
+          - label: "Plats"
+            name: "plats"
+            widget: "list"
+            fields:
+              - { label: "Nom du plat", name: "nom", widget: "string" }
+              - { label: "Description", name: "description", widget: "text", required: false }
+              - { label: "Prix", name: "prix", widget: "string" }
+
+      - name: "desserts"
+        label: "Desserts"
+        file: "_data/menu_desserts.json"
+        fields:
+          - label: "Desserts"
+            name: "plats"
+            widget: "list"
+            fields:
+              - { label: "Nom du plat", name: "nom", widget: "string" }
+              - { label: "Description", name: "description", widget: "text", required: false }
+              - { label: "Prix", name: "prix", widget: "string" }
+
+      - name: "boissons"
+        label: "Boissons"
+        file: "_data/menu_boissons.json"
+        fields:
+          - label: "Boissons"
+            name: "plats"
+            widget: "list"
+            fields:
+              - { label: "Nom", name: "nom", widget: "string" }
+              - { label: "Description", name: "description", widget: "text", required: false }
+              - { label: "Prix", name: "prix", widget: "string" }
