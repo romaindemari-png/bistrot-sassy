@@ -1,0 +1,18 @@
+{
+  "entrees": [
+    { "nom": "Burrata crémeuse", "description": "Tomates confites, basilic frais, huile d'olive de Provence", "prix": "9€" },
+    { "nom": "Tartare de thon", "description": "Avocat, mangue, sésame grillé, sauce ponzu maison", "prix": "12€" },
+    { "nom": "Soupe du marché", "description": "Légumes de saison, croûtons maison, fromage râpé", "prix": "7€" }
+  ],
+  "plats": [
+    { "nom": "Pavé de bœuf", "description": "Sauce au poivre, frites maison, salade verte", "prix": "18€" },
+    { "nom": "Dos de cabillaud", "description": "Risotto crémeux, vierge de tomates cerises, herbes fraîches", "prix": "16€" },
+    { "nom": "Plat végétarien du jour", "description": "Selon arrivage du marché — demandez à votre serveur", "prix": "13€" },
+    { "nom": "Burger Sassy", "description": "Pain brioché maison, bœuf charolais, cheddar affiné, sauce secrète", "prix": "15€" }
+  ],
+  "desserts": [
+    { "nom": "Fondant chocolat", "description": "Cœur coulant, glace vanille bourbon, éclats de noisette", "prix": "7€" },
+    { "nom": "Crème brûlée", "description": "Recette traditionnelle, caramel croustillant", "prix": "6€" },
+    { "nom": "Tarte du moment", "description": "Selon inspiration du chef — changeante chaque semaine", "prix": "6€" }
+  ]
+}
