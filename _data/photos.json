@@ -1,0 +1,13 @@
+{
+  "slider": [
+    { "image": "/hero1.png", "alt": "Bistrot Sassy ambiance 1" },
+    { "image": "/hero2.png", "alt": "Bistrot Sassy ambiance 2" },
+    { "image": "/hero3.png", "alt": "Bistrot Sassy ambiance 3" }
+  ],
+  "galerie": [
+    { "image": "/galerie1.png", "legende": "" },
+    { "image": "/galerie2.jpeg", "legende": "" },
+    { "image": "/galerie3.jpeg", "legende": "" },
+    { "image": "/galerie4.png", "legende": "" }
+  ]
+}
