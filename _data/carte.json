@@ -1,14 +1,23 @@
 {
   "entrees": [
-    { "nom": "Burrata crémeuse", "description": "Tomates confites, basilic frais, huile d'olive de Provence", "prix": "9€" },
     { "nom": "Tartare de thon", "description": "Avocat, mangue, sésame grillé, sauce ponzu maison", "prix": "12€" },
-    { "nom": "Soupe du marché", "description": "Légumes de saison, croûtons maison, fromage râpé", "prix": "7€" }
+    { "nom": "Burrata crémeuse", "description": "Tomates confites, basilic frais, huile d'olive de Provence", "prix": "9€" },
+    { "nom": "Verrine du marché", "description": "Légumes de saison, fromage frais, herbes fraîches", "prix": "7€" }
   ],
-  "plats": [
+  "viandes": [
     { "nom": "Pavé de bœuf", "description": "Sauce au poivre, frites maison, salade verte", "prix": "18€" },
+    { "nom": "Volaille rôtie", "description": "Jus de cuisson, légumes du moment, purée maison", "prix": "15€" },
+    { "nom": "Pièce du boucher", "description": "Selon arrivage, cuisson au choix, sauce maison", "prix": "19€" }
+  ],
+  "vins": [
+    { "nom": "Côtes de Provence rosé", "description": "Château Sainte-Marguerite — verre / bouteille", "prix": "5€ / 22€" },
+    { "nom": "Rouge naturel", "description": "Sélection du patron, région Sud — verre / bouteille", "prix": "4€ / 18€" },
+    { "nom": "Blanc régional", "description": "Domaine local, sec et frais — verre / bouteille", "prix": "4€ / 18€" }
+  ],
+  "poissons": [
     { "nom": "Dos de cabillaud", "description": "Risotto crémeux, vierge de tomates cerises, herbes fraîches", "prix": "16€" },
-    { "nom": "Plat végétarien du jour", "description": "Selon arrivage du marché — demandez à votre serveur", "prix": "13€" },
-    { "nom": "Burger Sassy", "description": "Pain brioché maison, bœuf charolais, cheddar affiné, sauce secrète", "prix": "15€" }
+    { "nom": "Filet de daurade", "description": "Légumes rôtis, beurre citronné, câpres", "prix": "17€" },
+    { "nom": "Tartare marin", "description": "Crudo de poisson du jour, huile d'olive, citron vert", "prix": "13€" }
   ],
   "desserts": [
     { "nom": "Fondant chocolat", "description": "Cœur coulant, glace vanille bourbon, éclats de noisette", "prix": "7€" },
