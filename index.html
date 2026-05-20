@@ -313,6 +313,13 @@ body {
   transform: translateY(0);
   transition: transform .65s cubic-bezier(.77,0,.18,1);
   will-change: transform;
+  overflow: hidden;
+}
+.stack-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 /* Z-index statiques — la carte visible n'est jamais retirée du DOM,
    elle part vers le haut et révèle celle d'en dessous */
