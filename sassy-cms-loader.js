@@ -1,7 +1,7 @@
 /* ============================================================
-   BISTROT SASSY â€” CMS Loader v2
+   BISTROT SASSY — CMS Loader v3
    Connecte l'index.html aux fichiers JSON de Decap CMS
-   أ€ placer juste avant </body> dans index.html
+   À placer juste avant </body> dans index.html
    ============================================================ */
 
 (async function () {
@@ -32,7 +32,6 @@
     if (el && value !== undefined) el.setAttribute(attr, value);
   }
 
-  /* â”€â”€ Rendu d'une liste de plats â”€â”€ */
   function renderPlats(items) {
     if (!items || !items.length) return '';
     return items.map(p => `
@@ -46,9 +45,9 @@
     `).join('');
   }
 
-  /* â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
-     1. Gأ‰Nأ‰RAL
-     â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ */
+  /* ══════════════════════════════════════════════════
+     1. GÉNÉRAL
+     ══════════════════════════════════════════════════ */
   const general = await loadJSON('/_data/general.json');
   if (general) {
     setText('cms-nom',         general.nom);
@@ -71,9 +70,9 @@
     }
   }
 
-  /* â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+  /* ══════════════════════════════════════════════════
      2. HORAIRES
-     â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ */
+     ══════════════════════════════════════════════════ */
   const horaires = await loadJSON('/_data/horaires.json');
   if (horaires) {
     const container = document.getElementById('cms-horaires');
@@ -88,9 +87,9 @@
     setText('cms-horaires-note', horaires.note);
   }
 
-  /* â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+  /* ══════════════════════════════════════════════════
      3. CARTE
-     â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ */
+     ══════════════════════════════════════════════════ */
   const carte = await loadJSON('/_data/carte.json');
   if (carte) {
     setHTML('cms-entrees',  renderPlats(carte.entrees));
@@ -100,6 +99,39 @@
     setHTML('cms-desserts', renderPlats(carte.desserts));
   }
 
-  console.log('[Sassy CMS] Donnأ©es chargأ©es âœ“');
+  /* ══════════════════════════════════════════════════
+     4. PHOTOS — slider et galerie
+     ══════════════════════════════════════════════════ */
+  const photos = await loadJSON('/_data/photos.json');
+  if (photos) {
+
+    // Slider — 3 cards fixes
+    if (photos.slider && photos.slider.length) {
+      photos.slider.forEach((item, i) => {
+        const card = document.getElementById(`card-${i}`);
+        if (card) {
+          const img = card.querySelector('img');
+          if (img) {
+            img.src = item.image;
+            if (item.alt) img.alt = item.alt;
+          }
+        }
+      });
+    }
+
+    // Galerie — cells dynamiques
+    if (photos.galerie && photos.galerie.length) {
+      const grid = document.querySelector('.galerie-grid');
+      if (grid) {
+        grid.innerHTML = photos.galerie.map(item => `
+          <div class="galerie-cell">
+            <img src="${item.image}" alt="${item.legende || 'Bistrot Sassy'}">
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  console.log('[Sassy CMS] Données chargées ✓');
 
 })();
