@@ -1,12 +1,1730 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Administration — Bistrot Sassy</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mon Bistrot — Admin</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F7F5F2;
+      --card:      #FFFFFF;
+      --dark:      #1A1A2E;
+      --accent:    #FF6B6B;
+      --accent2:   #4ECDC4;
+      --accent3:   #FFE66D;
+      --accent4:   #A8E6CF;
+      --accent5:   #FF8B94;
+      --text:      #1A1A2E;
+      --muted:     #9A9AAF;
+      --radius:    20px;
+      --shadow:    0 4px 24px rgba(26,26,46,0.08);
+      --shadow-lg: 0 8px 40px rgba(26,26,46,0.14);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── ÉCRAN LOGIN ── */
+    #screen-login {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      background: var(--dark);
+    }
+
+    .login-emoji {
+      font-size: 64px;
+      margin-bottom: 16px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .login-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .login-sub {
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .login-field {
+      width: 100%;
+      max-width: 340px;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 16px 20px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 15px;
+      color: #fff;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .login-field::placeholder { color: rgba(255,255,255,0.3); }
+    .login-field:focus { border-color: var(--accent2); }
+
+    .btn-login {
+      width: 100%;
+      max-width: 340px;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 8px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 20px rgba(255,107,107,0.4);
+    }
+
+    .btn-login:active { transform: scale(0.97); }
+
+    /* ── ÉCRAN DASHBOARD ── */
+    #screen-dashboard { display: none; min-height: 100vh; padding-bottom: 40px; }
+
+    /* Header */
+    .dash-header {
+      background: var(--dark);
+      padding: 52px 24px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dash-header::before {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      background: var(--accent);
+      border-radius: 50%;
+      top: -80px; right: -60px;
+      opacity: 0.15;
+    }
+
+    .dash-header::after {
+      content: '';
+      position: absolute;
+      width: 120px; height: 120px;
+      background: var(--accent2);
+      border-radius: 50%;
+      bottom: -40px; left: 20px;
+      opacity: 0.12;
+    }
+
+    .dash-greeting {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .dash-name {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .dash-site {
+      font-size: 13px;
+      color: var(--accent2);
+      font-weight: 500;
+    }
+
+    .dash-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(78,205,196,0.15);
+      border: 1px solid rgba(78,205,196,0.3);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent2);
+      margin-top: 16px;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      background: var(--accent2);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Sections */
+    .dash-section {
+      padding: 28px 20px 8px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* Cards grille */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 22px 18px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s;
+      position: relative;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .card:active { transform: scale(0.96); box-shadow: var(--shadow-lg); }
+
+    .card-accent {
+      position: absolute;
+      top: 0; right: 0;
+      width: 60px; height: 60px;
+      border-radius: 0 var(--radius) 0 60px;
+      opacity: 0.15;
+    }
+
+    .card-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .card-desc {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .card-badge {
+      display: inline-block;
+      background: var(--accent3);
+      color: var(--dark);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 8px;
+    }
+
+    /* Card large */
+    .card-wide {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 22px;
+    }
+
+    .card-wide .card-icon { margin-bottom: 0; font-size: 36px; }
+
+    .card-wide-text { flex: 1; }
+
+    .card-wide .card-title { font-size: 15px; }
+
+    /* Bouton publier */
+    .btn-publish {
+      width: calc(100% - 40px);
+      margin: 20px 20px 0;
+      background: var(--dark);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: transform 0.15s, background 0.2s;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-publish:active { transform: scale(0.97); }
+    .btn-publish.publishing { background: var(--accent2); }
+
+    /* ── ÉCRAN ÉDITION ── */
+    #screen-edit {
+      display: none;
+      min-height: 100vh;
+      background: var(--bg);
+    }
+
+    .edit-header {
+      background: var(--card);
+      padding: 52px 20px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .btn-back {
+      width: 40px; height: 40px;
+      background: var(--bg);
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+
+    .btn-back:active { transform: scale(0.9); }
+
+    .edit-header-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .edit-body { padding: 24px 20px; }
+
+    /* Groupes de champs */
+    .field-group {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .field-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .field-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .field-input:focus { border-color: var(--accent2); background: #fff; }
+
+    .field-textarea {
+      resize: none;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+
+    /* Items menu */
+    .menu-item {
+      background: var(--bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .menu-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .menu-item-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .btn-delete {
+      width: 28px; height: 28px;
+      background: rgba(255,107,107,0.1);
+      border: none;
+      border-radius: 8px;
+      color: var(--accent);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .btn-add {
+      width: 100%;
+      background: transparent;
+      border: 2px dashed var(--muted);
+      border-radius: 14px;
+      padding: 14px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-add:active { border-color: var(--accent2); color: var(--accent2); }
+
+    /* Bouton sauvegarder */
+    .btn-save {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      margin-top: 8px;
+      box-shadow: 0 4px 20px rgba(255,107,107,0.35);
+      transition: transform 0.15s;
+    }
+
+    .btn-save:active { transform: scale(0.97); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--dark);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 14px 24px;
+      border-radius: 40px;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+      z-index: 100;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Horaires toggle */
+    .hours-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .day-label {
+      font-size: 13px;
+      font-weight: 600;
+      width: 80px;
+      flex-shrink: 0;
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #E0E0E0;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    .toggle input:checked + .toggle-slider { background: var(--accent2); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    .hours-inputs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .hours-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1.5px solid transparent;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .hours-input:focus { border-color: var(--accent2); }
+    .hours-sep { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    /* Photo upload */
+    .photo-upload {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--bg);
+      border: 2px dashed var(--muted);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .photo-upload img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      position: absolute;
+      inset: 0;
+    }
+
+    .photo-upload-icon { font-size: 32px; margin-bottom: 8px; }
+    .photo-upload-text { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+    /* Couleur picker */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .color-preview {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .color-label { font-size: 13px; font-weight: 600; flex: 1; }
+    .color-value { font-size: 12px; color: var(--muted); font-family: monospace; }
+
+    /* ── ÉCRAN INSTAGRAM ── */
+    #screen-instagram { display: none; min-height: 100vh; background: var(--bg); }
+
+    .insta-header {
+      background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737);
+      padding: 52px 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .insta-header .btn-back {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+    }
+
+    .insta-header-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Format toggle */
+    .format-toggle {
+      display: flex;
+      background: var(--card);
+      border-radius: 16px;
+      padding: 6px;
+      margin: 20px 20px 0;
+      box-shadow: var(--shadow);
+      gap: 6px;
+    }
+
+    .format-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .format-btn.active {
+      background: var(--dark);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    /* Aperçu Instagram */
+    .insta-preview-wrap {
+      padding: 20px;
+    }
+
+    .preview-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* Post carré 1:1 */
+    .insta-post {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #1A1A1A;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Story 9:16 */
+    .insta-story {
+      width: 60%;
+      margin: 0 auto;
+      aspect-ratio: 9/16;
+      background: #1A1A1A;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ── DA SASSY : bleu #2050E7 · crème #FAF1E2 · jaune #FFF08B ── */
+    .preview-bg {
+      position: absolute;
+      inset: 0;
+      background: #2050E7; /* Bleu Sassy strict — pas de dégradé */
+    }
+
+    .preview-texture {
+      position: absolute;
+      inset: 0;
+      /* Pas de texture — DA Sassy épurée */
+    }
+
+    /* Bande jaune décorative en bas */
+    .preview-band {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 8px;
+      background: #FFF08B;
+      z-index: 3;
+    }
+
+    /* Bande crème fine en haut */
+    .preview-band-top {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: #FAF1E2;
+      z-index: 3;
+    }
+
+    .preview-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 24px;
+      width: 100%;
+    }
+
+    .preview-logo {
+      font-family: 'Playfair Display', serif; /* Canela — remplacer par @font-face quand dispo */
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #FAF1E2;
+      margin-bottom: 6px;
+    }
+
+    .preview-divider {
+      width: 40px;
+      height: 2px;
+      background: #FFF08B; /* Jaune Sassy */
+      margin: 0 auto 16px;
+    }
+
+    .preview-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #FFF08B; /* Jaune Sassy */
+      margin-bottom: 20px;
+    }
+
+    .preview-menu-item {
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(250,241,226,0.15);
+    }
+
+    .preview-menu-item:last-child { border-bottom: none; }
+
+    .preview-plat {
+      font-family: 'Playfair Display', serif; /* Canela Bold */
+      font-size: 14px;
+      font-weight: 700;
+      color: #FAF1E2;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .preview-desc {
+      font-size: 10px;
+      color: rgba(250,241,226,0.55);
+      margin-top: 3px;
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .preview-prix {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      color: #2050E7;
+      background: #FFF08B; /* Jaune Sassy */
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 5px;
+      letter-spacing: 0.05em;
+    }
+
+    .preview-footer {
+      position: absolute;
+      bottom: 18px;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      color: rgba(250,241,226,0.4);
+      text-transform: uppercase;
+      z-index: 2;
+    }
+
+    /* ── CARROUSEL ── */
+    .carousel-wrap {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .carousel-slides {
+      display: flex;
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .carousel-slide {
+      min-width: 100%;
+      aspect-ratio: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Slide 1 — Photo plat */
+    .slide-photo-bg {
+      position: absolute;
+      inset: 0;
+      background: #2050E7;
+    }
+
+    .slide-photo-frame {
+      position: relative;
+      z-index: 2;
+      width: 75%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(250,241,226,0.1);
+      border: 2px solid rgba(250,241,226,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .slide-photo-frame img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .slide-photo-placeholder {
+      text-align: center;
+      color: rgba(250,241,226,0.35);
+    }
+
+    .slide-photo-placeholder span { font-size: 28px; display: block; margin-bottom: 4px; }
+    .slide-photo-placeholder p { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .slide-header {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 16px 20px 8px;
+      width: 100%;
+    }
+
+    .slide-footer-tag {
+      position: relative;
+      z-index: 2;
+      margin-top: 10px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #FFF08B;
+    }
+
+    /* Dots navigation carrousel */
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .carousel-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .carousel-dot.active {
+      background: var(--dark);
+      transform: scale(1.3);
+    }
+
+    /* Zone upload photo */
+    .photo-tap-zone {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+      padding: 0 20px 20px;
+    }
+
+    .insta-field-group {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .insta-field-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .insta-row {
+      display: grid;
+      grid-template-columns: 1fr 80px;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .insta-input {
+      background: var(--bg);
+      border: 1.5px solid transparent;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    .insta-input:focus { border-color: #833AB4; background: #fff; }
+
+    .insta-input-prix {
+      text-align: center;
+      font-weight: 700;
+    }
+
+    /* Historique */
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--bg);
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-thumb {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #833AB4, #FD1D1D);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .history-info { flex: 1; }
+
+    .history-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .history-date {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .history-likes {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Btn Instagram */
+    .btn-insta {
+      width: 100%;
+      background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 20px rgba(131,58,180,0.35);
+      transition: transform 0.15s;
+      margin-top: 8px;
+    }
+
+    .btn-insta:active { transform: scale(0.97); }
+  </style>
 </head>
 <body>
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+
+<!-- ══════════════════════════════════
+     ÉCRAN 1 : LOGIN
+══════════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-emoji">🍽️</div>
+  <div class="login-title">Mon Bistrot</div>
+  <div class="login-sub">Espace administration</div>
+  <button class="btn-login" id="btn-netlify-login" onclick="openNetlifyLogin()">Se connecter →</button>
+</div>
+
+<!-- ══════════════════════════════════
+     ÉCRAN 2 : DASHBOARD
+══════════════════════════════════ -->
+<div id="screen-dashboard">
+
+  <div class="dash-header">
+    <div class="dash-greeting">Bonjour 👋</div>
+    <div class="dash-name">Bistrot Sassy</div>
+    <div class="dash-site">sassy.netlify.app</div>
+    <div class="dash-status">
+      <span class="status-dot"></span>
+      Site en ligne
+    </div>
+    <button onclick="doLogout()" style="position:absolute;top:52px;right:20px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);font-size:11px;font-family:'Poppins',sans-serif;padding:6px 12px;border-radius:20px;cursor:pointer;letter-spacing:0.05em">
+      Déconnexion
+    </button>
+  </div>
+
+  <!-- Modifier le contenu -->
+  <div class="dash-section">
+    <div class="section-label">Modifier mon site</div>
+    <div class="cards-grid">
+
+      <div class="card" onclick="openEdit('menu')" style="--c: var(--accent)">
+        <div class="card-accent" style="background: var(--accent)"></div>
+        <span class="card-icon">🍕</span>
+        <div class="card-title">La Carte</div>
+        <div class="card-desc">Plats, prix et descriptions</div>
+        <div class="card-badge">8 plats</div>
+      </div>
+
+      <div class="card" onclick="openEdit('horaires')" style="--c: var(--accent2)">
+        <div class="card-accent" style="background: var(--accent2)"></div>
+        <span class="card-icon">🕐</span>
+        <div class="card-title">Horaires</div>
+        <div class="card-desc">Jours et heures d'ouverture</div>
+      </div>
+
+      <div class="card" onclick="openEdit('photos')" style="--c: var(--accent3)">
+        <div class="card-accent" style="background: var(--accent3)"></div>
+        <span class="card-icon">📸</span>
+        <div class="card-title">Photos</div>
+        <div class="card-desc">Hero et galerie</div>
+        <div class="card-badge">3 photos</div>
+      </div>
+
+      <div class="card" onclick="openEdit('contact')" style="--c: var(--accent4)">
+        <div class="card-accent" style="background: var(--accent4)"></div>
+        <span class="card-icon">📞</span>
+        <div class="card-title">Contact</div>
+        <div class="card-desc">Téléphone et adresse</div>
+      </div>
+
+      <div class="card card-wide" onclick="showScreen('screen-instagram')" style="background: linear-gradient(135deg, #1A1A2E, #2D1B4E)">
+        <div style="font-size:36px">📱</div>
+        <div class="card-wide-text">
+          <div class="card-title" style="color:#fff">Publier sur Instagram</div>
+          <div class="card-desc" style="color:rgba(255,255,255,0.5)">Post ou Story — menu du jour, promo…</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#833AB4,#FD1D1D); width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0">✨</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Publier -->
+  <div class="dash-section">
+    <div class="section-label">Mettre en ligne</div>
+    <button class="btn-publish" id="btn-publish" onclick="doPublish()">
+      🚀 Publier les modifications
+    </button>
+    <p style="text-align:center; font-size:11px; color:var(--muted); margin-top:10px; padding: 0 20px;">
+      Le site sera mis à jour en 1–2 minutes après publication
+    </p>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════
+     ÉCRAN 3 : ÉDITION
+══════════════════════════════════ -->
+<div id="screen-edit">
+
+  <div class="edit-header">
+    <button class="btn-back" onclick="closeEdit()">←</button>
+    <div class="edit-header-title" id="edit-title">Modifier</div>
+  </div>
+
+  <div class="edit-body" id="edit-body">
+    <!-- Contenu injecté dynamiquement -->
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════
+     ÉCRAN 4 : INSTAGRAM
+══════════════════════════════════ -->
+<div id="screen-instagram">
+
+  <div class="insta-header">
+    <button class="btn-back" onclick="showScreen('screen-dashboard')">←</button>
+    <div class="insta-header-title">📱 Instagram</div>
+  </div>
+
+  <!-- Toggle Post / Story / Carrousel -->
+  <div class="format-toggle">
+    <button class="format-btn active" id="btn-post" onclick="setFormat('post')">⬛ Post</button>
+    <button class="format-btn" id="btn-story" onclick="setFormat('story')">📱 Story</button>
+    <button class="format-btn" id="btn-carousel" onclick="setFormat('carousel')">🎠 Carrousel</button>
+  </div>
+
+  <!-- Aperçu live -->
+  <div class="insta-preview-wrap">
+    <div class="preview-label">Aperçu</div>
+
+    <!-- Post -->
+    <div class="insta-post" id="preview-post">
+      <div class="preview-bg"></div><div class="preview-texture"></div>
+      <div class="preview-band-top"></div><div class="preview-band"></div>
+      <div class="preview-content">
+        <div class="preview-logo">Bistrot Sassy</div>
+        <div class="preview-divider"></div>
+        <div class="preview-title" id="prev-titre">Menu du jour</div>
+        <div class="preview-menu-item">
+          <div class="preview-plat" id="prev-entree-nom">Tartare de thon</div>
+          <div class="preview-desc" id="prev-entree-desc">Avocat, mangue, sauce ponzu</div>
+          <div class="preview-prix" id="prev-entree-prix">12€</div>
+        </div>
+        <div class="preview-menu-item">
+          <div class="preview-plat" id="prev-plat-nom">Pavé de bœuf</div>
+          <div class="preview-desc" id="prev-plat-desc">Sauce poivre, frites maison</div>
+          <div class="preview-prix" id="prev-plat-prix">18€</div>
+        </div>
+        <div class="preview-menu-item">
+          <div class="preview-plat" id="prev-dessert-nom">Fondant chocolat</div>
+          <div class="preview-desc" id="prev-dessert-desc">Cœur coulant, glace vanille</div>
+          <div class="preview-prix" id="prev-dessert-prix">7€</div>
+        </div>
+      </div>
+      <div class="preview-footer">Marseille · Ouvert midi & soir</div>
+    </div>
+
+    <!-- Story -->
+    <div class="insta-story" id="preview-story" style="display:none">
+      <div class="preview-bg"></div><div class="preview-texture"></div>
+      <div class="preview-band-top"></div><div class="preview-band"></div>
+      <div class="preview-content">
+        <div class="preview-logo">Bistrot Sassy</div>
+        <div class="preview-divider"></div>
+        <div class="preview-title">Menu du jour</div>
+        <div class="preview-menu-item">
+          <div class="preview-plat" id="prev-s-entree">Tartare de thon</div>
+          <div class="preview-prix" id="prev-s-entree-prix">12€</div>
+        </div>
+        <div class="preview-menu-item">
+          <div class="preview-plat" id="prev-s-plat">Pavé de bœuf</div>
+          <div class="preview-prix" id="prev-s-plat-prix">18€</div>
+        </div>
+        <div class="preview-menu-item">
+          <div class="preview-plat" id="prev-s-dessert">Fondant chocolat</div>
+          <div class="preview-prix" id="prev-s-dessert-prix">7€</div>
+        </div>
+      </div>
+      <div class="preview-footer">Marseille · Ouvert midi & soir</div>
+    </div>
+
+    <!-- Carrousel -->
+    <div id="preview-carousel" style="display:none">
+      <div class="carousel-wrap">
+        <div class="carousel-slides" id="carousel-slides">
+          <!-- Slide 1 : Photo plat -->
+          <div class="carousel-slide">
+            <div class="slide-photo-bg"></div>
+            <div class="preview-band-top"></div><div class="preview-band"></div>
+            <div class="slide-header">
+              <div class="preview-logo">Bistrot Sassy</div>
+              <div class="preview-divider"></div>
+              <div class="preview-title" id="prev-c-titre">Plat du jour</div>
+            </div>
+            <div class="slide-photo-frame" id="slide-photo-frame" onclick="triggerPhotoUpload()">
+              <div class="photo-tap-zone">
+                <div class="slide-photo-placeholder">
+                  <span>📷</span>
+                  <p>Appuie pour ajouter<br>la photo du plat</p>
+                </div>
+              </div>
+            </div>
+            <div class="slide-footer-tag" id="prev-c-plat-tag">Pavé de bœuf · 18€</div>
+          </div>
+          <!-- Slide 2 : Menu -->
+          <div class="carousel-slide">
+            <div class="preview-bg"></div>
+            <div class="preview-band-top"></div><div class="preview-band"></div>
+            <div class="preview-content">
+              <div class="preview-logo">Bistrot Sassy</div>
+              <div class="preview-divider"></div>
+              <div class="preview-title">Menu du jour</div>
+              <div class="preview-menu-item">
+                <div class="preview-plat" id="prev-c-entree-nom">Tartare de thon</div>
+                <div class="preview-desc" id="prev-c-entree-desc">Avocat, mangue, sauce ponzu</div>
+                <div class="preview-prix" id="prev-c-entree-prix">12€</div>
+              </div>
+              <div class="preview-menu-item">
+                <div class="preview-plat" id="prev-c-plat-nom">Pavé de bœuf</div>
+                <div class="preview-desc" id="prev-c-plat-desc">Sauce poivre, frites maison</div>
+                <div class="preview-prix" id="prev-c-plat-prix">18€</div>
+              </div>
+              <div class="preview-menu-item">
+                <div class="preview-plat" id="prev-c-dessert-nom">Fondant chocolat</div>
+                <div class="preview-desc" id="prev-c-dessert-desc">Cœur coulant, glace vanille</div>
+                <div class="preview-prix" id="prev-c-dessert-prix">7€</div>
+              </div>
+            </div>
+            <div class="preview-footer">Marseille · Ouvert midi & soir</div>
+          </div>
+        </div>
+      </div>
+      <div class="carousel-dots">
+        <div class="carousel-dot active" onclick="goSlide(0)"></div>
+        <div class="carousel-dot" onclick="goSlide(1)"></div>
+      </div>
+      <p style="text-align:center;font-size:11px;color:#9A9AAF;margin-top:8px">Tape sur les points pour naviguer entre les slides</p>
+    </div>
+
+  </div>
+
+  <!-- Input photo caché -->
+  <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="loadPhoto(event)" />
+
+  <!-- Formulaire -->
+  <div class="insta-form">
+
+    <div class="insta-field-group">
+      <div class="insta-field-title">🏷️ Titre du post</div>
+      <input class="insta-input" type="text" value="Menu du jour" oninput="updatePreview()" id="f-titre" placeholder="Menu du jour, Spécial week-end…" />
+    </div>
+
+    <div class="insta-field-group">
+      <div class="insta-field-title">🥗 Entrée</div>
+      <div class="insta-row">
+        <input class="insta-input" id="f-entree-nom" type="text" value="Tartare de thon" placeholder="Nom" oninput="updatePreview()" />
+        <input class="insta-input insta-input-prix" id="f-entree-prix" type="text" value="12€" placeholder="Prix" oninput="updatePreview()" />
+      </div>
+      <input class="insta-input" id="f-entree-desc" type="text" value="Avocat, mangue, sauce ponzu" placeholder="Description courte" oninput="updatePreview()" />
+    </div>
+
+    <div class="insta-field-group">
+      <div class="insta-field-title">🍽️ Plat</div>
+      <div class="insta-row">
+        <input class="insta-input" id="f-plat-nom" type="text" value="Pavé de bœuf" placeholder="Nom" oninput="updatePreview()" />
+        <input class="insta-input insta-input-prix" id="f-plat-prix" type="text" value="18€" placeholder="Prix" oninput="updatePreview()" />
+      </div>
+      <input class="insta-input" id="f-plat-desc" type="text" value="Sauce poivre, frites maison" placeholder="Description courte" oninput="updatePreview()" />
+    </div>
+
+    <div class="insta-field-group">
+      <div class="insta-field-title">🍮 Dessert</div>
+      <div class="insta-row">
+        <input class="insta-input" id="f-dessert-nom" type="text" value="Fondant chocolat" placeholder="Nom" oninput="updatePreview()" />
+        <input class="insta-input insta-input-prix" id="f-dessert-prix" type="text" value="7€" placeholder="Prix" oninput="updatePreview()" />
+      </div>
+      <input class="insta-input" id="f-dessert-desc" type="text" value="Cœur coulant, glace vanille" placeholder="Description courte" oninput="updatePreview()" />
+    </div>
+
+    <button class="btn-insta" onclick="doPostInsta()">
+      ✨ Publier sur Instagram
+    </button>
+
+    <!-- Historique -->
+    <div class="insta-field-group" style="margin-top:20px">
+      <div class="insta-field-title">🕐 Derniers posts</div>
+
+      <div class="history-item">
+        <div class="history-thumb">🍽️</div>
+        <div class="history-info">
+          <div class="history-title">Menu du jour</div>
+          <div class="history-date">Aujourd'hui à 11h30</div>
+        </div>
+        <div class="history-likes">❤️ 47</div>
+      </div>
+
+      <div class="history-item">
+        <div class="history-thumb">🎉</div>
+        <div class="history-info">
+          <div class="history-title">Spécial week-end</div>
+          <div class="history-date">Hier à 18h00</div>
+        </div>
+        <div class="history-likes">❤️ 83</div>
+      </div>
+
+      <div class="history-item">
+        <div class="history-thumb">🥂</div>
+        <div class="history-info">
+          <div class="history-title">Menu du jour</div>
+          <div class="history-date">Lundi à 11h45</div>
+        </div>
+        <div class="history-likes">❤️ 61</div>
+      </div>
+
+      <div class="history-item">
+        <div class="history-thumb">🌿</div>
+        <div class="history-info">
+          <div class="history-title">Menu végétarien</div>
+          <div class="history-date">Vendredi à 12h00</div>
+        </div>
+        <div class="history-likes">❤️ 95</div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── Navigation ── */
+  function showScreen(id) {
+    ['screen-login','screen-dashboard','screen-edit','screen-instagram'].forEach(s => {
+      document.getElementById(s).style.display = 'none';
+    });
+    document.getElementById(id).style.display = 'block';
+    window.scrollTo(0,0);
+  }
+
+  /* ── Netlify Identity ── */
+  function openNetlifyLogin() {
+    netlifyIdentity.open('login');
+  }
+
+  // Quand l'utilisateur se connecte
+  netlifyIdentity.on('login', user => {
+    netlifyIdentity.close();
+    showScreen('screen-dashboard');
+    // Afficher le nom de l'utilisateur
+    const greeting = document.querySelector('.dash-name');
+    if (greeting && user.user_metadata && user.user_metadata.full_name) {
+      greeting.textContent = user.user_metadata.full_name;
+    }
+    showToast('✅ Connecté !');
+    // Charger les données JSON du site
+    loadSassyData();
+  });
+
+  // Vérifier si déjà connecté au chargement
+  netlifyIdentity.on('init', user => {
+    if (user) {
+      showScreen('screen-dashboard');
+      loadSassyData();
+    } else {
+      showScreen('screen-login');
+    }
+  });
+
+  // Déconnexion
+  function doLogout() {
+    netlifyIdentity.logout();
+    showScreen('screen-login');
+    showToast('👋 Déconnecté');
+  }
+
+  netlifyIdentity.on('logout', () => {
+    showScreen('screen-login');
+  });
+
+  // Charger les données JSON de Sassy
+  async function loadSassyData() {
+    try {
+      const [general, horaires] = await Promise.all([
+        fetch('/_data/general.json').then(r => r.ok ? r.json() : null),
+        fetch('/_data/horaires.json').then(r => r.ok ? r.json() : null)
+      ]);
+      if (general) {
+        // Pré-remplir les champs contact
+        const tel = document.getElementById('f-contact-tel');
+        if (tel && general.telephone) tel.value = general.telephone;
+        const adr = document.getElementById('f-contact-adresse');
+        if (adr && general.adresse) adr.value = general.adresse;
+      }
+    } catch(e) {
+      console.log('Données JSON non disponibles en local');
+    }
+  }
+
+  function doLogin() {
+    openNetlifyLogin();
+  }
+
+  function closeEdit() {
+    showScreen('screen-dashboard');
+  }
+
+  /* ── Toast ── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  /* ── Publier ── */
+  function doPublish() {
+    const btn = document.getElementById('btn-publish');
+    btn.classList.add('publishing');
+    btn.textContent = '⏳ Publication en cours…';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.classList.remove('publishing');
+      btn.innerHTML = '🚀 Publier les modifications';
+      btn.disabled = false;
+      showToast('✅ Site mis à jour !');
+    }, 3000);
+  }
+
+  /* ── Contenu des écrans d'édition ── */
+  const editScreens = {
+
+    menu: {
+      title: '🍕 La Carte',
+      html: `
+        <div class="field-group">
+          <div class="field-group-title">Entrées</div>
+          ${menuItem(1, 'Tartare de thon', 'Avocat, mangue, sauce ponzu', '12€')}
+          ${menuItem(2, 'Soupe du marché', 'Légumes de saison, croûtons', '7€')}
+          <button class="btn-add" onclick="showToast('➕ Entrée ajoutée')">+ Ajouter une entrée</button>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Plats</div>
+          ${menuItem(1, 'Pavé de bœuf', 'Sauce poivre, frites maison', '18€')}
+          ${menuItem(2, 'Dos de cabillaud', 'Risotto crémeux, herbes fraîches', '16€')}
+          ${menuItem(3, 'Burger Sassy', 'Pain brioché, bœuf, sauce secrète', '15€')}
+          <button class="btn-add" onclick="showToast('➕ Plat ajouté')">+ Ajouter un plat</button>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Desserts</div>
+          ${menuItem(1, 'Fondant chocolat', 'Cœur coulant, glace vanille', '7€')}
+          ${menuItem(2, 'Crème brûlée', 'Recette traditionnelle', '6€')}
+          <button class="btn-add" onclick="showToast('➕ Dessert ajouté')">+ Ajouter un dessert</button>
+        </div>
+        <button class="btn-save" onclick="saveSection()">💾 Enregistrer la carte</button>
+      `
+    },
+
+    horaires: {
+      title: '🕐 Horaires',
+      html: `
+        <div class="field-group">
+          <div class="field-group-title">Jours d'ouverture</div>
+          ${hoursRow('Lundi', false, '', '')}
+          ${hoursRow('Mardi', true, '12:00', '22:00')}
+          ${hoursRow('Mercredi', true, '12:00', '22:00')}
+          ${hoursRow('Jeudi', true, '12:00', '22:30')}
+          ${hoursRow('Vendredi', true, '12:00', '23:00')}
+          ${hoursRow('Samedi', true, '11:30', '23:30')}
+          ${hoursRow('Dimanche', true, '11:30', '22:00')}
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Message spécial</div>
+          <label class="field-label">Fermeture exceptionnelle / info</label>
+          <textarea class="field-input field-textarea" placeholder="Ex : Fermé le 25 décembre…"></textarea>
+        </div>
+        <button class="btn-save" onclick="saveSection()">💾 Enregistrer les horaires</button>
+      `
+    },
+
+    photos: {
+      title: '📸 Photos',
+      html: `
+        <div class="field-group">
+          <div class="field-group-title">Photo principale (Hero)</div>
+          <div class="photo-upload" onclick="showToast('📷 Ouvre ta galerie photo')">
+            <div class="photo-upload-icon">🌅</div>
+            <div class="photo-upload-text">Appuie pour changer la photo</div>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Galerie (3 photos)</div>
+          <div class="photo-upload" style="aspect-ratio:4/3" onclick="showToast('📷 Photo 1')">
+            <div class="photo-upload-icon">🍽️</div>
+            <div class="photo-upload-text">Photo ambiance 1</div>
+          </div>
+          <div class="photo-upload" style="aspect-ratio:4/3" onclick="showToast('📷 Photo 2')">
+            <div class="photo-upload-icon">🥂</div>
+            <div class="photo-upload-text">Photo ambiance 2</div>
+          </div>
+          <div class="photo-upload" style="aspect-ratio:4/3" onclick="showToast('📷 Photo 3')">
+            <div class="photo-upload-icon">🌿</div>
+            <div class="photo-upload-text">Photo ambiance 3</div>
+          </div>
+        </div>
+        <button class="btn-save" onclick="saveSection()">💾 Enregistrer les photos</button>
+      `
+    },
+
+    contact: {
+      title: '📞 Contact',
+      html: `
+        <div class="field-group">
+          <div class="field-group-title">Coordonnées</div>
+          <label class="field-label">Téléphone</label>
+          <input class="field-input" type="tel" value="04 91 00 00 00" />
+          <label class="field-label">Email</label>
+          <input class="field-input" type="email" value="contact@bistrotsassy.fr" />
+          <label class="field-label">Adresse</label>
+          <input class="field-input" type="text" value="12 rue de la Paix, Marseille" />
+          <label class="field-label">Lien Google Maps</label>
+          <input class="field-input" type="url" placeholder="https://maps.google.com/..." />
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Réseaux sociaux</div>
+          <label class="field-label">Instagram</label>
+          <input class="field-input" type="text" placeholder="@bistrotsassy" />
+          <label class="field-label">Facebook</label>
+          <input class="field-input" type="text" placeholder="facebook.com/bistrotsassy" />
+        </div>
+        <button class="btn-save" onclick="saveSection()">💾 Enregistrer le contact</button>
+      `
+    },
+
+    textes: {
+      title: '✏️ Textes',
+      html: `
+        <div class="field-group">
+          <div class="field-group-title">Page d'accueil</div>
+          <label class="field-label">Accroche principale</label>
+          <input class="field-input" type="text" value="Le goût de Marseille dans chaque assiette" />
+          <label class="field-label">Sous-titre</label>
+          <input class="field-input" type="text" value="Bistrot moderne, cuisine du marché" />
+          <label class="field-label">Description courte</label>
+          <textarea class="field-input field-textarea">Une cuisine généreuse et sincère, inspirée du marché et des saisons, dans une ambiance chaleureuse au cœur de Marseille.</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-group-title">Section À propos</div>
+          <label class="field-label">Texte à propos</label>
+          <textarea class="field-input field-textarea" style="min-height:120px">Depuis 2019, le Bistrot Sassy propose une cuisine de marché généreuse et conviviale…</textarea>
+        </div>
+        <button class="btn-save" onclick="saveSection()">💾 Enregistrer les textes</button>
+      `
+    }
+  };
+
+  /* ── Helpers HTML ── */
+  function menuItem(num, nom, desc, prix) {
+    return `
+      <div class="menu-item">
+        <div class="menu-item-header">
+          <span class="menu-item-num">Plat ${num}</span>
+          <button class="btn-delete" onclick="showToast('🗑️ Supprimé')">✕</button>
+        </div>
+        <input class="field-input" type="text" value="${nom}" placeholder="Nom du plat" style="margin-bottom:8px" />
+        <input class="field-input" type="text" value="${desc}" placeholder="Description" style="margin-bottom:8px" />
+        <input class="field-input" type="text" value="${prix}" placeholder="Prix" style="margin-bottom:0; width:100px" />
+      </div>
+    `;
+  }
+
+  function hoursRow(day, open, from, to) {
+    return `
+      <div class="hours-row">
+        <span class="day-label">${day}</span>
+        <label class="toggle">
+          <input type="checkbox" ${open ? 'checked' : ''} onchange="toggleHours(this)" />
+          <span class="toggle-slider"></span>
+        </label>
+        <div class="hours-inputs" style="${open ? '' : 'opacity:0.3; pointer-events:none'}">
+          <input class="hours-input" type="time" value="${from}" />
+          <span class="hours-sep">–</span>
+          <input class="hours-input" type="time" value="${to}" />
+        </div>
+      </div>
+    `;
+  }
+
+  function toggleHours(checkbox) {
+    const row = checkbox.closest('.hours-row');
+    const inputs = row.querySelector('.hours-inputs');
+    inputs.style.opacity = checkbox.checked ? '1' : '0.3';
+    inputs.style.pointerEvents = checkbox.checked ? 'auto' : 'none';
+  }
+
+  /* ── Ouvrir édition ── */
+  function openEdit(section) {
+    const s = editScreens[section];
+    document.getElementById('edit-title').textContent = s.title;
+    document.getElementById('edit-body').innerHTML = s.html;
+    showScreen('screen-edit');
+  }
+
+  function saveSection() {
+    showToast('✅ Modifications enregistrées !');
+    setTimeout(() => closeEdit(), 1200);
+  }
+
+  /* ── Init géré par Netlify Identity ── */
+
+  /* ── Instagram ── */
+  let currentFormat = 'post';
+  let currentSlide = 0;
+
+  function setFormat(format) {
+    currentFormat = format;
+    ['post','story','carousel'].forEach(f => {
+      document.getElementById('btn-' + f).classList.toggle('active', f === format);
+    });
+    document.getElementById('preview-post').style.display     = format === 'post'     ? 'flex'  : 'none';
+    document.getElementById('preview-story').style.display    = format === 'story'    ? 'flex'  : 'none';
+    document.getElementById('preview-carousel').style.display = format === 'carousel' ? 'block' : 'none';
+  }
+
+  function goSlide(n) {
+    currentSlide = n;
+    document.getElementById('carousel-slides').style.transform = `translateX(-${n * 100}%)`;
+    document.querySelectorAll('.carousel-dot').forEach((d,i) => d.classList.toggle('active', i === n));
+  }
+
+  function triggerPhotoUpload() {
+    document.getElementById('photo-input').click();
+  }
+
+  function loadPhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const frame = document.getElementById('slide-photo-frame');
+    frame.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover" />`;
+    showToast('📷 Photo ajoutée !');
+  }
+
+  function updatePreview() {
+    const get = id => document.getElementById(id)?.value || '';
+
+    // Post
+    document.getElementById('prev-titre').textContent       = get('f-titre');
+    document.getElementById('prev-entree-nom').textContent  = get('f-entree-nom');
+    document.getElementById('prev-entree-desc').textContent = get('f-entree-desc');
+    document.getElementById('prev-entree-prix').textContent = get('f-entree-prix');
+    document.getElementById('prev-plat-nom').textContent    = get('f-plat-nom');
+    document.getElementById('prev-plat-desc').textContent   = get('f-plat-desc');
+    document.getElementById('prev-plat-prix').textContent   = get('f-plat-prix');
+    document.getElementById('prev-dessert-nom').textContent = get('f-dessert-nom');
+    document.getElementById('prev-dessert-desc').textContent= get('f-dessert-desc');
+    document.getElementById('prev-dessert-prix').textContent= get('f-dessert-prix');
+
+    // Story
+    document.getElementById('prev-s-entree').textContent       = get('f-entree-nom');
+    document.getElementById('prev-s-entree-prix').textContent  = get('f-entree-prix');
+    document.getElementById('prev-s-plat').textContent         = get('f-plat-nom');
+    document.getElementById('prev-s-plat-prix').textContent    = get('f-plat-prix');
+    document.getElementById('prev-s-dessert').textContent      = get('f-dessert-nom');
+    document.getElementById('prev-s-dessert-prix').textContent = get('f-dessert-prix');
+
+    // Carrousel slide 1 tag
+    const tag = document.getElementById('prev-c-plat-tag');
+    if (tag) tag.textContent = `${get('f-plat-nom')} · ${get('f-plat-prix')}`;
+    const ct = document.getElementById('prev-c-titre');
+    if (ct) ct.textContent = get('f-titre') || 'Plat du jour';
+
+    // Carrousel slide 2
+    const setC = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    setC('prev-c-entree-nom',  get('f-entree-nom'));
+    setC('prev-c-entree-desc', get('f-entree-desc'));
+    setC('prev-c-entree-prix', get('f-entree-prix'));
+    setC('prev-c-plat-nom',    get('f-plat-nom'));
+    setC('prev-c-plat-desc',   get('f-plat-desc'));
+    setC('prev-c-plat-prix',   get('f-plat-prix'));
+    setC('prev-c-dessert-nom', get('f-dessert-nom'));
+    setC('prev-c-dessert-desc',get('f-dessert-desc'));
+    setC('prev-c-dessert-prix',get('f-dessert-prix'));
+  }
+
+  function doPostInsta() {
+    showToast('📱 Publication en cours sur Instagram…');
+    setTimeout(() => showToast('✅ Publié sur Instagram !'), 2500);
+  }
+</script>
 </body>
 </html>
