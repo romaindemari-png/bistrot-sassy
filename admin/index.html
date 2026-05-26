@@ -1742,7 +1742,11 @@
   }
 
   /* ── Ouvrir édition ── */
+  // Section courante en cours d'édition
+  let currentSection = null;
+
   function openEdit(section) {
+    currentSection = section;
     const s = editScreens[section];
     document.getElementById('edit-title').textContent = s.title;
     document.getElementById('edit-body').innerHTML = s.html;
@@ -1750,9 +1754,89 @@
     prefillSection(section);
   }
 
-  function saveSection() {
-    showToast('✅ Modifications enregistrées !');
-    setTimeout(() => closeEdit(), 1200);
+  async function saveSection() {
+    const btn = document.querySelector('.btn-save');
+    if (btn) { btn.textContent = '⏳ Enregistrement…'; btn.disabled = true; }
+
+    try {
+      // Récupérer le token Netlify Identity de l'utilisateur connecté
+      const user = netlifyIdentity.currentUser();
+      if (!user) throw new Error('Non connecté');
+      const token = await user.jwt();
+
+      // Construire les données selon la section
+      let data = {};
+
+      if (currentSection === 'contact') {
+        data = {
+          telephone: document.getElementById('f-contact-tel')?.value || '',
+          email: document.getElementById('f-contact-email')?.value || '',
+          adresse: document.getElementById('f-contact-adresse')?.value || '',
+          maps_url: document.getElementById('f-contact-maps')?.value || '',
+          instagram: document.getElementById('f-contact-instagram')?.value || '',
+          facebook: document.getElementById('f-contact-facebook')?.value || ''
+        };
+      }
+
+      if (currentSection === 'horaires') {
+        const rows = document.querySelectorAll('.hours-row');
+        const jours = Array.from(rows).map(row => {
+          const label = row.querySelector('.day-label')?.textContent || '';
+          const ouvert = row.querySelector('input[type="checkbox"]')?.checked || false;
+          const inputs = row.querySelectorAll('.hours-input');
+          const from = inputs[0]?.value || '';
+          const to = inputs[1]?.value || '';
+          return { jour: label, ouvert, heures: ouvert ? `${from}–${to}` : 'Fermé' };
+        });
+        const note = document.querySelector('#edit-body textarea')?.value || '';
+        data = { jours, note };
+      }
+
+      if (currentSection === 'menu') {
+        const groups = document.querySelectorAll('.field-group');
+        const parseGroup = (group) => {
+          return Array.from(group.querySelectorAll('.menu-item')).map(item => {
+            const inputs = item.querySelectorAll('.field-input');
+            return {
+              nom: inputs[0]?.value || '',
+              description: inputs[1]?.value || '',
+              prix: inputs[2]?.value || ''
+            };
+          });
+        };
+        data = {
+          entrees: parseGroup(groups[0]),
+          plats: parseGroup(groups[1]),
+          desserts: parseGroup(groups[2])
+        };
+      }
+
+      // Appeler la Netlify Function save-data
+      const res = await fetch('/.netlify/functions/save-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ section: currentSection, data })
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Erreur serveur');
+
+      // Mettre à jour les données en mémoire
+      if (currentSection === 'contact') sassyData.general = { ...sassyData.general, ...data };
+      if (currentSection === 'horaires') sassyData.horaires = data;
+      if (currentSection === 'menu') sassyData.carte = data;
+
+      showToast('✅ Modifications enregistrées !');
+      setTimeout(() => closeEdit(), 1200);
+
+    } catch (err) {
+      console.error('Erreur save:', err);
+      showToast('❌ Erreur : ' + err.message);
+      if (btn) { btn.textContent = '💾 Enregistrer'; btn.disabled = false; }
+    }
   }
 
   /* ── Init géré par Netlify Identity ── */
