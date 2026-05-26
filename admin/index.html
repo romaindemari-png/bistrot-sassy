@@ -697,6 +697,55 @@
       box-shadow: var(--shadow-lg);
     }
 
+    /* ── Desktop : layout 2 colonnes + aperçus limités ── */
+    @media (min-width: 768px) {
+      #screen-instagram {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .insta-preview-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .insta-post {
+        width: 340px;
+        max-width: 340px;
+      }
+
+      .insta-story {
+        width: 200px;
+      }
+
+      #preview-carousel .carousel-wrap {
+        width: 340px;
+        margin: 0 auto;
+      }
+
+      .insta-form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+      }
+
+      .format-toggle {
+        max-width: 400px;
+        margin: 20px auto 0;
+      }
+
+      #screen-dashboard {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      #screen-edit {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+    }
+
     /* ── DA SASSY : bleu #2050E7 · crème #FAF1E2 · jaune #FFF08B ── */
     .preview-bg {
       position: absolute;
@@ -1417,21 +1466,82 @@
   });
 
   // Charger les données JSON de Sassy
+  // ── Données Sassy chargées en mémoire ──
+  let sassyData = { general: null, horaires: null, carte: null };
+
   async function loadSassyData() {
     try {
-      const [general, horaires] = await Promise.all([
-        fetch('/_data/general.json').then(r => r.ok ? r.json() : null),
-        fetch('/_data/horaires.json').then(r => r.ok ? r.json() : null)
+      const [general, horaires, carte] = await Promise.all([
+        fetch('/_data/general.json').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/_data/horaires.json').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/_data/carte.json').then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
-      if (general) {
-        // Pré-remplir les champs contact
-        const tel = document.getElementById('f-contact-tel');
-        if (tel && general.telephone) tel.value = general.telephone;
-        const adr = document.getElementById('f-contact-adresse');
-        if (adr && general.adresse) adr.value = general.adresse;
-      }
+      sassyData = { general, horaires, carte };
+      console.log('[Admin] Données Sassy chargées ✓');
     } catch(e) {
-      console.log('Données JSON non disponibles en local');
+      console.log('[Admin] Données JSON non disponibles');
+    }
+  }
+
+  // ── Pré-remplir les écrans d'édition avec les vrais JSON ──
+  function prefillSection(section) {
+    const { general, horaires, carte } = sassyData;
+
+    if (section === 'contact' && general) {
+      setTimeout(() => {
+        const set = (id, val) => { const el = document.getElementById(id); if(el && val) el.value = val; };
+        set('f-contact-tel', general.telephone);
+        set('f-contact-email', general.email);
+        set('f-contact-adresse', general.adresse);
+        set('f-contact-maps', general.maps_url);
+        set('f-contact-instagram', general.instagram);
+        set('f-contact-facebook', general.facebook);
+      }, 50);
+    }
+
+    if (section === 'horaires' && horaires && horaires.jours) {
+      setTimeout(() => {
+        horaires.jours.forEach((j, i) => {
+          const checkbox = document.querySelector(`.hours-row:nth-child(${i+1}) input[type="checkbox"]`);
+          const inputs = document.querySelectorAll(`.hours-row:nth-child(${i+1}) .hours-input`);
+          if (checkbox) checkbox.checked = j.ouvert;
+          if (inputs[0] && j.heures) {
+            const parts = j.heures.split('–').map(s => s.trim());
+            if (parts[0]) inputs[0].value = parts[0];
+            if (parts[1]) inputs[1].value = parts[1];
+          }
+        });
+        const note = document.querySelector('#edit-body textarea');
+        if (note && horaires.note) note.value = horaires.note;
+      }, 50);
+    }
+
+    if (section === 'menu' && carte) {
+      setTimeout(() => {
+        // Reconstruire le HTML du menu avec les vraies données
+        const body = document.getElementById('edit-body');
+        if (!body) return;
+
+        const renderItems = (items, label) => {
+          if (!items || !items.length) return '';
+          return items.map((p, i) => `
+            <div class="menu-item">
+              <div class="menu-item-header">
+                <span class="menu-item-num">${label} ${i+1}</span>
+                <button class="btn-delete" onclick="showToast('🗑️ Supprimé')">✕</button>
+              </div>
+              <input class="field-input" type="text" value="${p.nom || ''}" placeholder="Nom du plat" style="margin-bottom:8px" />
+              <input class="field-input" type="text" value="${p.description || ''}" placeholder="Description" style="margin-bottom:8px" />
+              <input class="field-input" type="text" value="${p.prix || ''}" placeholder="Prix" style="margin-bottom:0; width:100px" />
+            </div>
+          `).join('');
+        };
+
+        const sections = body.querySelectorAll('.field-group');
+        if (sections[0]) sections[0].innerHTML = `<div class="field-group-title">Entrées</div>${renderItems(carte.entrees, 'Entrée')}<button class="btn-add" onclick="showToast('➕ Entrée ajoutée')">+ Ajouter une entrée</button>`;
+        if (sections[1]) sections[1].innerHTML = `<div class="field-group-title">Plats</div>${renderItems(carte.plats, 'Plat')}<button class="btn-add" onclick="showToast('➕ Plat ajouté')">+ Ajouter un plat</button>`;
+        if (sections[2]) sections[2].innerHTML = `<div class="field-group-title">Desserts</div>${renderItems(carte.desserts, 'Dessert')}<button class="btn-add" onclick="showToast('➕ Dessert ajouté')">+ Ajouter un dessert</button>`;
+      }, 50);
     }
   }
 
@@ -1551,20 +1661,20 @@
         <div class="field-group">
           <div class="field-group-title">Coordonnées</div>
           <label class="field-label">Téléphone</label>
-          <input class="field-input" type="tel" value="04 91 00 00 00" />
+          <input class="field-input" id="f-contact-tel" type="tel" value="04 91 00 00 00" />
           <label class="field-label">Email</label>
-          <input class="field-input" type="email" value="contact@bistrotsassy.fr" />
+          <input class="field-input" id="f-contact-email" type="email" value="contact@bistrotsassy.fr" />
           <label class="field-label">Adresse</label>
-          <input class="field-input" type="text" value="12 rue de la Paix, Marseille" />
+          <input class="field-input" id="f-contact-adresse" type="text" value="12 rue de la Paix, Marseille" />
           <label class="field-label">Lien Google Maps</label>
-          <input class="field-input" type="url" placeholder="https://maps.google.com/..." />
+          <input class="field-input" id="f-contact-maps" type="url" placeholder="https://maps.google.com/..." />
         </div>
         <div class="field-group">
           <div class="field-group-title">Réseaux sociaux</div>
           <label class="field-label">Instagram</label>
-          <input class="field-input" type="text" placeholder="@bistrotsassy" />
+          <input class="field-input" id="f-contact-instagram" type="text" placeholder="@bistrotsassy" />
           <label class="field-label">Facebook</label>
-          <input class="field-input" type="text" placeholder="facebook.com/bistrotsassy" />
+          <input class="field-input" id="f-contact-facebook" type="text" placeholder="facebook.com/bistrotsassy" />
         </div>
         <button class="btn-save" onclick="saveSection()">💾 Enregistrer le contact</button>
       `
@@ -1637,6 +1747,7 @@
     document.getElementById('edit-title').textContent = s.title;
     document.getElementById('edit-body').innerHTML = s.html;
     showScreen('screen-edit');
+    prefillSection(section);
   }
 
   function saveSection() {
