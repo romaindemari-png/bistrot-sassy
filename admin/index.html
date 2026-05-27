@@ -1078,6 +1078,33 @@
     }
 
     /* Btn Instagram */
+    .insta-hashtag-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .hashtag-label {
+      font-size: 0.72em;
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+    .hashtag-chip {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.75em;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .hashtag-chip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .hashtag-chip.used { opacity: 0.35; pointer-events: none; }
+
     .btn-insta {
       width: 100%;
       background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737);
@@ -1323,6 +1350,34 @@
         <input class="insta-input insta-input-prix" id="f-dessert-prix" type="text" value="7€" placeholder="Prix" oninput="updatePreview()" />
       </div>
       <input class="insta-input" id="f-dessert-desc" type="text" value="Cœur coulant, glace vanille" placeholder="Description courte" oninput="updatePreview()" />
+    </div>
+
+    <div class="insta-field-group">
+      <div class="insta-field-title">✍️ Description & hashtags
+        <span id="caption-count" style="font-weight:400;font-size:0.75em;color:var(--muted);float:right;margin-top:2px;">0 / 2200</span>
+      </div>
+      <textarea
+        class="insta-input"
+        id="f-caption"
+        rows="5"
+        maxlength="2200"
+        placeholder="Découvrez notre menu du jour 🍽️&#10;&#10;Réservation au 04 XX XX XX XX ou en bio 🔗&#10;&#10;#bistrotsassy #marseille #menudujour #restaurantmarseille #cuisinefrancaise"
+        oninput="updateCaptionCount()"
+        style="resize:vertical;line-height:1.5;font-size:0.9em;"
+      ></textarea>
+      <div class="insta-hashtag-suggestions" id="hashtag-suggestions">
+        <span class="hashtag-label">Suggestions :</span>
+        <button class="hashtag-chip" onclick="addHashtag('#bistrotsassy')">#bistrotsassy</button>
+        <button class="hashtag-chip" onclick="addHashtag('#marseille')">#marseille</button>
+        <button class="hashtag-chip" onclick="addHashtag('#menudujour')">#menudujour</button>
+        <button class="hashtag-chip" onclick="addHashtag('#restaurantmarseille')">#restaurantmarseille</button>
+        <button class="hashtag-chip" onclick="addHashtag('#cuisinefrancaise')">#cuisinefrancaise</button>
+        <button class="hashtag-chip" onclick="addHashtag('#bistrot')">#bistrot</button>
+        <button class="hashtag-chip" onclick="addHashtag('#foodmarseille')">#foodmarseille</button>
+        <button class="hashtag-chip" onclick="addHashtag('#gastronomie')">#gastronomie</button>
+        <button class="hashtag-chip" onclick="addHashtag('#marseille5eme')">#marseille5eme</button>
+        <button class="hashtag-chip" onclick="addHashtag('#lunch')">#lunch</button>
+      </div>
     </div>
 
     <button class="btn-insta" onclick="doPostInsta()">
@@ -1896,7 +1951,37 @@
     setC('prev-c-dessert-prix',get('f-dessert-prix'));
   }
 
+  function updateCaptionCount() {
+    const ta = document.getElementById('f-caption');
+    const count = document.getElementById('caption-count');
+    if (!ta || !count) return;
+    const len = ta.value.length;
+    count.textContent = len + ' / 2200';
+    count.style.color = len > 2000 ? '#e74c3c' : len > 1500 ? '#f39c12' : 'var(--muted)';
+    // Marquer les chips déjà utilisés
+    document.querySelectorAll('.hashtag-chip').forEach(chip => {
+      chip.classList.toggle('used', ta.value.includes(chip.textContent.trim()));
+    });
+  }
+
+  function addHashtag(tag) {
+    const ta = document.getElementById('f-caption');
+    if (!ta) return;
+    const val = ta.value;
+    // Ajouter à la fin avec espace si besoin
+    const sep = val.length > 0 && !val.endsWith(' ') && !val.endsWith('\n') ? ' ' : '';
+    ta.value = val + sep + tag;
+    ta.focus();
+    updateCaptionCount();
+  }
+
   function doPostInsta() {
+    const caption = document.getElementById('f-caption')?.value || '';
+    if (!caption.trim()) {
+      showToast('⚠️ Ajoute une description avant de publier !');
+      document.getElementById('f-caption')?.focus();
+      return;
+    }
     showToast('📱 Publication en cours sur Instagram…');
     setTimeout(() => showToast('✅ Publié sur Instagram !'), 2500);
   }
