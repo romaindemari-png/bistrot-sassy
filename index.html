@@ -865,6 +865,142 @@ footer {
   .hero-title { font-size: 2.6rem; }
   .galerie-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ══════════════════════════
+   SECTION EVENTS
+══════════════════════════ */
+#events {
+  background: #FAF1E2;
+  padding: 80px 0 100px;
+}
+.events-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  max-width: 1100px;
+  margin: 0 auto 56px;
+  padding: 0 40px;
+}
+.events-title {
+  font-family: 'Canela', serif;
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 700;
+  color: #2050E7;
+  line-height: 1;
+  text-transform: lowercase;
+}
+.events-subtitle {
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #2050E7;
+  opacity: 0.5;
+  font-weight: 500;
+}
+.events-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+.event-card {
+  background: #fff;
+  border: 2px solid #2050E7;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.event-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 6px 6px 0 #2050E7;
+}
+.event-photo {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  display: block;
+}
+.event-photo-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #2050E7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: #FAF1E2;
+}
+.event-body {
+  padding: 20px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.event-date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFF08B;
+  border: 1.5px solid #2050E7;
+  padding: 5px 12px;
+  margin-bottom: 14px;
+  width: fit-content;
+}
+.event-date-day {
+  font-family: 'Canela', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2050E7;
+  line-height: 1;
+}
+.event-date-info { display: flex; flex-direction: column; }
+.event-date-monthyear {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2050E7;
+  line-height: 1.2;
+}
+.event-date-heure {
+  font-size: 0.65rem;
+  color: #2050E7;
+  opacity: 0.7;
+  letter-spacing: 0.06em;
+}
+.event-name {
+  font-family: 'Canela', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #2050E7;
+  line-height: 1.2;
+  margin-bottom: 8px;
+  text-transform: lowercase;
+}
+.event-desc {
+  font-size: 0.82rem;
+  color: #2050E7;
+  opacity: 0.7;
+  line-height: 1.55;
+  flex: 1;
+}
+.events-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #2050E7;
+  opacity: 0.4;
+  font-family: 'Canela', serif;
+  font-size: 1.4rem;
+}
+@media (max-width: 700px) {
+  #events { padding: 60px 0 80px; }
+  .events-header { flex-direction: column; gap: 8px; padding: 0 20px; margin-bottom: 36px; }
+  .events-grid { padding: 0 20px; grid-template-columns: 1fr; gap: 16px; }
+}
 </style>
 </head>
 <body>
@@ -1128,6 +1264,18 @@ footer {
 <!-- ============================
      CONTACT
 ============================ -->
+
+<!-- ============================
+     EVENTS
+============================ -->
+<section id="events">
+  <div class="events-header">
+    <h2 class="events-title">événements</h2>
+    <span class="events-subtitle">à venir</span>
+  </div>
+  <div class="events-grid" id="events-grid"></div>
+</section>
+
 <section id="contact">
   <div class="contact-inner">
     <div>
@@ -1333,6 +1481,48 @@ document.getElementById('cform').addEventListener('submit', e => {
   e.target.reset();
 });
 </script>
-<script src="/sassy-cms-loader.js"></script>
+<script src="/sassy-cms-loader.js">
+  /* ── Events ── */
+  (function() {
+    var MONTHS = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+    function renderEvents(events) {
+      var grid = document.getElementById('events-grid');
+      if (!grid) return;
+      var now = new Date(); now.setHours(0,0,0,0);
+      var futurs = events
+        .filter(function(e){ return new Date(e.date) >= now; })
+        .sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+      if (!futurs.length) {
+        grid.innerHTML = '<div class="events-empty">Prochains événements bientôt annoncés ✦</div>';
+        return;
+      }
+      grid.innerHTML = futurs.map(function(e) {
+        var d = new Date(e.date);
+        var day = d.getDate();
+        var month = MONTHS[d.getMonth()];
+        var year = d.getFullYear();
+        var photoEl = e.photo
+          ? '<img class="event-photo" src="'+e.photo+'" alt="'+e.titre+'" loading="lazy"/>'
+          : '<div class="event-photo-placeholder">✦</div>';
+        return '<article class="event-card">'
+          + photoEl
+          + '<div class="event-body">'
+          + '<div class="event-date-badge">'
+          + '<span class="event-date-day">'+day+'</span>'
+          + '<div class="event-date-info">'
+          + '<span class="event-date-monthyear">'+month+' '+year+'</span>'
+          + (e.heure ? '<span class="event-date-heure">'+e.heure+'</span>' : '')
+          + '</div></div>'
+          + '<h3 class="event-name">'+e.titre+'</h3>'
+          + (e.description ? '<p class="event-desc">'+e.description+'</p>' : '')
+          + '</div></article>';
+      }).join('');
+    }
+    fetch('/_data/events.json')
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(data){ renderEvents(Array.isArray(data) ? data : []); })
+      .catch(function(){ renderEvents([]); });
+  })();
+</script>
 </body>
 </html>
