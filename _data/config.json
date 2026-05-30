@@ -4,17 +4,47 @@
     "type": "restaurant",
     "slug": "bistrot-sassy"
   },
-
   "blocs": {
     "socle": {
-      "carte":  { "label": "La carte", "actif": true, "sections": ["carte"] },
-      "photos": { "label": "Photos",   "actif": true, "sections": ["hero", "galerie"] },
-      "infos":  { "label": "Infos",    "actif": true, "sections": ["horaires", "contact"] }
+      "carte": {
+        "label": "La carte",
+        "actif": true,
+        "sections": [
+          "carte"
+        ]
+      },
+      "photos": {
+        "label": "Photos",
+        "actif": true,
+        "sections": [
+          "hero",
+          "galerie"
+        ]
+      },
+      "infos": {
+        "label": "Infos",
+        "actif": true,
+        "sections": [
+          "horaires",
+          "contact"
+        ]
+      }
     },
-
     "optionnels": {
-      "events":      { "label": "Événements",  "actif": true, "sections": ["events"] },
-      "reservation": { "label": "Réservation", "actif": true, "sections": ["reservation"] }
+      "events": {
+        "label": "Événements",
+        "actif": false,
+        "sections": [
+          "events"
+        ]
+      },
+      "reservation": {
+        "label": "Réservation",
+        "actif": true,
+        "sections": [
+          "reservation"
+        ]
+      }
     }
   }
 }
