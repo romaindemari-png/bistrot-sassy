@@ -1193,6 +1193,13 @@
         <div class="card-desc">Téléphone et adresse</div>
       </div>
 
+      <div class="card" onclick="openEdit('config')" style="--c: var(--accent2)">
+        <div class="card-accent" style="background: var(--accent2)"></div>
+        <span class="card-icon">🧩</span>
+        <div class="card-title">Sections de mon site</div>
+        <div class="card-desc">Activez ou masquez des sections selon votre établissement</div>
+      </div>
+
       <div class="card card-wide" onclick="showScreen('screen-instagram')" style="background: linear-gradient(135deg, #1A1A2E, #2D1B4E)">
         <div style="font-size:36px">📱</div>
         <div class="card-wide-text">
@@ -1484,16 +1491,17 @@
 
   // Charger les données JSON de Sassy
   // ── Données Sassy chargées en mémoire ──
-  let sassyData = { general: null, horaires: null, carte: null };
+  let sassyData = { general: null, horaires: null, carte: null, config: null };
 
   async function loadSassyData() {
     try {
-      const [general, horaires, carte] = await Promise.all([
+      const [general, horaires, carte, config] = await Promise.all([
         fetch('/_data/general.json').then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/_data/horaires.json').then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch('/_data/carte.json').then(r => r.ok ? r.json() : null).catch(() => null)
+        fetch('/_data/carte.json').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/_data/config.json').then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
-      sassyData = { general, horaires, carte };
+      sassyData = { general, horaires, carte, config };
       console.log('[Admin] Données Sassy chargées ✓');
     } catch(e) {
       console.log('[Admin] Données JSON non disponibles');
@@ -1558,6 +1566,46 @@
         if (sections[0]) sections[0].innerHTML = `<div class="field-group-title">Entrées</div>${renderItems(carte.entrees, 'Entrée')}<button class="btn-add" onclick="showToast('➕ Entrée ajoutée')">+ Ajouter une entrée</button>`;
         if (sections[1]) sections[1].innerHTML = `<div class="field-group-title">Plats</div>${renderItems(carte.plats, 'Plat')}<button class="btn-add" onclick="showToast('➕ Plat ajouté')">+ Ajouter un plat</button>`;
         if (sections[2]) sections[2].innerHTML = `<div class="field-group-title">Desserts</div>${renderItems(carte.desserts, 'Dessert')}<button class="btn-add" onclick="showToast('➕ Dessert ajouté')">+ Ajouter un dessert</button>`;
+      }, 50);
+    }
+
+    if (section === 'config') {
+      setTimeout(() => {
+        const list = document.getElementById('blocs-list');
+        if (!list) return;
+        const config = sassyData.config;
+        // Garde-fou : config illisible → pas d'édition possible (on ne propose rien à écraser)
+        if (!config || !config.blocs) {
+          list.innerHTML = `<p style="font-size:13px; color:var(--muted)">Configuration indisponible — réessayez plus tard.</p>`;
+          const saveBtn = document.querySelector('#edit-body .btn-save');
+          if (saveBtn) saveBtn.style.display = 'none';
+          return;
+        }
+        const socle = config.blocs.socle || {};
+        const optionnels = config.blocs.optionnels || {};
+        // Socle : affiché mais VERROUILLÉ (toggle grisé, non cliquable)
+        const rowSocle = (key, b) => `
+          <div class="hours-row">
+            <span class="day-label">${b.label || key} 🔒</span>
+            <label class="toggle" style="opacity:0.4; pointer-events:none">
+              <input type="checkbox" checked disabled />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>`;
+        // Optionnels : vrai toggle on/off
+        const rowOpt = (key, b) => `
+          <div class="hours-row">
+            <span class="day-label">${b.label || key}</span>
+            <label class="toggle">
+              <input type="checkbox" data-bloc="${key}" ${b.actif !== false ? 'checked' : ''} />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>`;
+        list.innerHTML =
+          `<div class="field-group-title">Toujours affichées</div>` +
+          Object.entries(socle).map(([k, b]) => rowSocle(k, b)).join('') +
+          `<div class="field-group-title" style="margin-top:16px">Sections optionnelles</div>` +
+          Object.entries(optionnels).map(([k, b]) => rowOpt(k, b)).join('');
       }, 50);
     }
   }
@@ -1716,6 +1764,19 @@
         </div>
         <button class="btn-save" onclick="saveSection()">💾 Enregistrer les textes</button>
       `
+    },
+
+    config: {
+      title: '🧩 Sections de mon site',
+      html: `
+        <p style="font-size:13px; color:var(--muted); margin:0 0 16px; padding:0 4px">
+          Activez ou masquez des sections selon votre établissement.
+        </p>
+        <div class="field-group">
+          <div id="blocs-list"></div>
+        </div>
+        <button class="btn-save" onclick="saveSection()">💾 Enregistrer</button>
+      `
     }
   };
 
@@ -1828,6 +1889,21 @@
         };
       }
 
+      if (currentSection === 'config') {
+        // Garde-fou : ne jamais écraser un config qu'on n'a pas pu lire
+        const base = sassyData.config;
+        if (!base || !base.blocs || !base.blocs.optionnels) {
+          throw new Error('Configuration indisponible — sauvegarde annulée');
+        }
+        // Cloner le config COMPLET (commerce + socle intacts) ; ne changer que optionnels.*.actif
+        const next = JSON.parse(JSON.stringify(base));
+        document.querySelectorAll('#blocs-list input[data-bloc]').forEach(cb => {
+          const key = cb.getAttribute('data-bloc');
+          if (next.blocs.optionnels[key]) next.blocs.optionnels[key].actif = cb.checked;
+        });
+        data = next;
+      }
+
       // Appeler la Netlify Function save-data
       const res = await fetch('/.netlify/functions/save-data', {
         method: 'POST',
@@ -1845,6 +1921,7 @@
       if (currentSection === 'contact') sassyData.general = { ...sassyData.general, ...data };
       if (currentSection === 'horaires') sassyData.horaires = data;
       if (currentSection === 'menu') sassyData.carte = data;
+      if (currentSection === 'config') sassyData.config = data;
 
       showToast('✅ Modifications enregistrées !');
       setTimeout(() => closeEdit(), 1200);
