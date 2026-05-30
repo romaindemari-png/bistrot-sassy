@@ -37,8 +37,9 @@ exports.handler = async (event) => {
   }
 
   try {
-    const SITE_ID = process.env.NETLIFY_SITE_ID;
-    const gatewayBase = `https://api.netlify.com/api/v1/sites/${SITE_ID}/git/github`;
+    // Git Gateway est exposé sur l'origine du site (proxy local), PAS sur api.netlify.com.
+    // process.env.URL est injecté automatiquement par Netlify (URL principale du site).
+    const gatewayBase = `${process.env.URL}/.netlify/git/github`;
 
     // 1. Récupérer le fichier actuel (pour avoir son SHA)
     const getRes = await fetch(`${gatewayBase}/contents/${filePath}`, {
@@ -52,6 +53,11 @@ exports.handler = async (event) => {
     if (getRes.ok) {
       const current = await getRes.json();
       sha = current.sha;
+    } else if (getRes.status !== 404) {
+      // 404 = le fichier n'existe pas encore (création) → on continue sans sha.
+      // Tout autre statut = vraie erreur → on s'arrête avec un message lisible.
+      const detail = await getRes.text();
+      throw new Error(`Lecture du fichier échouée (HTTP ${getRes.status}) : ${detail}`);
     }
 
     // 2. Encoder le nouveau contenu en base64
@@ -75,8 +81,9 @@ exports.handler = async (event) => {
     });
 
     if (!putRes.ok) {
-      const err = await putRes.json();
-      throw new Error(err.message || 'Erreur écriture GitHub');
+      // Ne plus supposer du JSON : lire le corps en texte pour remonter la vraie erreur HTTP.
+      const detail = await putRes.text();
+      throw new Error(`Écriture GitHub échouée (HTTP ${putRes.status}) : ${detail}`);
     }
 
     return {
