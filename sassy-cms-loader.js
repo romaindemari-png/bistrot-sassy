@@ -97,7 +97,9 @@
     setAttrAll('cms-tel-link', 'href', `tel:${(general.telephone||'').replace(/\s/g,'')}`);
     setAttr('cms-email-link',  'href', `mailto:${general.email}`);
     if (general.whatsapp) {
-      setAttr('cms-whatsapp', 'href', `https://wa.me/${general.whatsapp}`);
+      // Numéro piloté par la donnée ; message pré-rempli conservé EN DUR (identique à l'existant)
+      const waText = '?text=Bonjour%2C+je+voudrais+réserver+une+table+au+Bistrot+Sassy';
+      setAttrAll('cms-whatsapp', 'href', `https://wa.me/${general.whatsapp}${waText}`);
     }
     if (general.adresse) {
       const iframe = document.getElementById('cms-maps-iframe');
