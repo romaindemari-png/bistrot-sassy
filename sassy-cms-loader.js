@@ -32,6 +32,18 @@
     if (el && value !== undefined) el.setAttribute(attr, value);
   }
 
+  /* Variantes par CLASSE : pilotent TOUS les éléments .className d'un coup
+     (pour un champ affiché à plusieurs endroits, ex. téléphone). */
+  function setTextAll(className, value) {
+    if (value === undefined) return;
+    document.querySelectorAll('.' + className).forEach(el => { el.textContent = value; });
+  }
+
+  function setAttrAll(className, attr, value) {
+    if (value === undefined) return;
+    document.querySelectorAll('.' + className).forEach(el => { el.setAttribute(attr, value); });
+  }
+
   function renderPlats(items) {
     if (!items || !items.length) return '';
     return items.map(p => `
@@ -79,10 +91,10 @@
     setText('cms-nom',         general.nom);
     setText('cms-accroche',    general.accroche);
     setText('cms-description', general.description);
-    setText('cms-telephone',   general.telephone);
+    setTextAll('cms-telephone', general.telephone);
     setText('cms-adresse',     general.adresse);
     setText('cms-email',       general.email);
-    setAttr('cms-tel-link',    'href', `tel:${(general.telephone||'').replace(/\s/g,'')}`);
+    setAttrAll('cms-tel-link', 'href', `tel:${(general.telephone||'').replace(/\s/g,'')}`);
     setAttr('cms-email-link',  'href', `mailto:${general.email}`);
     if (general.whatsapp) {
       setAttr('cms-whatsapp', 'href', `https://wa.me/${general.whatsapp}`);
