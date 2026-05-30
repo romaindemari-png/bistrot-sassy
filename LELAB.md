@@ -1,0 +1,139 @@
+# LeLab — Spécification produit
+
+> Mémoire produit du projet. À lire en priorité avant toute évolution.
+> Statut : fondation technique réparée et vérifiée en prod. Interface LeDash/LeLab+ à construire.
+
+---
+
+## VISION
+
+Agence de **sites vitrines clés en main pour les commerces de bouche** (restaurants, cafés, glaciers, bars, boulangeries…), développés via **Claude + GitHub + Netlify**.
+
+Deux produits :
+
+- **LeDash** — l'éditeur de site (offre d'entrée). Le client édite le contenu de son site et publie sur Instagram de façon restreinte. Couleur d'accent : **violet `#CAB4FF`**.
+- **LeLab+** — le studio Instagram premium. Création de contenu Insta avancée (thèmes, formats, IA, preview). Couleur d'accent : **jaune `#FFF28C`**.
+
+---
+
+## CHARTE GRAPHIQUE
+
+**Neutres**
+- Noir : `#0A0A0A`
+- Blanc : `#FFFFFF`
+- Gris fond (bg) : `#FAFAF8`
+- Gris carte (card) : `#F4F4F2`
+- Bordures : `#E8E8E6`
+- Texte gris : `#6B6B6B`
+
+**Accents**
+- Violet (LeDash) : `#CAB4FF`
+- Jaune (LeLab+) : `#FFF28C`
+
+**Typographie**
+- Titres : **Bricolage Grotesque**
+- Texte : **Inter**
+
+**Principes visuels** (inspiration Qonto)
+- Pavés noirs massifs + aplats de couleur pleine
+- Gros titres
+- Pictos dans des carrés arrondis
+- Beaucoup de blanc / d'espace
+
+**Règle technique impérative**
+- Toujours forcer `color-scheme: light` pour éviter le dark mode automatique des webviews.
+
+---
+
+## ARCHITECTURE TECHNIQUE
+
+*(état tel que réparé et vérifié en production)*
+
+- **Site statique** : un seul `index.html`, **sans build**. Netlify sert la racine telle quelle.
+- **Données** : `_data/*.json` — `general`, `horaires`, `carte`, `photos`, `events`.
+- **Injection** : `sassy-cms-loader.js` charge les JSON et les injecte dans le DOM par **ID** (ex. `cms-entrees`, `cms-desserts`, slider, galerie). Les événements sont rendus par un petit script inline qui lit `_data/events.json`.
+- **Admin** : `admin/index.html` (panneau **custom**, pas Decap) qui **POST** vers `netlify/functions/save-data.js`.
+- **Sauvegarde** : `save-data.js` écrit dans GitHub via le **proxy Git Gateway**.
+  - URL = `${process.env.URL}/.netlify/git/github` — **PAS** `api.netlify.com`.
+  - Authentification : le **token Netlify Identity** de l'utilisateur (Bearer), relayé à Git Gateway.
+  - Chaque sauvegarde = **commit GitHub = redéploiement Netlify**.
+- **Prérequis Netlify** : **Netlify Identity** et **Git Gateway** activés ; variable d'env **`NETLIFY_SITE_ID`** présente.
+- **Autre fonction** : `netlify/functions/publish-instagram.js` (publication post simple / carrousel via l'API Graph Instagram ; env `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_ACCOUNT_ID`).
+
+---
+
+## SYSTÈME DE BLOCS
+
+*(objectif produit — à implémenter progressivement, pas encore fait)*
+
+Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par client.
+
+**Socle** (toujours présent pour tout commerce de bouche)
+- **LA CARTE** — menu / parfums / boissons selon le type de commerce
+- **PHOTOS** — slider + galerie
+- **INFOS** — adresse, horaires, contact
+
+**Blocs optionnels** (on/off selon le client)
+- **ÉVÉNEMENTS**
+- À venir : **menu du jour**, **avis**, etc.
+
+**Sur-mesure**
+- La **charte** (couleurs / typo / ton) propre à chaque commerce.
+
+**Cible technique**
+- Un `_data/config.json` qui déclare le **type de commerce** et les **blocs activés**.
+- Le **site** ET l'**admin LeDash** lisent ce `config.json` pour afficher / masquer les sections.
+
+---
+
+## FRONTIÈRE LEDASH vs LELAB+
+
+**LeDash** (offre d'entrée)
+- Éditer le contenu du site.
+- Publier sur Instagram de façon **restreinte** : post simple uniquement, depuis la **carte** ou les **events**, avec légende générée par IA.
+- La publication restreinte passe par une **popup simple** : aperçu Insta + légende IA + bouton publier + **renvoi upsell vers LeLab+**. **Pas** de choix de thème ni de format.
+
+**LeLab+** (studio Insta complet)
+- Thèmes (dont certains **typo-only**, ex. « menu du jour »).
+- **3 formats** : post / story / carrousel.
+- IA + **preview live**.
+
+**Accès**
+- Un client **LeLab+** a accès aux deux via une **bascule**.
+- Un client **LeDash** voit LeLab+ **verrouillé** (upsell).
+
+### Studio LeLab+ — flux designé
+
+- **Étapes guidées** : **Thème → Contenu → Légende / IA → Publier**, avec une **preview Instagram live** (cadre téléphone réaliste) qui se met à jour en direct.
+- **Règle clé — thèmes adaptatifs** : le contenu de l'**étape 2 (Contenu)** change selon le **thème** choisi.
+  - Thèmes **« photo »** (ex. plat du jour, photo d'ambiance, événement) → **upload de photo** + texte + **3 formats** (post / story / carrousel).
+  - Thèmes **« typo-only »** (ex. menu du jour) → **PAS d'upload photo** : le client saisit seulement **titre + plats / prix**, et le visuel est **généré automatiquement dans la charte graphique du commerce** (couleurs / typo du client). **Formats limités** (post / portrait).
+- **Vocabulaire produit** : on dit **« thème »** — jamais « template » (jugé trop industriel).
+
+---
+
+## MAQUETTES DE RÉFÉRENCE
+
+*(prototypes HTML validés — ils décrivent le rendu cible à reproduire lors du dev ; les fichiers vivent **hors repo** pour l'instant, à intégrer progressivement)*
+
+1. **Dashboard d'accueil LeLab+** — jaune.
+2. **Éditeur de site LeDash** — violet, avec **popup de publication Insta restreinte**.
+3. **Studio Instagram LeLab+**.
+
+---
+
+## DÉPLOIEMENT
+
+- Repo GitHub → **Netlify auto-publish depuis `main`**.
+- Le vrai site Sassy : **gorgeous-heliotrope-e2e59d.netlify.app**.
+
+---
+
+## MÉTHODE NOUVEAU CLIENT
+
+*(intention, à affiner)*
+
+- Partir de **ce repo** comme base.
+- Remplacer `_data/*.json` + la charte + `config.json`.
+- Brancher **GitHub + Netlify + Git Gateway**.
+- Le **template réutilisable** sera extrait plus tard, une fois LeLab fini.
