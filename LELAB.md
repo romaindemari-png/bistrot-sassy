@@ -1,7 +1,7 @@
 # LeLab — Spécification produit
 
 > Mémoire produit du projet. À lire en priorité avant toute évolution.
-> Statut : fondation technique réparée et vérifiée en prod. Interface LeDash/LeLab+ à construire.
+> Statut : fondation réparée et vérifiée en prod + **système de blocs complet et fonctionnel** (config + site + admin) + **consolidation CMS entamée** (telephone & whatsapp pilotés par la donnée). Reste à faire : **interface LeDash visuelle (redesign, charte violette)**.
 
 ---
 
@@ -64,7 +64,7 @@ Deux produits :
 
 ## SYSTÈME DE BLOCS
 
-*(objectif produit — à implémenter progressivement, pas encore fait)*
+*(✅ FAIT et déployé — validé de bout en bout en prod)*
 
 Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par client.
 
@@ -80,9 +80,27 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 **Sur-mesure**
 - La **charte** (couleurs / typo / ton) propre à chaque commerce.
 
-**Cible technique**
-- Un `_data/config.json` qui déclare le **type de commerce** et les **blocs activés**.
-- Le **site** ET l'**admin LeDash** lisent ce `config.json` pour afficher / masquer les sections.
+**Réalisé (déployé, validé de bout en bout en prod)**
+- ✅ `_data/config.json` créé — **socle** : carte / photos / infos ; **optionnels** : events, reservation.
+- ✅ Le **site** (`sassy-cms-loader.js`) lit `config.json` et **masque les blocs optionnels désactivés** — règle **fallback = tout afficher** (config absent / illisible) testée.
+- ✅ L'**admin LeDash** expose des **interrupteurs** pour activer / désactiver les blocs optionnels (**socle verrouillé**, non désactivable) et écrit `config.json` via **save-data**.
+
+---
+
+## CONSOLIDATION CMS
+
+*(brancher les champs « en dur » de `index.html` pour qu'ils soient pilotés par `_data/*.json` et éditables via l'admin)*
+
+- **Injection par classe** : `sassy-cms-loader.js` dispose, en plus des helpers par **id** (`setText` / `setAttr`), de helpers par **classe** (`setTextAll` / `setAttrAll`). Ils pilotent **tous** les éléments `.cms-x` d'un coup → un champ affiché à plusieurs endroits se met à jour partout en une fois.
+- **✅ Fait (validé en prod)** :
+  - **`telephone`** — pilote les **3 emplacements** (CTA réservation, bloc adresse, bloc contact) via `.cms-telephone` / `.cms-tel-link`.
+  - **`whatsapp`** — numéro du FAB piloté par la donnée via `.cms-whatsapp` ; **message pré-rempli `?text=…` conservé en dur** dans le loader (rendu et comportement identiques). `id="wa"` conservé (utilisé par le CSS).
+- **🗓️ Reportés au redesign** (touchent à l'affichage) :
+  - **`adresse`** — affichée sur 2 lignes (`<br/>`), JSON sur 1 ligne.
+  - **`horaires`** — JSON **par jour** vs affichage **condensé** (`lun–ven…`), structures incompatibles.
+  - **`nom`** — tissé dans des titres / phrases, pas de cible d'affichage autonome.
+  - **`description` / `email` / `horaires.note`** — présents en JSON mais **affichés nulle part** → décision design (créer un emplacement).
+- **⚠️ Chaînon à compléter un jour** : `instagram` / `facebook` — l'admin les enregistre, mais ils ne sont ni dans `general.json` ni affichés sur le site.
 
 ---
 
@@ -119,6 +137,13 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 1. **Dashboard d'accueil LeLab+** — jaune.
 2. **Éditeur de site LeDash** — violet, avec **popup de publication Insta restreinte**.
 3. **Studio Instagram LeLab+**.
+
+---
+
+## PROCHAINE ÉTAPE
+
+- **Redesign visuel de LeDash** à partir des **maquettes de référence** (charte **violette** `#CAB4FF`, principes Qonto).
+- Ce redesign sera **aussi l'occasion de traiter les champs CMS reportés** (`adresse`, `horaires`, `nom`, et éventuellement `description` / `email` / `horaires.note`), car ils touchent à l'**affichage** — donc à régler en même temps que la refonte des sections concernées.
 
 ---
 
