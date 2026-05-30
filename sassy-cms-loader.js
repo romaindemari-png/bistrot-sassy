@@ -46,6 +46,32 @@
   }
 
   /* ══════════════════════════════════════════════════
+     0. BLOCS / VISIBILITÉ
+     Lit _data/config.json et masque les sections des blocs
+     OPTIONNELS désactivés (actif === false). Le socle, ainsi
+     que about et quote, ne sont JAMAIS masqués.
+     Fallback par construction : config absent / vide / illisible
+     ⇒ tout reste affiché. On ne masque QUE ce qui est
+     explicitement désactivé dans un config valide.
+     ══════════════════════════════════════════════════ */
+  const config = await loadJSON('/_data/config.json');
+  try {
+    const optionnels = config && config.blocs && config.blocs.optionnels;
+    if (optionnels && typeof optionnels === 'object') {
+      Object.values(optionnels).forEach(bloc => {
+        if (bloc && bloc.actif === false && Array.isArray(bloc.sections)) {
+          bloc.sections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+          });
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[Sassy CMS] config illisible — tout reste affiché', e);
+  }
+
+  /* ══════════════════════════════════════════════════
      1. GÉNÉRAL
      ══════════════════════════════════════════════════ */
   const general = await loadJSON('/_data/general.json');
