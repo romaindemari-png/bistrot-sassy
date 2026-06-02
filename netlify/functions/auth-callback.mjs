@@ -59,7 +59,7 @@ export const handler = async (event) => {
     return page(200, 'Instagram connecté ✅',
       `Le compte lié à la Page « ${page0.name} » est prêt. Tu peux maintenant publier depuis l’espace.`);
   } catch (err) {
-    console.error('instagram-auth-callback:', err);
+    console.error('auth-callback:', err);
     return page(500, 'Erreur de connexion', err.message);
   }
 };
