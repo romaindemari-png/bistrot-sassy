@@ -29,7 +29,8 @@ exports.handler = async (event) => {
     horaires: '_data/horaires.json',
     menu:     '_data/carte.json',
     photos:   '_data/photos.json',
-    config:   '_data/config.json'
+    config:   '_data/config.json',
+    events:   '_data/events.json'
   };
 
   const filePath = fileMap[section];
