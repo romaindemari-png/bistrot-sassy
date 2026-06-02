@@ -196,6 +196,29 @@
             <img src="${item.image}" alt="${item.legende || 'Bistrot Sassy'}">
           </div>
         `).join('');
+
+        // Carousel si plus de 4 photos (sinon grille classique)
+        const inner = grid.closest('.galerie-inner');
+        const isCarousel = photos.galerie.length > 4;
+        if (inner) inner.classList.toggle('has-carousel', isCarousel);
+
+        if (inner && isCarousel) {
+          const nav  = inner.querySelector('.galerie-nav');
+          const prev = nav && nav.querySelector('[data-dir="prev"]');
+          const next = nav && nav.querySelector('[data-dir="next"]');
+          const step = () => {
+            const cell = grid.querySelector('.galerie-cell');
+            return cell ? cell.getBoundingClientRect().width + 12 : grid.clientWidth * 0.8;
+          };
+          const update = () => {
+            if (prev) prev.disabled = grid.scrollLeft <= 4;
+            if (next) next.disabled = grid.scrollLeft + grid.clientWidth >= grid.scrollWidth - 4;
+          };
+          if (prev) prev.onclick = () => grid.scrollBy({ left: -step(), behavior: 'smooth' });
+          if (next) next.onclick = () => grid.scrollBy({ left:  step(), behavior: 'smooth' });
+          grid.addEventListener('scroll', update, { passive: true });
+          update();
+        }
       }
     }
   }
