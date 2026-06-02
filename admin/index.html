@@ -1293,6 +1293,7 @@ const editScreens = {
         <div id="photos-galerie"><!-- injecté par prefillSection('photos') --></div>
         <button class="btn-add" disabled style="opacity:.5;cursor:not-allowed">+ Ajouter une photo (bientôt)</button>
       </div>
+      <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="onPhotoPicked(this)">
     `
   },
   contact: {
@@ -1421,13 +1422,13 @@ function prefillSection(section){
         slotS.innerHTML = [0, 1, 2].map(i => {
           const item = slider[i];
           return `
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <div data-slot="${i}" style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
               <div style="width:80px;height:80px;border-radius:10px;overflow:hidden;background:var(--gris-card);flex-shrink:0;display:flex;align-items:center;justify-content:center">${thumb(item && item.image)}</div>
               <div style="flex:1;min-width:0">
                 <div style="font-size:13px;font-weight:600">Photo ${i + 1}</div>
                 <div style="font-size:11.5px;color:var(--gris-txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(item && item.alt) || '—'}</div>
               </div>
-              <button class="btn-add" disabled style="width:auto;opacity:.5;cursor:not-allowed">Remplacer</button>
+              <button class="btn-add" style="width:auto" onclick="pickSliderPhoto(${i})">Remplacer</button>
             </div>`;
         }).join('');
       }
@@ -1587,6 +1588,112 @@ async function saveBlocs(){
   } finally {
     if (btn){ btn.textContent = '💾 Enregistrer les sections'; btn.disabled = false; }
   }
+}
+
+/* ════ PHOTOS — upload slider (étape 3) ════ */
+let photoSlot = null;   // index du slot slider en cours de remplacement
+
+// File image → base64 JPEG redimensionné (max 1600px, qualité 0.82)
+function fileToJpegBase64(file, maxDim = 1600, quality = 0.82){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim){
+          if (width >= height){ height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]); // base64 sans préfixe
+      };
+      img.onerror = () => reject(new Error('Image illisible'));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('Lecture du fichier échouée'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// Extrait la clé Blob d'une URL serve-image (sinon null → image legacy non supprimée)
+function blobKeyFromUrl(url){
+  const m = typeof url === 'string' && url.match(/serve-image\?key=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Clic « Remplacer » → ouvre le sélecteur de fichier pour ce slot
+function pickSliderPhoto(index){
+  photoSlot = index;
+  const input = document.getElementById('photo-file-input');
+  if (input){ input.value = ''; input.click(); }
+}
+
+// Fichier choisi → conversion + upload + auto-save
+async function onPhotoPicked(input){
+  const file = input.files && input.files[0];
+  if (!file || photoSlot === null) return;
+  if (!file.type.startsWith('image/')){ showToast('⚠️ Choisis une image'); return; }
+  if (file.size > 20 * 1024 * 1024){ showToast('⚠️ Image trop lourde (max 20 Mo)'); return; }
+
+  const index = photoSlot;
+  const btn = document.querySelector(`#photos-slider [data-slot="${index}"] .btn-add`);
+  if (btn){ btn.disabled = true; btn.textContent = '⏳ Envoi…'; }
+  showToast('🖼️ Préparation de la photo…');
+
+  try {
+    const dataBase64 = await fileToJpegBase64(file);
+    const user = netlifyIdentity.currentUser();
+    if (!user) throw new Error('Non connecté');
+    const token = await user.jwt();
+
+    const current = (sassyData.photos && sassyData.photos.slider && sassyData.photos.slider[index]) || {};
+    const oldKey = blobKeyFromUrl(current.image);
+
+    const res = await fetch('/.netlify/functions/upload-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ target: 'slider', dataBase64, oldKey })
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Upload échoué');
+
+    // maj du modèle en mémoire
+    if (!sassyData.photos) sassyData.photos = { slider: [], galerie: [] };
+    if (!sassyData.photos.slider) sassyData.photos.slider = [];
+    sassyData.photos.slider[index] = { image: result.url, alt: current.alt || `Bistrot Sassy ambiance ${index + 1}` };
+
+    prefillSection('photos');   // vignette mise à jour immédiatement
+    await savePhotos();         // auto-save photos.json
+    showToast('✅ Photo remplacée');
+  } catch (err){
+    console.error('upload slider:', err);
+    showToast('❌ ' + err.message);
+    if (btn){ btn.disabled = false; btn.textContent = 'Remplacer'; }
+  } finally {
+    photoSlot = null;
+  }
+}
+
+// Écrit photos.json via save-data (auto-save)
+async function savePhotos(){
+  const user = netlifyIdentity.currentUser();
+  if (!user) throw new Error('Non connecté');
+  const token = await user.jwt();
+  const data = {
+    slider:  (sassyData.photos && sassyData.photos.slider)  || [],
+    galerie: (sassyData.photos && sassyData.photos.galerie) || []
+  };
+  const res = await fetch('/.netlify/functions/save-data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ section: 'photos', data })
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || 'Sauvegarde échouée');
+  sassyData.photos = data;
 }
 
 renderStudio();
