@@ -167,9 +167,10 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ## PROCHAINE ÉTAPE
 
-- **Redesign visuel de LeLab** à partir des **maquettes de référence** (charte **violette** `#CAB4FF`, principes Qonto).
-- Ce redesign sera **aussi l'occasion de traiter les champs CMS reportés** (`adresse`, `horaires`, `nom`, et éventuellement `description` / `email` / `horaires.note`), car ils touchent à l'**affichage** — donc à régler en même temps que la refonte des sections concernées.
-- **Note** : le nom « LeDash » est abandonné. L'interface admin s'appelle désormais simplement « LeLab » (l'admin du produit LeLab).
+- **Éditeur photos LeLab** : branche `feature-photos-upload` en cours (PR #3). Infra Blobs créée (`upload-image.mjs`, `serve-image.mjs`, `package.json`). Prochaines étapes : (2) afficher les photos actuelles en lecture dans l'admin, (3) upload réel slider + auto-save, (4) galerie ajout/suppression, (5) garde-fous + finition.
+- **Redesign visuel LeLab** (charte violette) : reporté après photos.
+- **LeLab+** : tester le déverrouillage avec un vrai client (changer `config.plan` à `lelab_plus`).
+- **Éditeur events** : sortir du placeholder.
 
 ---
 
