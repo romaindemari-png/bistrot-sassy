@@ -1032,17 +1032,18 @@ function boot(user){
 }
 
 /* ── Données Sassy chargées en mémoire ── */
-let sassyData = { general: null, horaires: null, carte: null, config: null };
+let sassyData = { general: null, horaires: null, carte: null, config: null, photos: null };
 
 async function loadSassyData(){
   try {
-    const [general, horaires, carte, config] = await Promise.all([
+    const [general, horaires, carte, config, photos] = await Promise.all([
       fetch('/_data/general.json').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/_data/horaires.json').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/_data/carte.json').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/_data/config.json').then(r => r.ok ? r.json() : null).catch(() => null)
+      fetch('/_data/config.json').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/_data/photos.json').then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
-    sassyData = { general, horaires, carte, config };
+    sassyData = { general, horaires, carte, config, photos };
     console.log('[Admin] Données Sassy chargées ✓');
   } catch(e){
     console.log('[Admin] Données JSON non disponibles');
@@ -1284,25 +1285,14 @@ const editScreens = {
     title: '📸 Photos',
     html: `
       <div class="field-group">
-        <div class="field-group-title">Photo principale (Hero)</div>
-        <div class="photo-upload" onclick="showToast('📷 Ouvre ta galerie photo')">
-          <div class="photo-upload-icon">🌅</div>
-          <div class="photo-upload-text">Appuie pour changer la photo</div>
-        </div>
+        <div class="field-group-title">Slider (3 photos)</div>
+        <div id="photos-slider"><!-- injecté par prefillSection('photos') --></div>
       </div>
       <div class="field-group">
-        <div class="field-group-title">Galerie (3 photos)</div>
-        <div class="photo-upload" style="aspect-ratio:4/3" onclick="showToast('📷 Photo 1')">
-          <div class="photo-upload-icon">🍽️</div><div class="photo-upload-text">Photo ambiance 1</div>
-        </div>
-        <div class="photo-upload" style="aspect-ratio:4/3" onclick="showToast('📷 Photo 2')">
-          <div class="photo-upload-icon">🥂</div><div class="photo-upload-text">Photo ambiance 2</div>
-        </div>
-        <div class="photo-upload" style="aspect-ratio:4/3" onclick="showToast('📷 Photo 3')">
-          <div class="photo-upload-icon">🌿</div><div class="photo-upload-text">Photo ambiance 3</div>
-        </div>
+        <div class="field-group-title">Galerie (max 6 photos)</div>
+        <div id="photos-galerie"><!-- injecté par prefillSection('photos') --></div>
+        <button class="btn-add" disabled style="opacity:.5;cursor:not-allowed">+ Ajouter une photo (bientôt)</button>
       </div>
-      <button class="btn-save" onclick="showToast('📸 Gestion des photos bientôt disponible')">💾 Enregistrer les photos</button>
     `
   },
   contact: {
@@ -1412,6 +1402,47 @@ function prefillSection(section){
       if (sections[0]) sections[0].innerHTML = `<div class="field-group-title">Entrées</div>${renderItems(carte.entrees, 'Entrée')}<button class="btn-add" onclick="showToast('➕ Entrée ajoutée')">+ Ajouter une entrée</button>`;
       if (sections[1]) sections[1].innerHTML = `<div class="field-group-title">Plats</div>${renderItems(carte.plats, 'Plat')}<button class="btn-add" onclick="showToast('➕ Plat ajouté')">+ Ajouter un plat</button>`;
       if (sections[2]) sections[2].innerHTML = `<div class="field-group-title">Desserts</div>${renderItems(carte.desserts, 'Dessert')}<button class="btn-add" onclick="showToast('➕ Dessert ajouté')">+ Ajouter un dessert</button>`;
+    }, 50);
+  }
+
+  if (section === 'photos'){
+    setTimeout(() => {
+      const photos  = sassyData.photos || {};
+      const slider  = photos.slider  || [];
+      const galerie = photos.galerie || [];
+
+      const thumb = (src) => src
+        ? `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
+        : `<div class="photo-upload-icon">🖼️</div>`;
+
+      // Slider : 3 slots fixes (remplacement désactivé pour l'instant)
+      const slotS = document.getElementById('photos-slider');
+      if (slotS){
+        slotS.innerHTML = [0, 1, 2].map(i => {
+          const item = slider[i];
+          return `
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+              <div style="width:80px;height:80px;border-radius:10px;overflow:hidden;background:var(--gris-card);flex-shrink:0;display:flex;align-items:center;justify-content:center">${thumb(item && item.image)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600">Photo ${i + 1}</div>
+                <div style="font-size:11.5px;color:var(--gris-txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(item && item.alt) || '—'}</div>
+              </div>
+              <button class="btn-add" disabled style="width:auto;opacity:.5;cursor:not-allowed">Remplacer</button>
+            </div>`;
+        }).join('');
+      }
+
+      // Galerie : vignettes actuelles
+      const slotG = document.getElementById('photos-galerie');
+      if (slotG){
+        slotG.innerHTML = galerie.length
+          ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">${
+              galerie.map(item => `
+                <div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--gris-card);display:flex;align-items:center;justify-content:center">${thumb(item && item.image)}</div>
+              `).join('')
+            }</div>`
+          : `<p style="font-size:12.5px;color:var(--gris-txt)">Aucune photo dans la galerie.</p>`;
+      }
     }, 50);
   }
 }
