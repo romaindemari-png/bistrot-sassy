@@ -170,7 +170,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - **Éditeur photos LeLab** : ✅ **TERMINÉ** (étapes 1-5, mergé dans `main`). (1) Infra Blobs (`upload-image.mjs`, `serve-image.mjs`, `package.json` ; Blobs en mode manuel `SITE_ID` + `NETLIFY_API_TOKEN`). (2) Affichage des photos actuelles. (3) Upload slider (canvas JPEG + Blobs + auto-save) + fix `object-fit:cover` slider. (4) Galerie : ajout (max 6) / suppression + delete Blob. (5) Garde-fous : verrou anti-upload concurrent (`isUploading`), validation `createImageBitmap` (rejet non-image), cohérence Blob/JSON (rollback du blob orphelin si save échoue ; suppression de l'ancienne image côté client après save), magic bytes serveur (JPEG/PNG/WebP). **Bonus site** : carousel galerie (`index.html`/`sassy-cms-loader.js`) — grille si ≤4, carousel horizontal si >4 (flèches desktop + scroll tactile mobile, scroll-snap).
 - **Redesign visuel LeLab** (charte violette) : reporté après photos.
 - **LeLab+** : tester le déverrouillage avec un vrai client (changer `config.plan` à `lelab_plus`).
-- **Éditeur events** : sortir du placeholder.
+- **Éditeur events** : ✅ **FAIT** — éditeur dans l'admin (titre, date, heure, description ; ajout/suppression, max 5 ; save via `saveSection` section `events` → `_data/events.json`). Sans photo. Le site rend la liste via le script inline (`#events-grid`, filtre dates passées).
 
 ---
 
