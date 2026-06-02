@@ -39,7 +39,11 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'JSON invalide' }) };
   }
 
-  const store = getStore('photos');
+  const store = getStore({
+    name: 'photos',
+    siteID: process.env.SITE_ID,
+    token: process.env.NETLIFY_API_TOKEN
+  });
 
   try {
     // — Suppression seule —

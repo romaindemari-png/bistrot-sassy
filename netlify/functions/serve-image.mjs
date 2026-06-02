@@ -14,7 +14,11 @@ export const handler = async (event) => {
   }
 
   try {
-    const store = getStore('photos');
+    const store = getStore({
+      name: 'photos',
+      siteID: process.env.SITE_ID,
+      token: process.env.NETLIFY_API_TOKEN
+    });
     const result = await store.getWithMetadata(key, { type: 'arrayBuffer' });
     if (!result || !result.data) {
       return { statusCode: 404, body: 'Image introuvable' };
