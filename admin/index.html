@@ -10,8 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
-  netlifyIdentity.init({
-    APIUrl: 'https://gorgeous-heliotrope-e2e59d.netlify.app/.netlify/identity'
+  document.addEventListener('DOMContentLoaded', function() {
+    netlifyIdentity.init({
+      APIUrl: 'https://gorgeous-heliotrope-e2e59d.netlify.app/.netlify/identity'
+    });
   });
 </script>
 <style>
