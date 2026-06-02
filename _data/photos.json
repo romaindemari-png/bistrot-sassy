@@ -9,7 +9,7 @@
       "alt": "Bistrot Sassy ambiance 2"
     },
     {
-      "image": "/images/uploads/hero3.png",
+      "image": "/.netlify/functions/serve-image?key=photos%2Fslider%2F1780432476592-e65t78.jpg",
       "alt": "Bistrot Sassy ambiance 3"
     }
   ],
