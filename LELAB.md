@@ -173,6 +173,12 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ---
 
+## TODO
+
+- **Correctif éditeur horaires admin** : normaliser le format `HHhMM – HHhMM` à la saisie, gérer le cas `ouvert:true` sans heures saisies.
+
+---
+
 ## DÉPLOIEMENT
 
 - Repo GitHub → **Netlify auto-publish depuis `main`**.
