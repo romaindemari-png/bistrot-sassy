@@ -44,26 +44,50 @@ export const handler = async (event) => {
     const perms = await (await fetch(`${GRAPH}/me/permissions?` + new URLSearchParams({ access_token: userToken }))).json();
     console.log('me/permissions:', JSON.stringify(perms));
 
-    // 3) Pages du user (avec page access tokens) + compte IG lié
-    const pages = await (await fetch(`${GRAPH}/me/accounts?` + new URLSearchParams({
-      fields: 'id,name,access_token,tasks,instagram_business_account', access_token: userToken
+    // 3) Récupérer les Pages — via les Business Portfolios (les Pages d'un Business
+    //    n'apparaissent PAS dans /me/accounts), avec fallback /me/accounts.
+    let candidates = [];
+
+    // 3a) Business portfolios du user → owned_pages
+    const biz = await (await fetch(`${GRAPH}/me/businesses?` + new URLSearchParams({
+      fields: 'id,name', access_token: userToken
     }))).json();
-    // Log diagnostic — tokens masqués (ne jamais logger un access_token)
-    console.log('me/accounts:', JSON.stringify({
-      ...pages,
-      data: (pages.data || []).map(p => ({
-        id: p.id, name: p.name, has_token: !!p.access_token, tasks: p.tasks || null,
-        instagram_business_account: p.instagram_business_account || null
-      }))
-    }));
+    console.log('me/businesses:', JSON.stringify(biz));
+    for (const b of (biz.data || [])) {
+      const owned = await (await fetch(`${GRAPH}/${b.id}/owned_pages?` + new URLSearchParams({
+        fields: 'id,name,access_token,instagram_business_account', access_token: userToken
+      }))).json();
+      console.log(`business ${b.id} (${b.name}) owned_pages:`, JSON.stringify({
+        ...owned,
+        data: (owned.data || []).map(p => ({
+          id: p.id, name: p.name, has_token: !!p.access_token,
+          instagram_business_account: p.instagram_business_account || null
+        }))
+      }));
+      candidates.push(...(owned.data || []));
+    }
 
-    let page0 = (pages.data || []).find(p => p.instagram_business_account?.id);
+    // 3b) Fallback : Pages gérées directement (hors Business)
+    if (!candidates.length) {
+      const pages = await (await fetch(`${GRAPH}/me/accounts?` + new URLSearchParams({
+        fields: 'id,name,access_token,tasks,instagram_business_account', access_token: userToken
+      }))).json();
+      console.log('me/accounts:', JSON.stringify({
+        ...pages,
+        data: (pages.data || []).map(p => ({
+          id: p.id, name: p.name, has_token: !!p.access_token,
+          instagram_business_account: p.instagram_business_account || null
+        }))
+      }));
+      candidates = pages.data || [];
+    }
 
-    // Si le champ groupé ne renvoie rien : interroger chaque Page directement (diagnostic + fallback)
+    // Sélection : 1ère Page liée à un compte Instagram (fallback requête directe par Page)
+    let page0 = candidates.find(p => p.instagram_business_account?.id);
     if (!page0) {
-      for (const p of (pages.data || [])) {
+      for (const p of candidates) {
         const ig = await (await fetch(`${GRAPH}/${p.id}?` + new URLSearchParams({
-          fields: 'instagram_business_account', access_token: p.access_token
+          fields: 'instagram_business_account', access_token: p.access_token || userToken
         }))).json();
         console.log(`page ${p.id} (${p.name}) → instagram_business_account:`, JSON.stringify(ig));
         if (ig.instagram_business_account?.id) {
@@ -71,6 +95,15 @@ export const handler = async (event) => {
           break;
         }
       }
+    }
+
+    // Sécurité : garantir un page access token (parfois absent d'owned_pages)
+    if (page0 && !page0.access_token) {
+      const t = await (await fetch(`${GRAPH}/${page0.id}?` + new URLSearchParams({
+        fields: 'access_token', access_token: userToken
+      }))).json();
+      if (t.access_token) page0.access_token = t.access_token;
+      console.log(`page ${page0.id} token récupéré:`, !!t.access_token);
     }
 
     if (!page0) return page(400, 'Aucun compte Instagram',
