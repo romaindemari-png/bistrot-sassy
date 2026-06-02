@@ -1291,7 +1291,7 @@ const editScreens = {
       <div class="field-group">
         <div class="field-group-title">Galerie (max 6 photos)</div>
         <div id="photos-galerie"><!-- injecté par prefillSection('photos') --></div>
-        <button class="btn-add" disabled style="opacity:.5;cursor:not-allowed">+ Ajouter une photo (bientôt)</button>
+        <button class="btn-add" id="btn-add-galerie" onclick="pickGaleriePhoto()">+ Ajouter une photo</button>
       </div>
       <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="onPhotoPicked(this)">
     `
@@ -1438,11 +1438,23 @@ function prefillSection(section){
       if (slotG){
         slotG.innerHTML = galerie.length
           ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">${
-              galerie.map(item => `
-                <div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--gris-card);display:flex;align-items:center;justify-content:center">${thumb(item && item.image)}</div>
+              galerie.map((item, i) => `
+                <div style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--gris-card);display:flex;align-items:center;justify-content:center">
+                  ${thumb(item && item.image)}
+                  <button onclick="deleteGaleriePhoto(${i})" title="Supprimer" style="position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:7px;background:rgba(10,10,10,.65);color:#fff;font-size:13px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+                </div>
               `).join('')
             }</div>`
           : `<p style="font-size:12.5px;color:var(--gris-txt)">Aucune photo dans la galerie.</p>`;
+      }
+      // état du bouton « + Ajouter » (max 6)
+      const addBtn = document.getElementById('btn-add-galerie');
+      if (addBtn){
+        const full = galerie.length >= 6;
+        addBtn.disabled = full;
+        addBtn.style.opacity = full ? '.5' : '';
+        addBtn.style.cursor  = full ? 'not-allowed' : '';
+        addBtn.textContent   = full ? 'Galerie pleine (6/6)' : `+ Ajouter une photo (${galerie.length}/6)`;
       }
     }, 50);
   }
@@ -1591,7 +1603,7 @@ async function saveBlocs(){
 }
 
 /* ════ PHOTOS — upload slider (étape 3) ════ */
-let photoSlot = null;   // index du slot slider en cours de remplacement
+let photoAction = null;   // { type:'slider', index } | { type:'galerie' }
 
 // File image → base64 JPEG redimensionné (max 1600px, qualité 0.82)
 function fileToJpegBase64(file, maxDim = 1600, quality = 0.82){
@@ -1624,22 +1636,35 @@ function blobKeyFromUrl(url){
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-// Clic « Remplacer » → ouvre le sélecteur de fichier pour ce slot
-function pickSliderPhoto(index){
-  photoSlot = index;
+// Ouvre le sélecteur de fichier
+function triggerPhotoInput(){
   const input = document.getElementById('photo-file-input');
   if (input){ input.value = ''; input.click(); }
 }
+// Clic « Remplacer » (slider)
+function pickSliderPhoto(index){
+  photoAction = { type: 'slider', index };
+  triggerPhotoInput();
+}
+// Clic « + Ajouter » (galerie)
+function pickGaleriePhoto(){
+  const galerie = (sassyData.photos && sassyData.photos.galerie) || [];
+  if (galerie.length >= 6){ showToast('⚠️ Galerie pleine (6 max)'); return; }
+  photoAction = { type: 'galerie' };
+  triggerPhotoInput();
+}
 
-// Fichier choisi → conversion + upload + auto-save
+// Fichier choisi → conversion + upload (slider ou galerie) + auto-save
 async function onPhotoPicked(input){
   const file = input.files && input.files[0];
-  if (!file || photoSlot === null) return;
+  if (!file || !photoAction) return;
   if (!file.type.startsWith('image/')){ showToast('⚠️ Choisis une image'); return; }
   if (file.size > 20 * 1024 * 1024){ showToast('⚠️ Image trop lourde (max 20 Mo)'); return; }
 
-  const index = photoSlot;
-  const btn = document.querySelector(`#photos-slider [data-slot="${index}"] .btn-add`);
+  const action = photoAction;
+  const btn = action.type === 'slider'
+    ? document.querySelector(`#photos-slider [data-slot="${action.index}"] .btn-add`)
+    : document.getElementById('btn-add-galerie');
   if (btn){ btn.disabled = true; btn.textContent = '⏳ Envoi…'; }
   showToast('🖼️ Préparation de la photo…');
 
@@ -1649,31 +1674,72 @@ async function onPhotoPicked(input){
     if (!user) throw new Error('Non connecté');
     const token = await user.jwt();
 
-    const current = (sassyData.photos && sassyData.photos.slider && sassyData.photos.slider[index]) || {};
-    const oldKey = blobKeyFromUrl(current.image);
+    if (!sassyData.photos) sassyData.photos = { slider: [], galerie: [] };
+    if (!sassyData.photos.slider)  sassyData.photos.slider  = [];
+    if (!sassyData.photos.galerie) sassyData.photos.galerie = [];
+
+    let oldKey = null;
+    if (action.type === 'slider'){
+      oldKey = blobKeyFromUrl((sassyData.photos.slider[action.index] || {}).image);
+    }
 
     const res = await fetch('/.netlify/functions/upload-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ target: 'slider', dataBase64, oldKey })
+      body: JSON.stringify({ target: action.type, dataBase64, oldKey })
     });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Upload échoué');
 
-    // maj du modèle en mémoire
-    if (!sassyData.photos) sassyData.photos = { slider: [], galerie: [] };
-    if (!sassyData.photos.slider) sassyData.photos.slider = [];
-    sassyData.photos.slider[index] = { image: result.url, alt: current.alt || `Bistrot Sassy ambiance ${index + 1}` };
+    if (action.type === 'slider'){
+      const current = sassyData.photos.slider[action.index] || {};
+      sassyData.photos.slider[action.index] = { image: result.url, alt: current.alt || `Bistrot Sassy ambiance ${action.index + 1}` };
+    } else {
+      sassyData.photos.galerie.push({ image: result.url, legende: '' });
+    }
 
-    prefillSection('photos');   // vignette mise à jour immédiatement
+    prefillSection('photos');   // vignettes mises à jour immédiatement
     await savePhotos();         // auto-save photos.json
-    showToast('✅ Photo remplacée');
+    showToast('✅ Photo enregistrée');
   } catch (err){
-    console.error('upload slider:', err);
+    console.error('upload photo:', err);
     showToast('❌ ' + err.message);
-    if (btn){ btn.disabled = false; btn.textContent = 'Remplacer'; }
+    prefillSection('photos');   // restaure l'état des boutons
   } finally {
-    photoSlot = null;
+    photoAction = null;
+  }
+}
+
+// Supprime une photo de la galerie (Blob + photos.json)
+async function deleteGaleriePhoto(index){
+  const galerie = (sassyData.photos && sassyData.photos.galerie) || [];
+  const item = galerie[index];
+  if (!item) return;
+  if (!confirm('Supprimer cette photo de la galerie ?')) return;
+
+  showToast('🗑️ Suppression…');
+  try {
+    const user = netlifyIdentity.currentUser();
+    if (!user) throw new Error('Non connecté');
+    const token = await user.jwt();
+
+    const key = blobKeyFromUrl(item.image);
+    if (key){
+      const res = await fetch('/.netlify/functions/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'delete', key })
+      });
+      if (!res.ok){ const r = await res.json().catch(() => ({})); throw new Error(r.error || 'Suppression Blob échouée'); }
+    }
+    // retire du modèle + auto-save (même si image legacy sans clé Blob)
+    sassyData.photos.galerie.splice(index, 1);
+    prefillSection('photos');
+    await savePhotos();
+    showToast('✅ Photo supprimée');
+  } catch (err){
+    console.error('delete galerie:', err);
+    showToast('❌ ' + err.message);
   }
 }
 
