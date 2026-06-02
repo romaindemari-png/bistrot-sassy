@@ -167,7 +167,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ## PROCHAINE ÉTAPE
 
-- **Éditeur photos LeLab** : branche `feature-photos-upload`. ✅ (1) Infra Blobs (`upload-image.mjs`, `serve-image.mjs`, `package.json`). ✅ (2) Affichage des photos actuelles dans l'admin (lecture seule). **Prochaine : (3) upload réel slider** — input file → conversion canvas JPEG → `upload-image` → Blobs → auto-save `photos.json`. Puis (4) galerie ajout/suppression, (5) garde-fous + finition.
+- **Éditeur photos LeLab** : branche `feature-photos-upload`. ✅ (1) Infra Blobs (`upload-image.mjs`, `serve-image.mjs`, `package.json` ; Blobs en mode manuel `SITE_ID` + `NETLIFY_API_TOKEN`). ✅ (2) Affichage des photos actuelles (lecture seule). ✅ (3) Upload réel slider (canvas JPEG + Blobs + auto-save, validé en prod) + fix affichage `object-fit:cover` sur le slider. **Prochaine : (4) galerie** — ajout (max 6) / suppression + delete Blob. Puis (5) garde-fous + finition.
 - **Redesign visuel LeLab** (charte violette) : reporté après photos.
 - **LeLab+** : tester le déverrouillage avec un vrai client (changer `config.plan` à `lelab_plus`).
 - **Éditeur events** : sortir du placeholder.
