@@ -34,7 +34,7 @@
     "optionnels": {
       "events": {
         "label": "Événements",
-        "actif": true,
+        "actif": false,
         "sections": [
           "events"
         ]
