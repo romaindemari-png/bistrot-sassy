@@ -7,7 +7,7 @@ exports.handler = async () => {
   const params = new URLSearchParams({
     client_id: process.env.INSTAGRAM_APP_ID,
     redirect_uri: process.env.INSTAGRAM_REDIRECT_URI,
-    scope: 'instagram_basic,instagram_content_publish,pages_show_list,business_management',
+    scope: 'instagram_basic,instagram_content_publish,pages_show_list',
     response_type: 'code',
     state: Math.random().toString(36).slice(2)
   });
