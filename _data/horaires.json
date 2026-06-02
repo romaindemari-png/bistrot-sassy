@@ -1,12 +1,40 @@
 {
   "jours": [
-    { "jour": "Lundi",    "ouvert": true,  "heures": "10h30 – 23h00" },
-    { "jour": "Mardi",    "ouvert": true,  "heures": "10h30 – 23h00" },
-    { "jour": "Mercredi", "ouvert": true,  "heures": "10h30 – 23h00" },
-    { "jour": "Jeudi",    "ouvert": true,  "heures": "10h30 – 00h00" },
-    { "jour": "Vendredi", "ouvert": true,  "heures": "10h30 – 01h00" },
-    { "jour": "Samedi",   "ouvert": true,  "heures": "10h30 – 01h00" },
-    { "jour": "Dimanche", "ouvert": false, "heures": "Fermé" }
+    {
+      "jour": "Lundi",
+      "ouvert": true,
+      "heures": "11:30–22:00"
+    },
+    {
+      "jour": "Mardi",
+      "ouvert": true,
+      "heures": "–"
+    },
+    {
+      "jour": "Mercredi",
+      "ouvert": true,
+      "heures": "–"
+    },
+    {
+      "jour": "Jeudi",
+      "ouvert": true,
+      "heures": "–"
+    },
+    {
+      "jour": "Vendredi",
+      "ouvert": true,
+      "heures": "–"
+    },
+    {
+      "jour": "Samedi",
+      "ouvert": true,
+      "heures": "–23:30"
+    },
+    {
+      "jour": "Dimanche",
+      "ouvert": false,
+      "heures": "Fermé"
+    }
   ],
   "note": "Cuisine servie jusqu'à 22h30 en semaine, 23h30 le week-end"
 }
