@@ -1381,7 +1381,7 @@ function prefillSection(section){
         const inputs = document.querySelectorAll(`.hours-row:nth-child(${i+1}) .hours-input`);
         if (checkbox) checkbox.checked = j.ouvert;
         if (inputs[0] && j.heures){
-          const parts = j.heures.split('–').map(s => s.trim());
+          const parts = j.heures.split('–').map(s => s.trim().replace('h', ':'));
           if (parts[0]) inputs[0].value = parts[0];
           if (parts[1]) inputs[1].value = parts[1];
         }
@@ -1440,14 +1440,23 @@ async function saveSection(){
 
     if (currentSection === 'horaires'){
       const rows = document.querySelectorAll('.hours-row');
+      const toHhMM = t => t.replace(':', 'h');   // "12:00" → "12h00"
+      let heuresManquantes = false;
       const jours = Array.from(rows).map(row => {
         const label = row.querySelector('.day-label')?.textContent || '';
         const ouvert = row.querySelector('input[type="checkbox"]')?.checked || false;
         const inputs = row.querySelectorAll('.hours-input');
         const from = inputs[0]?.value || '';
         const to = inputs[1]?.value || '';
-        return { jour: label, ouvert, heures: ouvert ? `${from}–${to}` : 'Fermé' };
+        if (ouvert && (!from || !to)) heuresManquantes = true;
+        return { jour: label, ouvert, heures: ouvert ? `${toHhMM(from)} – ${toHhMM(to)}` : '' };
       });
+      // Garde-fou : un jour ouvert doit avoir ses deux heures
+      if (heuresManquantes){
+        showToast('⚠️ Remplis les heures pour les jours ouverts');
+        if (btn){ btn.textContent = '💾 Enregistrer les horaires'; btn.disabled = false; }
+        return;
+      }
       const note = document.querySelector('#edit-body textarea')?.value || '';
       data = { jours, note };
     }
