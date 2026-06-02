@@ -42,7 +42,31 @@ export const handler = async (event) => {
     const pages = await (await fetch(`${GRAPH}/me/accounts?` + new URLSearchParams({
       fields: 'id,name,access_token,instagram_business_account', access_token: userToken
     }))).json();
-    const page0 = (pages.data || []).find(p => p.instagram_business_account?.id);
+    // Log diagnostic — tokens masqués (ne jamais logger un access_token)
+    console.log('me/accounts:', JSON.stringify({
+      ...pages,
+      data: (pages.data || []).map(p => ({
+        id: p.id, name: p.name, has_token: !!p.access_token,
+        instagram_business_account: p.instagram_business_account || null
+      }))
+    }));
+
+    let page0 = (pages.data || []).find(p => p.instagram_business_account?.id);
+
+    // Si le champ groupé ne renvoie rien : interroger chaque Page directement (diagnostic + fallback)
+    if (!page0) {
+      for (const p of (pages.data || [])) {
+        const ig = await (await fetch(`${GRAPH}/${p.id}?` + new URLSearchParams({
+          fields: 'instagram_business_account', access_token: p.access_token
+        }))).json();
+        console.log(`page ${p.id} (${p.name}) → instagram_business_account:`, JSON.stringify(ig));
+        if (ig.instagram_business_account?.id) {
+          page0 = { ...p, instagram_business_account: ig.instagram_business_account };
+          break;
+        }
+      }
+    }
+
     if (!page0) return page(400, 'Aucun compte Instagram',
       'Aucune Page Facebook reliée à un compte Instagram professionnel n’a été trouvée. Vérifie que ton Instagram est en mode pro et relié à une Page.');
 
