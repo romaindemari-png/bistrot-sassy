@@ -8,14 +8,23 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  // Variables d'environnement Netlify (à configurer dans le dashboard Netlify)
-  const ACCESS_TOKEN  = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const INSTAGRAM_ID  = process.env.INSTAGRAM_ACCOUNT_ID;
+  // Connexion via OAuth (Blobs) en priorité, sinon fallback env (transition)
+  let ACCESS_TOKEN, INSTAGRAM_ID;
+  try {
+    const { getStore } = await import('@netlify/blobs');
+    const store = getStore({ name: 'instagram', siteID: process.env.SITE_ID, token: process.env.NETLIFY_API_TOKEN });
+    const conn = await store.get('connection', { type: 'json' });
+    if (conn) { ACCESS_TOKEN = conn.pageAccessToken; INSTAGRAM_ID = conn.igAccountId; }
+  } catch (e) {
+    console.warn('Lecture connexion Instagram (Blobs) échouée, fallback env :', e.message);
+  }
+  ACCESS_TOKEN = ACCESS_TOKEN || process.env.INSTAGRAM_ACCESS_TOKEN;
+  INSTAGRAM_ID = INSTAGRAM_ID || process.env.INSTAGRAM_ACCOUNT_ID;
 
   if (!ACCESS_TOKEN || !INSTAGRAM_ID) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Variables d\'environnement manquantes' })
+      body: JSON.stringify({ error: 'Instagram non connecté (ni OAuth ni variables d\'environnement)' })
     };
   }
 
@@ -34,7 +43,7 @@ exports.handler = async (event) => {
     if (format === 'post') {
       // Étape 1 : créer le container média
       const containerRes = await fetch(
-        `https://graph.instagram.com/v19.0/${INSTAGRAM_ID}/media`,
+        `https://graph.facebook.com/v19.0/${INSTAGRAM_ID}/media`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -50,7 +59,7 @@ exports.handler = async (event) => {
 
       // Étape 2 : publier
       const publishRes = await fetch(
-        `https://graph.instagram.com/v19.0/${INSTAGRAM_ID}/media_publish`,
+        `https://graph.facebook.com/v19.0/${INSTAGRAM_ID}/media_publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -73,7 +82,7 @@ exports.handler = async (event) => {
       const childIds = await Promise.all(
         slides.map(async (slide) => {
           const res = await fetch(
-            `https://graph.instagram.com/v19.0/${INSTAGRAM_ID}/media`,
+            `https://graph.facebook.com/v19.0/${INSTAGRAM_ID}/media`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -92,7 +101,7 @@ exports.handler = async (event) => {
 
       // Étape 2 : créer le container carrousel
       const carouselRes = await fetch(
-        `https://graph.instagram.com/v19.0/${INSTAGRAM_ID}/media`,
+        `https://graph.facebook.com/v19.0/${INSTAGRAM_ID}/media`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -109,7 +118,7 @@ exports.handler = async (event) => {
 
       // Étape 3 : publier
       const publishRes = await fetch(
-        `https://graph.instagram.com/v19.0/${INSTAGRAM_ID}/media_publish`,
+        `https://graph.facebook.com/v19.0/${INSTAGRAM_ID}/media_publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
