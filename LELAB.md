@@ -1,7 +1,7 @@
 # LeLab — Spécification produit
 
 > Mémoire produit du projet. À lire en priorité avant toute évolution.
-> Statut : fondation réparée et vérifiée en prod + **système de blocs complet et fonctionnel** (config + site + admin) + **consolidation CMS entamée** (telephone & whatsapp pilotés par la donnée). Reste à faire : **interface LeDash visuelle (redesign, charte violette)**.
+> Statut : fondation réparée et vérifiée en prod + **système de blocs complet et fonctionnel** (config + site + admin) + **consolidation CMS entamée** (telephone & whatsapp pilotés par la donnée). Reste à faire : **interface LeLab visuelle (redesign, charte violette)**.
 
 ---
 
@@ -11,8 +11,33 @@ Agence de **sites vitrines clés en main pour les commerces de bouche** (restaur
 
 Deux produits :
 
-- **LeDash** — l'éditeur de site (offre d'entrée). Le client édite le contenu de son site et publie sur Instagram de façon restreinte. Couleur d'accent : **violet `#CAB4FF`**.
+- **LeLab** — l'éditeur de site (offre d'entrée). Le client édite le contenu de son site et publie sur Instagram de façon restreinte. Couleur d'accent : **violet `#CAB4FF`**.
 - **LeLab+** — le studio Instagram premium. Création de contenu Insta avancée (thèmes, formats, IA, preview). Couleur d'accent : **jaune `#FFF28C`**.
+
+---
+
+## OFFRES & TARIFS
+
+**Setup**
+- 590€ — site vitrine sur-mesure livré (basé sur une maquette en demi-journée, système de blocs)
+
+**Abonnements**
+- LeLab : 49€/mois — admin autonome + publication Insta basique (carte/events) + hébergement + domaine inclus
+- LeLab+ : 89€/mois — tout LeLab + studio Instagram complet (thèmes adaptatifs, 3 formats, IA, preview live)
+
+**Évolutions**
+- Blocs existants désactivés/réactivés : inclus dans l'abonnement (c'est un interrupteur, pas du dev)
+- Évolution custom (nouvelle section, refonte) : à partir de 150€, devis avant intervention
+
+**Workflow commercial**
+1. Démo complète présentée avec TOUS les blocs activés
+2. À la signature, désactivation des blocs inutiles pour ce client (10 secondes)
+3. Upsell LeLab+ naturel quand le client ressent la limite sur Instagram
+
+**Positionnement face à la concurrence**
+- Ne pas entrer dans une comparaison de prix avec les outils généralistes (Orylis & co)
+- Argument clé : sur-mesure quali + Instagram intégré (eux n'y touchent pas) + accompagné + démo réelle
+- La démo Sassy est l'argument de vente principal — pas le discours
 
 ---
 
@@ -27,7 +52,7 @@ Deux produits :
 - Texte gris : `#6B6B6B`
 
 **Accents**
-- Violet (LeDash) : `#CAB4FF`
+- Violet (LeLab) : `#CAB4FF`
 - Jaune (LeLab+) : `#FFF28C`
 
 **Typographie**
@@ -83,7 +108,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 **Réalisé (déployé, validé de bout en bout en prod)**
 - ✅ `_data/config.json` créé — **socle** : carte / photos / infos ; **optionnels** : events, reservation.
 - ✅ Le **site** (`sassy-cms-loader.js`) lit `config.json` et **masque les blocs optionnels désactivés** — règle **fallback = tout afficher** (config absent / illisible) testée.
-- ✅ L'**admin LeDash** expose des **interrupteurs** pour activer / désactiver les blocs optionnels (**socle verrouillé**, non désactivable) et écrit `config.json` via **save-data**.
+- ✅ L'**admin LeLab** expose des **interrupteurs** pour activer / désactiver les blocs optionnels (**socle verrouillé**, non désactivable) et écrit `config.json` via **save-data**.
 
 ---
 
@@ -104,9 +129,9 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ---
 
-## FRONTIÈRE LEDASH vs LELAB+
+## FRONTIÈRE LELAB vs LELAB+
 
-**LeDash** (offre d'entrée)
+**LeLab** (offre d'entrée)
 - Éditer le contenu du site.
 - Publier sur Instagram de façon **restreinte** : post simple uniquement, depuis la **carte** ou les **events**, avec légende générée par IA.
 - La publication restreinte passe par une **popup simple** : aperçu Insta + légende IA + bouton publier + **renvoi upsell vers LeLab+**. **Pas** de choix de thème ni de format.
@@ -118,7 +143,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 **Accès**
 - Un client **LeLab+** a accès aux deux via une **bascule**.
-- Un client **LeDash** voit LeLab+ **verrouillé** (upsell).
+- Un client **LeLab** voit LeLab+ **verrouillé** (upsell).
 
 ### Studio LeLab+ — flux designé
 
@@ -135,15 +160,16 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 *(prototypes HTML validés — ils décrivent le rendu cible à reproduire lors du dev ; les fichiers vivent **hors repo** pour l'instant, à intégrer progressivement)*
 
 1. **Dashboard d'accueil LeLab+** — jaune.
-2. **Éditeur de site LeDash** — violet, avec **popup de publication Insta restreinte**.
+2. **Éditeur de site LeLab** — violet, avec **popup de publication Insta restreinte**.
 3. **Studio Instagram LeLab+**.
 
 ---
 
 ## PROCHAINE ÉTAPE
 
-- **Redesign visuel de LeDash** à partir des **maquettes de référence** (charte **violette** `#CAB4FF`, principes Qonto).
+- **Redesign visuel de LeLab** à partir des **maquettes de référence** (charte **violette** `#CAB4FF`, principes Qonto).
 - Ce redesign sera **aussi l'occasion de traiter les champs CMS reportés** (`adresse`, `horaires`, `nom`, et éventuellement `description` / `email` / `horaires.note`), car ils touchent à l'**affichage** — donc à régler en même temps que la refonte des sections concernées.
+- **Note** : le nom « LeDash » est abandonné. L'interface admin s'appelle désormais simplement « LeLab » (l'admin du produit LeLab).
 
 ---
 
