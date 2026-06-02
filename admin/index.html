@@ -1032,18 +1032,19 @@ function boot(user){
 }
 
 /* ── Données Sassy chargées en mémoire ── */
-let sassyData = { general: null, horaires: null, carte: null, config: null, photos: null };
+let sassyData = { general: null, horaires: null, carte: null, config: null, photos: null, events: null };
 
 async function loadSassyData(){
   try {
-    const [general, horaires, carte, config, photos] = await Promise.all([
+    const [general, horaires, carte, config, photos, events] = await Promise.all([
       fetch('/_data/general.json').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/_data/horaires.json').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/_data/carte.json').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/_data/config.json').then(r => r.ok ? r.json() : null).catch(() => null),
-      fetch('/_data/photos.json').then(r => r.ok ? r.json() : null).catch(() => null)
+      fetch('/_data/photos.json').then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/_data/events.json').then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
-    sassyData = { general, horaires, carte, config, photos };
+    sassyData = { general, horaires, carte, config, photos, events };
     console.log('[Admin] Données Sassy chargées ✓');
   } catch(e){
     console.log('[Admin] Données JSON non disponibles');
@@ -1323,14 +1324,58 @@ const editScreens = {
   events: {
     title: '📅 Événements',
     html: `
-      <div class="soon-box">
-        <div class="soon-ico">📅</div>
-        <h2>Édition des événements</h2>
-        <p>La gestion de vos soirées, concerts et menus spéciaux arrive bientôt dans LeLab. En attendant, on s'en occupe pour vous.</p>
+      <div class="field-group">
+        <div class="field-group-title">Vos événements à venir</div>
+        <div id="events-list"><!-- injecté par prefillSection('events') --></div>
+        <button class="btn-add" id="btn-add-event" onclick="addEventCard()">+ Ajouter un événement</button>
       </div>
+      <button class="btn-save" onclick="saveSection()">💾 Enregistrer les événements</button>
     `
   }
 };
+
+/* ── Événements (éditeur) ── */
+const EVENTS_MAX = 5;
+
+function eventCardHTML(ev){
+  ev = ev || {};
+  const escA = s => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const escT = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  return `
+    <div class="menu-item event-item">
+      <div class="menu-item-header">
+        <span class="menu-item-num">Événement</span>
+        <button class="btn-delete" onclick="removeEventCard(this)">✕</button>
+      </div>
+      <input class="field-input ev-titre" type="text" value="${escA(ev.titre)}" placeholder="Titre (ex : soirée jazz)" style="margin-bottom:8px" />
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input class="field-input ev-date" type="date" value="${escA(ev.date)}" style="margin-bottom:0" />
+        <input class="field-input ev-heure" type="time" value="${escA(ev.heure)}" style="margin-bottom:0;width:130px" />
+      </div>
+      <textarea class="field-input field-textarea ev-desc" placeholder="Description (optionnelle)">${escT(ev.description)}</textarea>
+    </div>`;
+}
+
+function addEventCard(){
+  const list = document.getElementById('events-list');
+  if (!list) return;
+  if (list.querySelectorAll('.event-item').length >= EVENTS_MAX){ showToast('⚠️ Maximum 5 événements'); return; }
+  list.insertAdjacentHTML('beforeend', eventCardHTML());
+  updateEventsAddBtn();
+}
+
+function removeEventCard(btn){
+  const card = btn.closest('.event-item');
+  if (card) card.remove();
+  updateEventsAddBtn();
+}
+
+function updateEventsAddBtn(){
+  const btn = document.getElementById('btn-add-event');
+  const list = document.getElementById('events-list');
+  if (!btn || !list) return;
+  btn.style.display = list.querySelectorAll('.event-item').length >= EVENTS_MAX ? 'none' : '';
+}
 
 /* ── Ouvrir / fermer l'édition ── */
 let currentSection = null;
@@ -1458,6 +1503,16 @@ function prefillSection(section){
       }
     }, 50);
   }
+
+  if (section === 'events'){
+    setTimeout(() => {
+      const list = document.getElementById('events-list');
+      if (!list) return;
+      const events = Array.isArray(sassyData.events) ? sassyData.events : [];
+      list.innerHTML = events.map(eventCardHTML).join('');
+      updateEventsAddBtn();
+    }, 50);
+  }
 }
 
 /* ── Sauvegarde via save-data (Git Gateway) ── */
@@ -1514,6 +1569,14 @@ async function saveSection(){
       data = { entrees: parseGroup(groups[0]), plats: parseGroup(groups[1]), desserts: parseGroup(groups[2]) };
     }
 
+    if (currentSection === 'events'){
+      const cards = document.querySelectorAll('#events-list .event-item');
+      data = Array.from(cards).map(card => {
+        const val = (sel) => card.querySelector(sel)?.value.trim() || '';
+        return { date: val('.ev-date'), heure: val('.ev-heure'), titre: val('.ev-titre'), description: val('.ev-desc'), photo: '' };
+      }).filter(e => e.titre || e.date);   // ignore les cartes totalement vides
+    }
+
     const res = await fetch('/.netlify/functions/save-data', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -1525,6 +1588,7 @@ async function saveSection(){
     if (currentSection === 'contact') sassyData.general = { ...sassyData.general, ...data };
     if (currentSection === 'horaires') sassyData.horaires = data;
     if (currentSection === 'menu') sassyData.carte = data;
+    if (currentSection === 'events') sassyData.events = data;
 
     showToast('✅ Modifications enregistrées !');
     setTimeout(() => closeEdit(), 1200);
