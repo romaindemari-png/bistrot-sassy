@@ -38,15 +38,21 @@ export const handler = async (event) => {
     }))).json();
     const userToken = long.access_token || tok.access_token;
 
+    // — Diagnostic Login for Business : identité + permissions réellement accordées —
+    const me = await (await fetch(`${GRAPH}/me?` + new URLSearchParams({ fields: 'id,name', access_token: userToken }))).json();
+    console.log('me:', JSON.stringify(me));
+    const perms = await (await fetch(`${GRAPH}/me/permissions?` + new URLSearchParams({ access_token: userToken }))).json();
+    console.log('me/permissions:', JSON.stringify(perms));
+
     // 3) Pages du user (avec page access tokens) + compte IG lié
     const pages = await (await fetch(`${GRAPH}/me/accounts?` + new URLSearchParams({
-      fields: 'id,name,access_token,instagram_business_account', access_token: userToken
+      fields: 'id,name,access_token,tasks,instagram_business_account', access_token: userToken
     }))).json();
     // Log diagnostic — tokens masqués (ne jamais logger un access_token)
     console.log('me/accounts:', JSON.stringify({
       ...pages,
       data: (pages.data || []).map(p => ({
-        id: p.id, name: p.name, has_token: !!p.access_token,
+        id: p.id, name: p.name, has_token: !!p.access_token, tasks: p.tasks || null,
         instagram_business_account: p.instagram_business_account || null
       }))
     }));
