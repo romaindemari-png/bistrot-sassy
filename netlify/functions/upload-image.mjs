@@ -1,6 +1,7 @@
 import { getStore } from '@netlify/blobs';
 
-const SITE_URL = process.env.URL; // injecté par Netlify (URL principale du site)
+// Toujours cibler l'Identity de prod (même depuis un deploy preview, où process.env.URL = URL du preview)
+const SITE_URL = process.env.IDENTITY_URL || 'https://gorgeous-heliotrope-e2e59d.netlify.app';
 
 // Vérifie le jeton Netlify Identity de l'utilisateur connecté
 async function verifyIdentity(token) {
