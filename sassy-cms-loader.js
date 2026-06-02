@@ -114,16 +114,44 @@
      2. HORAIRES
      ══════════════════════════════════════════════════ */
   const horaires = await loadJSON('/_data/horaires.json');
-  if (horaires) {
-    const container = document.getElementById('cms-horaires');
-    if (container && horaires.jours) {
-      container.innerHTML = horaires.jours.map(j => `
-        <div style="display:flex; justify-content:space-between; padding:4px 0; opacity:${j.ouvert ? '1' : '0.4'}">
-          <span>${j.jour}</span>
-          <span>${j.heures}</span>
-        </div>
-      `).join('');
+  if (horaires && horaires.jours) {
+    const ABBR = { Lundi:'lun', Mardi:'mar', Mercredi:'mer', Jeudi:'jeu',
+                   Vendredi:'ven', Samedi:'sam', Dimanche:'dim' };
+    const abbr = d => ABBR[d] || d.toLowerCase().slice(0, 3);
+
+    // Regrouper les jours adjacents de mêmes horaires
+    const groups = [];
+    horaires.jours.forEach(j => {
+      const last = groups[groups.length - 1];
+      const key  = j.ouvert ? j.heures : 'FERME';
+      if (last && last.key === key) last.days.push(j.jour);
+      else groups.push({ key, ouvert: j.ouvert, heures: j.heures, days: [j.jour] });
+    });
+
+    // Emplacement A : section #horaires (.horaires-row)
+    const listA = document.getElementById('cms-horaires');
+    if (listA) {
+      listA.innerHTML = groups.map(g => {
+        const label = g.days.length > 1
+          ? `${abbr(g.days[0])} – ${abbr(g.days[g.days.length - 1])}`
+          : g.days[0].toLowerCase();
+        const val = g.ouvert ? `<span>${g.heures}</span>`
+                             : `<span class="closed">fermé</span>`;
+        return `<div class="horaires-row"><strong>${label}</strong>${val}</div>`;
+      }).join('');
     }
+
+    // Emplacement B : bloc contact (.ci-block-val)
+    const listB = document.getElementById('cms-horaires-compact');
+    if (listB) {
+      listB.innerHTML = groups.map(g => {
+        const label = g.days.length > 1
+          ? `${abbr(g.days[0])}–${abbr(g.days[g.days.length - 1])}`
+          : abbr(g.days[0]);
+        return `${label}&nbsp;: ${g.ouvert ? g.heures : 'fermé'}`;
+      }).join('<br/>');
+    }
+
     setText('cms-horaires-note', horaires.note);
   }
 
