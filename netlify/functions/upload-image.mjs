@@ -18,9 +18,18 @@ async function verifyIdentity(token) {
 
 const isOurKey = (k) => typeof k === 'string' && k.startsWith('photos/');
 
+// Détecte le type d'image par ses magic bytes (sinon null)
+function detectImageType(buf){
+  if (buf.length >= 3  && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
+  if (buf.length >= 8  && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return 'image/png';
+  if (buf.length >= 12 && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46
+      && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) return 'image/webp';
+  return null;
+}
+
 // POST /.netlify/functions/upload-image  (Authorization: Bearer <jwt Identity>)
-//   { target:'slider'|'galerie', dataBase64, oldKey? }  → upload (+ delete oldKey)
-//   { action:'delete', key }                            → suppression seule
+//   { target:'slider'|'galerie', dataBase64 }  → upload (la suppression de l'ancienne est gérée côté client après save)
+//   { action:'delete', key }                   → suppression seule
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
@@ -53,7 +62,7 @@ export const handler = async (event) => {
     }
 
     // — Upload —
-    const { target, dataBase64, oldKey } = body;
+    const { target, dataBase64 } = body;
     if (!['slider', 'galerie'].includes(target) || !dataBase64) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Paramètres manquants' }) };
     }
@@ -64,13 +73,15 @@ export const handler = async (event) => {
       return { statusCode: 413, body: JSON.stringify({ error: 'Image trop lourde' }) };
     }
 
-    const key = `photos/${target}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-    await store.set(key, buffer, { metadata: { contentType: 'image/jpeg' } });
-
-    // supprimer l'ancienne image si c'est bien un de nos blobs
-    if (isOurKey(oldKey) && oldKey !== key) {
-      try { await store.delete(oldKey); } catch (e) { console.warn('delete oldKey:', e); }
+    // Validation des magic bytes (le MIME client ne suffit pas)
+    const detected = detectImageType(buffer);
+    if (!detected) {
+      return { statusCode: 415, body: JSON.stringify({ error: 'Format non supporté (JPEG, PNG ou WebP attendu)' }) };
     }
+
+    const ext = detected === 'image/png' ? 'png' : detected === 'image/webp' ? 'webp' : 'jpg';
+    const key = `photos/${target}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    await store.set(key, buffer, { metadata: { contentType: detected } });
 
     const url = `/.netlify/functions/serve-image?key=${encodeURIComponent(key)}`;
     return { statusCode: 200, body: JSON.stringify({ success: true, url, key }) };
