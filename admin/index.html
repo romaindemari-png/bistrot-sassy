@@ -370,8 +370,14 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .pp-lbl{font-size:10px;letter-spacing:1.1px;text-transform:uppercase;color:#A0A09A;font-weight:700;align-self:flex-start;margin-bottom:3px;}
 .pp-live{font-size:10.5px;font-weight:700;color:#1A8F4C;display:inline-flex;align-items:center;gap:5px;align-self:flex-start;margin-bottom:16px;}
 .pp-live .d{width:6px;height:6px;border-radius:50%;background:#1A8F4C;box-shadow:0 0 0 2.5px rgba(26,143,76,.16);}
-.phone{width:260px;background:#000;border-radius:34px;padding:10px;box-shadow:0 16px 44px rgba(0,0,0,.2);flex-shrink:0;}
-.phone-screen{background:#fff;border-radius:25px;overflow:hidden;}
+.phone{width:280px;background:#000;border-radius:34px;padding:10px;box-shadow:0 16px 44px rgba(0,0,0,.2);flex-shrink:0;}
+/* écran à HAUTEUR FIXE (≈9:16) : seul le contenu interne varie, le téléphone ne grandit jamais */
+.phone-screen{position:relative;height:462px;background:#fff;border-radius:25px;overflow:hidden;}
+/* mode STORY : photo plein écran + en-tête en overlay, sans actions / likes / légende */
+.phone-screen.story .ig-img{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;}
+.phone-screen.story .ig-top{position:absolute;top:0;left:0;right:0;z-index:2;background:linear-gradient(rgba(0,0,0,.5),transparent);padding:12px 12px 22px;}
+.phone-screen.story .ig-name,.phone-screen.story .ig-name .loc,.phone-screen.story .ig-more{color:#fff;}
+.phone-screen.story .ig-actions,.phone-screen.story .ig-likes,.phone-screen.story .ig-cap{display:none;}
 .ig-top{display:flex;align-items:center;gap:8px;padding:10px 11px;}
 .ig-ava{width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2px;flex-shrink:0;}
 .ig-ava div{width:100%;height:100%;border-radius:50%;background:#fff url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=60&q=80') center/cover;border:1.5px solid #fff;}
@@ -1291,6 +1297,9 @@ function renderStudio(){
     if (img) igPhoto.style.backgroundImage = `url('${img}')`;
     document.getElementById('mpThumb').style.backgroundImage = img ? `url('${img}')` : '';
   }
+  // Story : layout plein écran (classe sur l'écran) — uniquement pour les thèmes photo
+  const screen = document.querySelector('#studio-unlocked .phone-screen');
+  if (screen) screen.classList.toggle('story', currentKind !== 'typo' && currentFmt === 'story');
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
 }
