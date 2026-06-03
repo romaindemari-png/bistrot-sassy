@@ -8,14 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    netlifyIdentity.init({
-      APIUrl: 'https://gorgeous-heliotrope-e2e59d.netlify.app/.netlify/identity'
-    });
-    var b = document.getElementById('btn-login');
-    if (b) b.addEventListener('click', openNetlifyLogin);
+  document.addEventListener('DOMContentLoaded', function(){
+    // logo du login depuis le logo sidebar déjà embarqué
+    var ll = document.getElementById('logo-login'), ls = document.getElementById('logo-sidebar');
+    if (ll && ls) ll.src = ls.dataset.lelab;
+    restoreSession();
   });
 </script>
 <style>
@@ -539,6 +537,12 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 #login-gate p{font-size:14px;color:var(--gris-txt);margin-bottom:26px;max-width:300px;line-height:1.5;}
 .btn-login{background:var(--noir);color:#fff;border-radius:12px;padding:14px 28px;
   font-size:14px;font-weight:600;}
+#login-form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;}
+#login-form input{width:100%;border:1px solid var(--bord);border-radius:10px;
+  padding:12px 13px;font-size:16px;background:#fff;color:var(--noir);}
+#login-form input:focus{outline:none;border-color:var(--accent-bord);box-shadow:0 0 0 3px var(--accent-soft);}
+#login-form .btn-login{width:100%;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+#login-error{color:#C0392B;font-size:12.5px;margin:2px 0 0;min-height:1em;}
 /* tant que non connecté : on masque l'app et la nav mobile */
 body:not(.authed) .app,
 body:not(.authed) .mobile-nav{display:none;}
@@ -645,7 +649,12 @@ body.authed #login-gate{display:none;}
   <img id="logo-login" alt="LeLab">
   <h1>Votre espace</h1>
   <p>Connectez-vous pour modifier votre site et publier sur Instagram.</p>
-  <button class="btn-login" id="btn-login">Se connecter →</button>
+  <form id="login-form" onsubmit="return customLogin(event)">
+    <input id="login-email" type="email" inputmode="email" autocomplete="username" placeholder="Email" required>
+    <input id="login-password" type="password" autocomplete="current-password" placeholder="Mot de passe" required>
+    <button class="btn-login" id="login-submit" type="submit">Se connecter →</button>
+    <p id="login-error" role="alert"></p>
+  </form>
 </div>
 
 <div class="app">
@@ -1082,19 +1091,7 @@ body.authed #login-gate{display:none;}
 let currentPlan = 'lelab'; // 'lelab' | 'lelab_plus'
 
 /* ── NETLIFY IDENTITY (auth) ── */
-function openNetlifyLogin(){ if (window.netlifyIdentity) netlifyIdentity.open('login'); else showToast('⚠️ Connexion indisponible — réessaie'); }
-function doLogout(){ netlifyIdentity.logout(); }
-
-netlifyIdentity.on('init', user => {
-  // remplit le logo du login depuis le logo sidebar déjà embarqué
-  const ll = document.getElementById('logo-login');
-  const ls = document.getElementById('logo-sidebar');
-  if (ll && ls) ll.src = ls.dataset.lelab;
-  if (user) boot(user);
-  else document.body.classList.remove('authed');
-});
-netlifyIdentity.on('login', user => { netlifyIdentity.close(); boot(user); showToast('✅ Connecté !'); });
-netlifyIdentity.on('logout', () => { document.body.classList.remove('authed'); showToast('👋 Déconnecté'); });
+function doLogout(){ customLogout(); }
 
 // Appelé une fois l'utilisateur authentifié
 function boot(user){
@@ -1103,6 +1100,107 @@ function boot(user){
   if (name){ const g = document.querySelector('.hello h1'); if (g) g.textContent = 'Bonjour, ' + name + ' 👋'; }
   showScreen('dashboard');
   loadSassyData();   // ↪ défini au bloc 4 (charge les JSON + applique le plan)
+}
+
+/* ════ AUTH CUSTOM (API GoTrue — remplace le widget) ════ */
+const IDENTITY = '/.netlify/identity';
+const SESSION_KEY = 'lelab_session';
+let session = null;   // { access_token, refresh_token, expires_at, user }
+
+function saveSession(s){ session = s; try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch(e){} }
+function clearSession(){ session = null; try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
+
+async function fetchIdentityUser(){
+  const res = await fetch(IDENTITY + '/user', { headers: { Authorization: 'Bearer ' + session.access_token } });
+  if (!res.ok) throw new Error('Profil indisponible');
+  return res.json();
+}
+
+// Connexion (password grant)
+async function customLogin(event){
+  if (event) event.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const pwd   = document.getElementById('login-password').value;
+  const err   = document.getElementById('login-error');
+  const btn   = document.getElementById('login-submit');
+  err.textContent = '';
+  if (!email || !pwd){ err.textContent = 'Email et mot de passe requis.'; return false; }
+  const lbl = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Connexion…';
+  try {
+    const res = await fetch(IDENTITY + '/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'password', username: email, password: pwd })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.access_token){
+      err.textContent = (data.error === 'invalid_grant') ? 'Email ou mot de passe incorrect.' : (data.error_description || 'Connexion impossible.');
+      document.getElementById('login-password').value = '';
+      return false;
+    }
+    saveSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000)
+    });
+    const user = await fetchIdentityUser();
+    saveSession({ ...session, user });
+    boot(user);
+  } catch (e){
+    err.textContent = 'Connexion impossible — réessaie.';
+  } finally {
+    btn.disabled = false; btn.textContent = lbl;
+  }
+  return false;
+}
+
+// Renvoie un access_token valide (refresh auto si expiré / <60 s)
+async function getToken(){
+  if (!session) return null;
+  if (Date.now() > session.expires_at - 60000){
+    try {
+      const res = await fetch(IDENTITY + '/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: session.refresh_token })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.access_token) throw new Error('refresh failed');
+      saveSession({
+        ...session,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || session.refresh_token,
+        expires_at: Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000)
+      });
+    } catch (e){
+      clearSession();
+      document.body.classList.remove('authed');
+      showToast('⚠️ Session expirée — reconnecte-toi');
+      return null;
+    }
+  }
+  return session.access_token;
+}
+
+function customLogout(){
+  clearSession();
+  document.body.classList.remove('authed');
+  showToast('👋 Déconnecté');
+}
+
+// Au chargement : restaure la session (avec refresh) ou affiche le login
+async function restoreSession(){
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e){}
+  if (s && s.access_token){
+    session = s;
+    const t = await getToken();           // refresh si nécessaire
+    if (t){
+      try { const user = await fetchIdentityUser(); saveSession({ ...session, user }); boot(user); return; }
+      catch(e){ clearSession(); }
+    }
+  }
+  document.body.classList.remove('authed'); // → login gate visible
 }
 
 /* ── Données Sassy chargées en mémoire ── */
@@ -1776,9 +1874,8 @@ async function saveSection(){
   const btn = document.querySelector('#screen-edit .btn-save');
   if (btn){ btn.textContent = '⏳ Enregistrement…'; btn.disabled = true; }
   try {
-    const user = netlifyIdentity.currentUser();
-    if (!user) throw new Error('Non connecté');
-    const token = await user.jwt();
+    const token = await getToken();
+    if (!token) throw new Error('Non connecté');
 
     let data = {};
 
@@ -1893,9 +1990,8 @@ async function saveBlocs(){
   const btn = document.getElementById('btn-save-blocs');
   if (btn){ btn.textContent = '⏳ Enregistrement…'; btn.disabled = true; }
   try {
-    const user = netlifyIdentity.currentUser();
-    if (!user) throw new Error('Non connecté');
-    const token = await user.jwt();
+    const token = await getToken();
+    if (!token) throw new Error('Non connecté');
     // Garde-fou : ne jamais écraser un config qu'on n'a pas pu lire
     const base = sassyData.config;
     if (!base || !base.blocs || !base.blocs.optionnels) throw new Error('Configuration indisponible — sauvegarde annulée');
@@ -2002,9 +2098,8 @@ async function onPhotoPicked(input){
 
   try {
     const dataBase64 = await fileToJpegBase64(file);
-    const user = netlifyIdentity.currentUser();
-    if (!user) throw new Error('Non connecté');
-    const token = await user.jwt();
+    const token = await getToken();
+    if (!token) throw new Error('Non connecté');
 
     if (!sassyData.photos) sassyData.photos = { slider: [], galerie: [] };
     if (!sassyData.photos.slider)  sassyData.photos.slider  = [];
@@ -2065,9 +2160,8 @@ async function deleteGaleriePhoto(index){
   isUploading = true;
   showToast('🗑️ Suppression…');
   try {
-    const user = netlifyIdentity.currentUser();
-    if (!user) throw new Error('Non connecté');
-    const token = await user.jwt();
+    const token = await getToken();
+    if (!token) throw new Error('Non connecté');
 
     const key = blobKeyFromUrl(item.image);
     if (key){
@@ -2093,9 +2187,8 @@ async function deleteGaleriePhoto(index){
 
 // Écrit photos.json via save-data (auto-save)
 async function savePhotos(){
-  const user = netlifyIdentity.currentUser();
-  if (!user) throw new Error('Non connecté');
-  const token = await user.jwt();
+  const token = await getToken();
+  if (!token) throw new Error('Non connecté');
   const data = {
     slider:  (sassyData.photos && sassyData.photos.slider)  || [],
     galerie: (sassyData.photos && sassyData.photos.galerie) || []
