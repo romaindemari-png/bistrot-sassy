@@ -180,6 +180,22 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ---
 
+## CONNEXION INSTAGRAM (OAuth)
+
+*(✅ connexion validée en dev)*
+
+- **Flow** : **Instagram API with Instagram Login** — connexion **directe au compte Instagram pro**, **sans Page Facebook ni Business** (l'ancien flux « Facebook Login for Business » est abandonné : `/me/accounts` restait vide pour une Page possédée par un Business Portfolio).
+- **App Meta** : **LeLab Social** — Instagram App ID `1300156898763730` (app distincte de l'ancienne, type Business avec produit *Instagram → API setup with Instagram login*).
+- **Endpoints** : auth `instagram.com/oauth/authorize` → échange `api.instagram.com/oauth/access_token` (token court + `user_id`) → token long `graph.instagram.com/access_token?grant_type=ig_exchange_token` (~60 j) → publication sur `graph.instagram.com/v21.0/{igUserId}/media(_publish)`.
+- **Fonctions** : `instagram-auth.js` (redirection), `auth-callback.mjs` (échange + stockage), `publish-instagram.js` (lit la connexion, fallback env conservé).
+- **Stockage** : Netlify **Blobs** (store `instagram`, clé `connection`) → `{ igUserId, accessToken, username, connectedAt }`. Privé, par site (= par client).
+- **Variables Netlify** : `IG_APP_ID`, `IG_APP_SECRET`, `INSTAGRAM_REDIRECT_URI` (= `…/.netlify/functions/auth-callback`). Les anciennes `INSTAGRAM_APP_ID/SECRET` (Facebook) sont obsolètes.
+- **Bouton admin** : « Connecter Instagram » (écran Publier) → `/.netlify/functions/instagram-auth`.
+- **Statut** : ✅ **connexion validée en dev avec `@lestud13`**.
+- **Reste à faire** : (1) **refresh** du token long-lived avant ~60 j (`ig_refresh_token`, à planifier) ; (2) **App Review** des permissions `instagram_business_basic` + `instagram_business_content_publish` (+ vérif Business) pour publier en prod sur des comptes non-testeurs.
+
+---
+
 ## DÉPLOIEMENT
 
 - Repo GitHub → **Netlify auto-publish depuis `main`**.
