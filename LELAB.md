@@ -1,7 +1,7 @@
 # LeLab — Spécification produit
 
 > Mémoire produit du projet. À lire en priorité avant toute évolution.
-> Statut : **admin LeLab/LeLab+ en prod** (charte violette/jaune) — éditeurs carte / horaires / contact / photos / events + interrupteurs de blocs + **studio LeLab+ (maquette)** ; **connexion Instagram OAuth validée en dev**. Reste à faire : **backlog studio** (wiring « Publier », etc. — voir PROCHAINE ÉTAPE).
+> Statut : **admin LeLab/LeLab+ en prod** (charte violette/jaune, **login custom GoTrue** compatible Safari iOS) — éditeurs carte / horaires / contact / photos / events + interrupteurs de blocs + **studio LeLab+** (stepper, upload photo, pass UX complète : nav simplifiée, footer sticky, preview sheet, persistance, étape 4 + bandeau redesignés) ; **connexion Instagram OAuth validée en dev**. Reste à faire : **backlog studio à partir du point 3** (contenu Story, carrousel, IA légende, wiring « Publier », etc. — voir PROCHAINE ÉTAPE).
 
 ---
 
@@ -172,12 +172,22 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - **Déverrouillage LeLab+** : ✅ testé (dev `@lestud13` + bascule `config.plan` en prod). Reste : activer pour un **vrai client payant**.
 - **Redesign visuel du site public** (charte) : optionnel/à voir — l'**admin** est déjà à la charte LeLab.
 - **Éditeur events** : ✅ **FAIT** — éditeur dans l'admin (titre, date, heure, description ; ajout/suppression, max 5 ; save via `saveSection` section `events` → `_data/events.json`). Sans photo. Le site rend la liste via le script inline (`#events-grid`, filtre dates passées).
-- **Studio LeLab+** : ✅ **intégré** dans l'admin (`screen-studio`, déverrouillé si `config.plan = lelab_plus`) — thèmes adaptatifs (plat / menu / ambiance / événement → photo vs typo), formats (Story plein écran 9:16, désactivé pour le typo), éditeur de plats, preview Instagram live (téléphone à taille fixe). ⚠️ **Encore une maquette** : le bouton « Publier » n'est pas branché. Backlog ci-dessous.
+- **Studio LeLab+** : ✅ **intégré** dans l'admin (`screen-studio`, déverrouillé si `config.plan = lelab_plus`) — thèmes adaptatifs (plat / menu / ambiance / événement → photo vs typo), formats (Story plein écran 9:16, désactivé pour le typo), éditeur de plats, preview Instagram live (téléphone à taille fixe). ⚠️ **Reste une maquette pour la publication** : le bouton « Publier » n'est pas branché (backlog #7).
+- **Pass UX Studio LeLab+** : ✅ **FAIT** (mergé dans `main`) —
+  - **Navigation simplifiée** (Accueil / Mon site / Studio).
+  - **Bouton « Continuer » sticky** (pied de page studio toujours visible).
+  - **Preview mobile en sheet depuis le haut** (≈70vh, coins arrondis en bas, croix de fermeture + backdrop ; tap sur le bandeau pour ouvrir/fermer).
+  - **Persistance du brouillon** (`sessionStorage` : thème, format, étape, légende, plats ; vidé à la déconnexion ; garde `studioReady` pour ne pas écraser au boot).
+  - **Étape 4 « Publier » redesignée** (carte récap : thème / format / extrait de légende, pictos en carrés arrondis suivant l'accent du plan).
+  - **Bandeau aperçu Instagram « variante A » jaune** (`#FFF28C`, miniature + sous-titre format/`en direct` + flèche animée qui pivote à l'ouverture).
+- **Login admin custom GoTrue** : ✅ **FAIT** (mergé dans `main`) — formulaire maison (`/.netlify/identity/token` password grant + `/user` + refresh), session `localStorage`, auto-refresh. **Remplace le widget Netlify Identity** (cassé sur Safari iOS) ; validé sur iPhone Safari, bouton de déconnexion visible sur mobile.
 
 ### Backlog Studio LeLab+ (par ordre de priorité)
 
-1. **Stepper fonctionnel** — navigation étapes 1→2→3→4 avec boutons Continuer / Retour.
-2. **Upload photo réel** — brancher Blobs (`upload-image` / `serve-image`). Détails techniques :
+*(#1 et #2 ✅ faits — le backlog restant commence au point 3.)*
+
+1. ✅ **Stepper fonctionnel** — navigation étapes 1→2→3→4 avec boutons Continuer / Retour. **FAIT.**
+2. ✅ **Upload photo réel** — Blobs (`upload-image` / `serve-image`), conversion canvas, vignettes multiples. **FAIT.** Détails techniques conservés pour mémoire :
    - **Input** : `accept="image/*" capture="environment"` → appareil photo direct sur mobile **ou** galerie.
    - **Conversion canvas côté client** (aucune lib externe) :
      - lire le fichier (`FileReader` / `createImageBitmap`),
