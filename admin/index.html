@@ -1175,13 +1175,38 @@ function handlePlusClick() {
 // ── STUDIO ────────────────────────────────────────────────
 let currentKind = 'typo';
 let currentFmt = 'square';
+let currentTheme = 'menu';
+let lastAutoCaption = '';   // dernière légende remplie auto (pour ne pas écraser le client)
+
+const THEMES = {
+  plat:     { kind:'photo', label:'Légende du plat', caption:'Notre plat du jour 🍽️ Fait maison, à déguster midi & soir.' },
+  menu:     { kind:'typo',  caption:'Le menu du jour est servi 🍽️ Trois plats faits maison, à déguster midi & soir en terrasse. Réservation conseillée.' },
+  ambiance: { kind:'photo', label:'Texte', caption:"L'ambiance chez nous ✨ Venez passer un bon moment en terrasse." },
+  event:    { kind:'photo', label:'Texte', caption:'Rendez-vous à ne pas manquer 🎉 Réservez votre table.' }
+};
+
+// Meilleure photo RÉELLE du site pour un thème (avec fallbacks ; '' si aucune photo)
+function themeImage(theme){
+  const p = (sassyData && sassyData.photos) || {};
+  const slider = p.slider || [], galerie = p.galerie || [];
+  const ev = Array.isArray(sassyData && sassyData.events) ? sassyData.events.find(e => e && e.photo) : null;
+  const first = (...c) => c.find(Boolean) || '';
+  const map = {
+    plat:     first(galerie[0] && galerie[0].image, slider[0] && slider[0].image),
+    ambiance: first(slider[0] && slider[0].image, galerie[0] && galerie[0].image),
+    event:    first(ev && ev.photo, galerie[1] && galerie[1].image, slider[1] && slider[1].image)
+  };
+  return map[theme] || (slider[0] && slider[0].image) || (galerie[0] && galerie[0].image) || '';
+}
 
 function selectTheme(btn){
   document.querySelectorAll('.tpl').forEach(t => t.classList.remove('sel'));
   btn.classList.add('sel');
-  currentKind = btn.dataset.kind;
+  currentTheme = btn.dataset.theme;
+  currentKind  = btn.dataset.kind;
   const isTypo = currentKind === 'typo';
   const name = btn.querySelector('.tt').textContent;
+  const t = THEMES[currentTheme] || {};
 
   document.getElementById('photoZone').style.display    = isTypo ? 'none' : 'block';
   document.getElementById('typoZone').style.display     = isTypo ? 'block' : 'none';
@@ -1192,7 +1217,16 @@ function selectTheme(btn){
       '<b>' + name + '</b> est un visuel typographique : pas de photo à charger, le rendu est généré dans votre charte.';
   } else {
     const lbl = document.getElementById('photoFieldLbl');
-    if (lbl) lbl.textContent = (btn.dataset.theme === 'plat' ? 'Légende du plat' : 'Texte');
+    if (lbl) lbl.textContent = t.label || 'Texte';
+    const img = themeImage(currentTheme);
+    if (img) document.getElementById('photoThumb').style.backgroundImage = `url('${img}')`;
+  }
+
+  // Légende du thème — uniquement si champ vide OU encore la valeur auto précédente
+  const capEl = document.getElementById('caption');
+  if (t.caption && (capEl.value.trim() === '' || capEl.value === lastAutoCaption)){
+    capEl.value = t.caption;
+    lastAutoCaption = t.caption;
   }
 
   // Story indisponible pour les thèmes typo
@@ -1249,10 +1283,12 @@ function renderStudio(){
     document.getElementById('tyDishes').innerHTML = html;
     document.getElementById('mpThumb').style.background = 'var(--sassy-creme, #FAF1E2)';
   } else {
+    const img = themeImage(currentTheme);
     igTypo.style.display = 'none';
     igPhoto.style.display = 'block';
     igPhoto.className = 'ig-img ' + ratioClass;
-    document.getElementById('mpThumb').style.backgroundImage = "url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120&q=80')";
+    if (img) igPhoto.style.backgroundImage = `url('${img}')`;
+    document.getElementById('mpThumb').style.backgroundImage = img ? `url('${img}')` : '';
   }
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
@@ -1925,6 +1961,7 @@ async function savePhotos(){
 }
 
 setFmtAvailability(currentKind === 'typo' ? ['square','portrait'] : ['square','portrait','story']);
+lastAutoCaption = (document.getElementById('caption') || {}).value || '';
 renderStudio();
 </script>
 <div class="toast" id="toast"></div>
