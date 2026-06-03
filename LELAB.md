@@ -171,6 +171,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - **Redesign visuel LeLab** (charte violette) : reporté après photos.
 - **LeLab+** : tester le déverrouillage avec un vrai client (changer `config.plan` à `lelab_plus`).
 - **Éditeur events** : ✅ **FAIT** — éditeur dans l'admin (titre, date, heure, description ; ajout/suppression, max 5 ; save via `saveSection` section `events` → `_data/events.json`). Sans photo. Le site rend la liste via le script inline (`#events-grid`, filtre dates passées).
+- **Studio LeLab+** : ✅ **intégré** dans l'admin (`screen-studio`, déverrouillé si `config.plan = lelab_plus`). Thèmes adaptatifs (plat / menu / ambiance / événement → photo vs typo), formats (Story désactivé pour les thèmes typo), éditeur de plats avec « Ajouter un plat », preview Instagram live. CSS additif, IDs camelCase, JS `selectTheme`/`selectFmt`/`setFmtAvailability`/`addDish`/`renderStudio`. ⚠️ **Encore une maquette** : le bouton « Publier » n'est pas branché. **Wiring à faire** : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST vers `publish-instagram` (connexion **OAuth Instagram déjà en place**). C'est l'étape qui rend le studio réellement fonctionnel.
 
 ---
 
