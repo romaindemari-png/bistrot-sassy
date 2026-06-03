@@ -176,9 +176,19 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 ### Backlog Studio LeLab+ (par ordre de priorité)
 
 1. **Stepper fonctionnel** — navigation étapes 1→2→3→4 avec boutons Continuer / Retour.
-2. **Upload photo réel** — brancher Blobs (`upload-image` / `serve-image`), support **multi-photos** avec vignettes.
-   - **2a. Capture directe** — `capture="environment"` sur l'`input[type=file]` → ouvre l'appareil photo directement sur mobile.
-   - **2b. Conversion auto au bon format** — toute image (HEIC, PNG, WebP, JPEG…) convertie en **JPEG** au ratio du format choisi : **1080×1080** (carré), **1080×1350** (portrait), **1080×1920** (story) — recadrage `cover` côté navigateur (canvas) **avant** envoi à Blobs et à l'API Instagram (qui n'accepte que JPEG). ⚠️ HEIC : décodage canvas OK sur Safari/iOS, **pas garanti** sur Chrome/Firefox desktop → prévoir un fallback (message clair, ou décodage via lib).
+2. **Upload photo réel** — brancher Blobs (`upload-image` / `serve-image`). Détails techniques :
+   - **Input** : `accept="image/*" capture="environment"` → appareil photo direct sur mobile **ou** galerie.
+   - **Conversion canvas côté client** (aucune lib externe) :
+     - lire le fichier (`FileReader` / `createImageBitmap`),
+     - dessiner dans un `<canvas>` au **ratio du format choisi** (1:1 carré, 4:5 portrait, 9:16 story),
+     - **recadrage centré automatique** (`cover`),
+     - export **JPEG qualité 0.92** (bon compromis qualité/poids),
+     - **résolutions cibles** : 1080×1080 (post), 1080×1350 (portrait), 1080×1920 (story).
+   - **Loader** pendant la conversion (jamais d'écran figé).
+   - **Aperçu instantané** dans la preview iPhone dès la conversion terminée.
+   - **Formats acceptés** : HEIC (Apple), PNG, WebP, JPEG → tout converti en **JPEG propre** (Blobs + API Instagram n'acceptent que JPEG). ⚠️ HEIC : décodage canvas OK sur **Safari/iOS** (cas nominal : upload depuis iPhone), non garanti sur Chrome/Firefox desktop → fallback message clair si décodage impossible.
+   - **Vignettes multiples** pour le carrousel (jusqu'à **10 photos**).
+   - **Priorité** : rapide, sans bug, **sans dépendance externe**.
 3. **Contenu Story adapté** — champ texte court en overlay, **pas** de légende ni hashtags.
 4. **Carrousel** — multi-photos en Post/Portrait → carrousel Instagram.
 5. **Stories successives** — multi-photos en Story → publications séparées automatiques.
