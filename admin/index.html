@@ -352,10 +352,23 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   padding:3px 9px;border-radius:16px;
 }
 .compose-foot{
-  display:flex;align-items:center;gap:10px;margin-top:24px;
-  padding-top:20px;border-top:1px solid var(--bord);
+  display:flex;align-items:center;gap:10px;
+  position:sticky;bottom:0;z-index:20;
+  margin-top:24px;padding:14px 0;
+  background:var(--blanc);border-top:1px solid var(--bord);
+  box-shadow:0 -6px 20px rgba(0,0,0,.05);
 }
 .foot-sp{flex:1;}
+/* Récap étape 4 — Publier */
+.recap-card{background:var(--blanc);border:1px solid var(--bord);border-radius:14px;overflow:hidden;margin-top:4px;}
+.recap-row{display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid var(--bord);}
+.recap-row:last-child{border-bottom:none;}
+.recap-ico{width:38px;height:38px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.recap-txt{display:flex;flex-direction:column;min-width:0;}
+.recap-k{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--gris-txt);font-weight:700;}
+.recap-v{font-size:14.5px;font-weight:600;color:var(--noir);}
+.recap-cap{font-weight:500;font-size:13px;color:var(--gris-txt);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.recap-hint{font-size:12.5px;color:var(--gris-txt);margin-top:12px;text-align:center;}
 .btn{padding:12px 20px;border-radius:10px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px;}
 .btn svg{width:15px;height:15px;}
 .btn-dark{background:var(--noir);color:#fff;}
@@ -407,6 +420,8 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 
 /* mini preview (mobile studio) */
 .mini-preview{display:none;}
+#preview-backdrop{display:none;}
+.sheet-handle{display:none;}
 
 /* ── POPUP PUBLICATION (LeLab basique) ─────────────────── */
 .popup-overlay{
@@ -483,14 +498,21 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   .mp-chev{margin-left:auto;color:#B0B0AA;transition:transform .2s;}
   .mp-chev svg{width:16px;height:16px;}
   body.preview-open .mp-chev{transform:rotate(180deg);}
+  /* preview en bottom sheet iOS */
+  #preview-backdrop{display:block;position:fixed;inset:0;background:rgba(10,10,10,.4);
+    opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:70;}
+  body.preview-open #preview-backdrop{opacity:1;pointer-events:auto;}
+  .sheet-handle{display:block;width:40px;height:4px;border-radius:2px;background:var(--bord);margin:2px auto 12px;}
   .preview-pane{
-    width:100%;height:auto;position:relative;border-left:none;
-    border-bottom:1px solid var(--bord);padding:0 16px;
-    max-height:0;overflow:hidden;opacity:0;
-    transition:max-height .3s ease,opacity .2s ease,padding .3s ease;
+    position:fixed;left:0;right:0;bottom:0;width:100%;height:auto;
+    max-height:85vh;overflow-y:auto;border-left:none;
+    background:#fff;border-radius:20px 20px 0 0;
+    box-shadow:0 -10px 40px rgba(0,0,0,.18);
+    transform:translateY(100%);transition:transform .3s ease;
+    z-index:80;padding:12px 16px calc(20px + env(safe-area-inset-bottom));
   }
-  body.preview-open .preview-pane{max-height:none;opacity:1;padding:14px;}
-  .preview-pane .pp-lbl,.preview-pane .pp-tip{display:none;}
+  body.preview-open .preview-pane{transform:translateY(0);}
+  .preview-pane .pp-tip{display:none;}
   .phone{width:auto;background:none;box-shadow:none;padding:0;display:flex;justify-content:center;}
   .phone-screen{border-radius:16px;border:1px solid var(--bord);width:210px;}
 }
@@ -519,6 +541,8 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   .mn-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:#B0B0AA;font-size:10px;font-weight:600;flex:1;padding:4px 0;}
   .mn-item svg{width:21px;height:21px;}
   .mn-item.active{color:var(--noir);}
+  /* pied compose au-dessus de la barre de nav mobile */
+  .compose-foot{bottom:calc(56px + env(safe-area-inset-bottom));}
 }
 @media(prefers-color-scheme:dark){
   html,body{background:#FAFAF8!important;color:#0A0A0A!important;}
@@ -684,11 +708,6 @@ body.authed #login-gate{display:none;}
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
       Mon site
     </button>
-    <button class="nav-item" onclick="showScreen('publier')">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>
-      Publier sur Instagram
-    </button>
-
     <p class="nav-sep" id="nav-sep-studio">Studio</p>
     <button class="nav-item locked-item" id="nav-studio" onclick="handlePlusClick()">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -727,9 +746,9 @@ body.authed #login-gate{display:none;}
             <div><div class="qa-tt">Modifier mon site</div><div class="qa-dd">Carte, photos, horaires…</div></div>
             <span class="qa-arr">↗</span>
           </div>
-          <div class="qa qa-accent" onclick="showScreen('publier')">
-            <span class="qa-ico">📸</span>
-            <div><div class="qa-tt">Publier sur Instagram</div><div class="qa-dd">Post depuis votre carte</div></div>
+          <div class="qa qa-accent" onclick="handlePlusClick()">
+            <span class="qa-ico">✦</span>
+            <div><div class="qa-tt">Studio Instagram</div><div class="qa-dd">Créer une publication</div></div>
             <span class="qa-arr">↗</span>
           </div>
         </div>
@@ -984,13 +1003,21 @@ body.authed #login-gate{display:none;}
           <div class="step-block" data-step="4">
             <div class="sh">Étape 4 — Publier</div>
             <h2>Prêt à publier ?</h2>
-            <div class="field"><div class="field-lbl"><span>Récapitulatif</span></div>
-              <div style="background:var(--gris-card);border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.8;">
-                <div>Thème : <b id="recap-theme">Menu du jour</b></div>
-                <div>Format : <b id="recap-format">Post (carré)</b></div>
+            <div class="recap-card">
+              <div class="recap-row">
+                <span class="recap-ico">🎨</span>
+                <div class="recap-txt"><span class="recap-k">Thème</span><span class="recap-v" id="recap-theme">Menu du jour</span></div>
+              </div>
+              <div class="recap-row">
+                <span class="recap-ico">📐</span>
+                <div class="recap-txt"><span class="recap-k">Format</span><span class="recap-v" id="recap-format">Post (carré)</span></div>
+              </div>
+              <div class="recap-row">
+                <span class="recap-ico">✍️</span>
+                <div class="recap-txt"><span class="recap-k">Légende</span><span class="recap-v recap-cap" id="recap-caption">—</span></div>
               </div>
             </div>
-            <p style="font-size:12.5px;color:var(--gris-txt);margin-top:10px;">Vérifiez l'aperçu à droite, puis publiez sur votre compte Instagram.</p>
+            <p class="recap-hint">Vérifiez l'aperçu, puis publiez en un tap.</p>
           </div>
 
           <div class="compose-foot">
@@ -1001,7 +1028,9 @@ body.authed #login-gate{display:none;}
         </div>
 
         <!-- preview pane -->
+        <div id="preview-backdrop" onclick="document.body.classList.remove('preview-open')"></div>
         <div class="preview-pane">
+          <div class="sheet-handle" onclick="document.body.classList.remove('preview-open')"></div>
           <div class="pp-label">Aperçu Instagram</div>
           <div class="pp-live"><span class="d"></span>En direct</div>
           <div class="phone">
@@ -1083,7 +1112,6 @@ body.authed #login-gate{display:none;}
 <nav class="mobile-nav">
   <a class="mn-item active" onclick="showScreen('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Accueil</a>
   <a class="mn-item" onclick="showScreen('monsite')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>Mon site</a>
-  <a class="mn-item" onclick="showScreen('publier')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></svg>Publier</a>
   <a class="mn-item" onclick="showScreen('studio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Studio</a>
 </nav>
 
@@ -1185,6 +1213,7 @@ async function getToken(){
 
 function customLogout(){
   clearSession();
+  clearStudioDraft();
   document.body.classList.remove('authed');
   showToast('👋 Déconnecté');
 }
@@ -1282,7 +1311,7 @@ function showScreen(name) {
   const s = document.getElementById(map[name]);
   if (s) s.classList.add('active');
 
-  const idx = ['dashboard','monsite','publier','studio'].indexOf(name);
+  const idx = ['dashboard','monsite','studio'].indexOf(name);
   const navItems = document.querySelectorAll('.nav-item');
   if (navItems[idx]) navItems[idx].classList.add('active');
   const mnItems = document.querySelectorAll('.mn-item');
@@ -1422,6 +1451,7 @@ function renderStudio(){
   if (screen) screen.classList.toggle('story', currentKind !== 'typo' && currentFmt === 'story');
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
+  saveStudioDraft();
 }
 
 /* ── Stepper studio ── */
@@ -1430,8 +1460,10 @@ let currentStep = 1;
 function updateRecap(){
   const rt = document.getElementById('recap-theme');
   const rf = document.getElementById('recap-format');
+  const rc = document.getElementById('recap-caption');
   if (rt){ const sel = document.querySelector('#studio-unlocked .tpl.sel .tt'); rt.textContent = sel ? sel.textContent : '—'; }
   if (rf){ const m = { square:'Post (carré)', portrait:'Portrait (4:5)', story:'Story (9:16)' }; rf.textContent = m[currentFmt] || currentFmt; }
+  if (rc){ const cap = (document.getElementById('caption') || {}).value || ''; rc.textContent = cap.split('#')[0].trim() || '—'; }
 }
 
 function goStep(n){
@@ -1458,12 +1490,53 @@ function goStep(n){
       : '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Publier';
   }
   updateRecap();
+  saveStudioDraft();
 }
 
 function nextStep(){ goStep(currentStep + 1); }
 function prevStep(){ goStep(currentStep - 1); }
 function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublishMock(); }
 function studioPublishMock(){ showToast('🚀 Publication Instagram — bientôt disponible'); }
+
+/* ── Persistance brouillon studio (sessionStorage) ── */
+let studioReady = false;
+
+function saveStudioDraft(){
+  if (!studioReady) return;
+  try {
+    const dishes = Array.from(document.querySelectorAll('#dishEdit .dish-row')).map(r => ({
+      n: r.querySelector('.d-name').value, p: r.querySelector('.d-price').value
+    }));
+    sessionStorage.setItem('lelab_studio_draft', JSON.stringify({
+      theme: currentTheme, kind: currentKind, fmt: currentFmt, step: currentStep,
+      caption:   (document.getElementById('caption')   || {}).value || '',
+      menuTitle: (document.getElementById('menuTitle') || {}).value || '',
+      photoTitle:(document.getElementById('photoTitle')|| {}).value || '',
+      dishes
+    }));
+  } catch (e){}
+}
+function clearStudioDraft(){ try { sessionStorage.removeItem('lelab_studio_draft'); } catch (e){} }
+
+function restoreStudioDraft(){
+  let d = null;
+  try { d = JSON.parse(sessionStorage.getItem('lelab_studio_draft') || 'null'); } catch (e){}
+  if (!d) return;
+  const tbtn = document.querySelector('#studio-unlocked .tpl[data-theme="' + d.theme + '"]');
+  if (tbtn) selectTheme(tbtn);                       // applique zones + formats dispo
+  if (Array.isArray(d.dishes)){
+    const list = document.getElementById('dishEdit');
+    if (list) list.innerHTML = d.dishes.map(x =>
+      `<div class="dish-row"><input class="inp d-name" value="${String(x.n||'').replace(/"/g,'&quot;')}" oninput="renderStudio()"><input class="inp d-price" value="${String(x.p||'').replace(/"/g,'&quot;')}" oninput="renderStudio()"></div>`
+    ).join('');
+  }
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  set('menuTitle', d.menuTitle); set('photoTitle', d.photoTitle); set('caption', d.caption);  // après selectTheme → écrase le prefill
+  const fbtn = document.querySelector('#fmtRow .fmt[data-fmt="' + d.fmt + '"]');
+  if (fbtn && !fbtn.classList.contains('disabled')) selectFmt(fbtn);
+  goStep(d.step || 1);
+  renderStudio();
+}
 
 /* ── Photos studio (en mémoire — upload Blobs différé à la publication) ── */
 let studioPhotos = [];      // [{ bitmap, cache:{fmt:dataURL} }]
@@ -2209,6 +2282,8 @@ lastAutoCaption = (document.getElementById('caption') || {}).value || '';
 renderStudio();
 goStep(1);
 renderStudioThumbs();
+restoreStudioDraft();   // ré-applique le brouillon si présent (saves bloqués tant que studioReady=false)
+studioReady = true;     // à partir d'ici, chaque modif est persistée
 </script>
 <div class="toast" id="toast"></div>
 </body>
