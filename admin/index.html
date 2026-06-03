@@ -620,6 +620,7 @@ body.authed #login-gate{display:none;}
 .add-dish{font-size:13px;font-weight:600;color:var(--accent-txt);display:inline-flex;
   align-items:center;gap:6px;cursor:pointer;margin-top:4px;}
 .add-dish svg{width:15px;height:15px;}
+#studio-unlocked .step-dot{cursor:pointer;}
 
 .ia-hint .spark{color:#B0760A;}
 .ig-name .loc{font-size:10.5px;font-weight:400;color:#737373;}
@@ -862,17 +863,17 @@ body.authed #login-gate{display:none;}
           </div>
 
           <div class="stepper">
-            <div class="step-dot active"><span class="num">1</span><span class="lbl">Thème</span></div>
+            <div class="step-dot active" onclick="goStep(1)"><span class="num">1</span><span class="lbl">Thème</span></div>
             <div class="step-line"></div>
-            <div class="step-dot"><span class="num">2</span><span class="lbl">Contenu</span></div>
+            <div class="step-dot" onclick="goStep(2)"><span class="num">2</span><span class="lbl">Contenu</span></div>
             <div class="step-line"></div>
-            <div class="step-dot"><span class="num">3</span><span class="lbl">Légende</span></div>
+            <div class="step-dot" onclick="goStep(3)"><span class="num">3</span><span class="lbl">Légende</span></div>
             <div class="step-line"></div>
-            <div class="step-dot"><span class="num">4</span><span class="lbl">Publier</span></div>
+            <div class="step-dot" onclick="goStep(4)"><span class="num">4</span><span class="lbl">Publier</span></div>
           </div>
 
           <!-- STEP 1 : THÈME -->
-          <div class="step-block">
+          <div class="step-block" data-step="1">
             <div class="sh">Étape 1 — Que voulez-vous publier ?</div>
             <h2>Choisissez un thème</h2>
             <div class="tpl-grid">
@@ -900,7 +901,7 @@ body.authed #login-gate{display:none;}
           </div>
 
           <!-- STEP 2 : CONTENU (adaptatif) -->
-          <div class="step-block">
+          <div class="step-block" data-step="2">
             <div class="sh">Étape 2 — Le contenu</div>
             <h2 id="step2Title">Vos plats & votre titre</h2>
 
@@ -952,7 +953,7 @@ body.authed #login-gate{display:none;}
           </div>
 
           <!-- STEP 3 : LÉGENDE -->
-          <div class="step-block">
+          <div class="step-block" data-step="3">
             <div class="sh">Étape 3 — La légende</div>
             <h2>Texte du post & hashtags</h2>
             <div class="field">
@@ -963,11 +964,23 @@ body.authed #login-gate{display:none;}
             </div>
           </div>
 
+          <!-- STEP 4 : PUBLIER -->
+          <div class="step-block" data-step="4">
+            <div class="sh">Étape 4 — Publier</div>
+            <h2>Prêt à publier ?</h2>
+            <div class="field"><div class="field-lbl"><span>Récapitulatif</span></div>
+              <div style="background:var(--gris-card);border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.8;">
+                <div>Thème : <b id="recap-theme">Menu du jour</b></div>
+                <div>Format : <b id="recap-format">Post (carré)</b></div>
+              </div>
+            </div>
+            <p style="font-size:12.5px;color:var(--gris-txt);margin-top:10px;">Vérifiez l'aperçu à droite, puis publiez sur votre compte Instagram.</p>
+          </div>
+
           <div class="compose-foot">
-            <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Retour</button>
+            <button class="btn btn-ghost" id="studio-back" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Retour</button>
             <div class="foot-spacer"></div>
-            <button class="btn btn-ghost">Brouillon</button>
-            <button class="btn btn-dark">Continuer<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+            <button class="btn btn-dark" id="studio-primary" onclick="studioPrimary()">Continuer<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
           </div>
         </div>
 
@@ -1303,6 +1316,47 @@ function renderStudio(){
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
 }
+
+/* ── Stepper studio ── */
+let currentStep = 1;
+
+function updateRecap(){
+  const rt = document.getElementById('recap-theme');
+  const rf = document.getElementById('recap-format');
+  if (rt){ const sel = document.querySelector('#studio-unlocked .tpl.sel .tt'); rt.textContent = sel ? sel.textContent : '—'; }
+  if (rf){ const m = { square:'Post (carré)', portrait:'Portrait (4:5)', story:'Story (9:16)' }; rf.textContent = m[currentFmt] || currentFmt; }
+}
+
+function goStep(n){
+  currentStep = Math.max(1, Math.min(4, n));
+  // afficher uniquement le bloc de l'étape courante
+  document.querySelectorAll('#studio-unlocked .step-block').forEach(b => {
+    b.style.display = (Number(b.dataset.step) === currentStep) ? 'block' : 'none';
+  });
+  // pastilles : done (<), active (==) ; lignes : done (<)
+  document.querySelectorAll('#studio-unlocked .step-dot').forEach((d, i) => {
+    d.classList.toggle('done', (i + 1) < currentStep);
+    d.classList.toggle('active', (i + 1) === currentStep);
+  });
+  document.querySelectorAll('#studio-unlocked .step-line').forEach((l, i) => {
+    l.classList.toggle('done', i < currentStep - 1);
+  });
+  // pied : Retour masqué à l'étape 1 ; bouton principal = Continuer (<4) / Publier (==4)
+  const back = document.getElementById('studio-back');
+  if (back) back.style.visibility = currentStep > 1 ? 'visible' : 'hidden';
+  const primary = document.getElementById('studio-primary');
+  if (primary){
+    primary.innerHTML = currentStep < 4
+      ? 'Continuer <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Publier';
+  }
+  updateRecap();
+}
+
+function nextStep(){ goStep(currentStep + 1); }
+function prevStep(){ goStep(currentStep - 1); }
+function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublishMock(); }
+function studioPublishMock(){ showToast('🚀 Publication Instagram — bientôt disponible'); }
 
 /* ════ MOTEUR D'ÉDITION (porté de l'ancien admin) ════ */
 
@@ -1973,6 +2027,7 @@ async function savePhotos(){
 setFmtAvailability(currentKind === 'typo' ? ['square','portrait'] : ['square','portrait','story']);
 lastAutoCaption = (document.getElementById('caption') || {}).value || '';
 renderStudio();
+goStep(1);
 </script>
 <div class="toast" id="toast"></div>
 </body>
