@@ -171,8 +171,18 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - **Redesign visuel LeLab** (charte violette) : reporté après photos.
 - **LeLab+** : tester le déverrouillage avec un vrai client (changer `config.plan` à `lelab_plus`).
 - **Éditeur events** : ✅ **FAIT** — éditeur dans l'admin (titre, date, heure, description ; ajout/suppression, max 5 ; save via `saveSection` section `events` → `_data/events.json`). Sans photo. Le site rend la liste via le script inline (`#events-grid`, filtre dates passées).
-- **Studio LeLab+** : ✅ **intégré** dans l'admin (`screen-studio`, déverrouillé si `config.plan = lelab_plus`). Thèmes adaptatifs (plat / menu / ambiance / événement → photo vs typo), formats (Story désactivé pour les thèmes typo), éditeur de plats avec « Ajouter un plat », preview Instagram live. CSS additif, IDs camelCase, JS `selectTheme`/`selectFmt`/`setFmtAvailability`/`addDish`/`renderStudio`. ⚠️ **Encore une maquette** : le bouton « Publier » n'est pas branché. **Wiring à faire** : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST vers `publish-instagram` (connexion **OAuth Instagram déjà en place**). C'est l'étape qui rend le studio réellement fonctionnel.
-- **Photos d'événements** (après le wiring « Publier ») : aujourd'hui `_data/events.json` a un champ `photo` mais il reste **vide** (aucun upload côté admin) → dans le studio, le thème « Événement » retombe sur une photo de la galerie. À faire : **ajouter l'upload photo dans l'éditeur Events** (réutiliser `fileToJpegBase64` + `upload-image` + le pattern galerie ; le champ `photo` est déjà dans le schéma et déjà affiché sur le site). Ensuite `themeImage('event')` utilisera la vraie photo de l'événement.
+- **Studio LeLab+** : ✅ **intégré** dans l'admin (`screen-studio`, déverrouillé si `config.plan = lelab_plus`) — thèmes adaptatifs (plat / menu / ambiance / événement → photo vs typo), formats (Story plein écran 9:16, désactivé pour le typo), éditeur de plats, preview Instagram live (téléphone à taille fixe). ⚠️ **Encore une maquette** : le bouton « Publier » n'est pas branché. Backlog ci-dessous.
+
+### Backlog Studio LeLab+ (par ordre de priorité)
+
+1. **Stepper fonctionnel** — navigation étapes 1→2→3→4 avec boutons Continuer / Retour.
+2. **Upload photo réel** — brancher Blobs (`upload-image` / `serve-image`), support **multi-photos** avec vignettes.
+3. **Contenu Story adapté** — champ texte court en overlay, **pas** de légende ni hashtags.
+4. **Carrousel** — multi-photos en Post/Portrait → carrousel Instagram.
+5. **Stories successives** — multi-photos en Story → publications séparées automatiques.
+6. **IA légende** — génération via **Claude API** depuis le bouton ✦.
+7. **Wiring « Publier »** → `publish-instagram` (**OAuth déjà en place**) : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST.
+8. **Photos d'événements** — upload dans l'éditeur Events (réutilise `fileToJpegBase64` + `upload-image` + le pattern galerie ; champ `photo` déjà dans le schéma `events.json` et déjà affiché sur le site). Ensuite `themeImage('event')` utilisera la vraie photo de l'événement.
 
 ---
 
