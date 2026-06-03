@@ -236,3 +236,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - Remplacer `_data/*.json` + la charte + `config.json`.
 - Brancher **GitHub + Netlify + Git Gateway**.
 - Le **template réutilisable** sera extrait plus tard, une fois LeLab fini.
+
+### Dette technique à traiter lors du premier nouveau client
+
+- **`netlify/functions/upload-image.mjs`** : l'URL Identity de prod est **codée en dur** en fallback — `process.env.IDENTITY_URL || 'https://gorgeous-heliotrope-e2e59d.netlify.app'`. Pour un nouveau site : définir la variable d'env **`IDENTITY_URL`** avec l'URL du nouveau client (ou retirer le fallback). Vérifier au passage qu'aucune autre URL `gorgeous-heliotrope-e2e59d…` ne traîne en dur (ex. `INSTAGRAM_REDIRECT_URI`, config Meta).
