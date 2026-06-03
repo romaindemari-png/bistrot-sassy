@@ -1,7 +1,7 @@
 # LeLab — Spécification produit
 
 > Mémoire produit du projet. À lire en priorité avant toute évolution.
-> Statut : fondation réparée et vérifiée en prod + **système de blocs complet et fonctionnel** (config + site + admin) + **consolidation CMS entamée** (telephone & whatsapp pilotés par la donnée). Reste à faire : **interface LeLab visuelle (redesign, charte violette)**.
+> Statut : **admin LeLab/LeLab+ en prod** (charte violette/jaune) — éditeurs carte / horaires / contact / photos / events + interrupteurs de blocs + **studio LeLab+ (maquette)** ; **connexion Instagram OAuth validée en dev**. Reste à faire : **backlog studio** (wiring « Publier », etc. — voir PROCHAINE ÉTAPE).
 
 ---
 
@@ -82,8 +82,9 @@ Deux produits :
   - URL = `${process.env.URL}/.netlify/git/github` — **PAS** `api.netlify.com`.
   - Authentification : le **token Netlify Identity** de l'utilisateur (Bearer), relayé à Git Gateway.
   - Chaque sauvegarde = **commit GitHub = redéploiement Netlify**.
-- **Prérequis Netlify** : **Netlify Identity** et **Git Gateway** activés ; variable d'env **`NETLIFY_SITE_ID`** présente.
-- **Autre fonction** : `netlify/functions/publish-instagram.js` (publication post simple / carrousel via l'API Graph Instagram ; env `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_ACCOUNT_ID`).
+- **Prérequis Netlify** : **Netlify Identity** + **Git Gateway** activés (pour `save-data` via `process.env.URL`) ; **Netlify Blobs** pour les images/connexion Insta, en mode manuel via `SITE_ID` (auto) + `NETLIFY_API_TOKEN`.
+- **Stockage médias / connexion** : **Netlify Blobs** — store `photos` (images uploadées) et store `instagram` (connexion OAuth). Fonctions : `upload-image.mjs`, `serve-image.mjs`.
+- **Instagram** : `instagram-auth.js` + `auth-callback.mjs` (OAuth, voir section CONNEXION INSTAGRAM) ; `publish-instagram.js` lit la connexion depuis Blobs (fallback env `INSTAGRAM_ACCESS_TOKEN`/`ACCOUNT_ID`).
 
 ---
 
@@ -120,9 +121,9 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - **✅ Fait (validé en prod)** :
   - **`telephone`** — pilote les **3 emplacements** (CTA réservation, bloc adresse, bloc contact) via `.cms-telephone` / `.cms-tel-link`.
   - **`whatsapp`** — numéro du FAB piloté par la donnée via `.cms-whatsapp` ; **message pré-rempli `?text=…` conservé en dur** dans le loader (rendu et comportement identiques). `id="wa"` conservé (utilisé par le CSS).
+  - **`horaires`** — ✅ rendu **dynamique** : `sassy-cms-loader.js` regroupe les jours consécutifs de mêmes horaires (`lun–mer…`) sur 2 emplacements (`#cms-horaires` + `#cms-horaires-compact`) ; éditeur admin durci (format `HHhMM`, garde-fou ouvert sans heures).
 - **🗓️ Reportés au redesign** (touchent à l'affichage) :
   - **`adresse`** — affichée sur 2 lignes (`<br/>`), JSON sur 1 ligne.
-  - **`horaires`** — JSON **par jour** vs affichage **condensé** (`lun–ven…`), structures incompatibles.
   - **`nom`** — tissé dans des titres / phrases, pas de cible d'affichage autonome.
   - **`description` / `email` / `horaires.note`** — présents en JSON mais **affichés nulle part** → décision design (créer un emplacement).
 - **⚠️ Chaînon à compléter un jour** : `instagram` / `facebook` — l'admin les enregistre, mais ils ne sont ni dans `general.json` ni affichés sur le site.
@@ -157,19 +158,19 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ## MAQUETTES DE RÉFÉRENCE
 
-*(prototypes HTML validés — ils décrivent le rendu cible à reproduire lors du dev ; les fichiers vivent **hors repo** pour l'instant, à intégrer progressivement)*
+*(prototypes HTML — ✅ **intégrés dans l'admin puis supprimés du repo** ; conservés ici pour mémoire du rendu cible)*
 
 1. **Dashboard d'accueil LeLab+** — jaune.
-2. **Éditeur de site LeLab** — violet, avec **popup de publication Insta restreinte**.
-3. **Studio Instagram LeLab+**.
+2. **Éditeur de site LeLab** (`lelab.html`) — violet → devenu le **shell de `admin/index.html`**.
+3. **Studio Instagram LeLab+** (`lelab-studio.html`) → intégré comme **studio enrichi** (`screen-studio`).
 
 ---
 
 ## PROCHAINE ÉTAPE
 
 - **Éditeur photos LeLab** : ✅ **TERMINÉ** (étapes 1-5, mergé dans `main`). (1) Infra Blobs (`upload-image.mjs`, `serve-image.mjs`, `package.json` ; Blobs en mode manuel `SITE_ID` + `NETLIFY_API_TOKEN`). (2) Affichage des photos actuelles. (3) Upload slider (canvas JPEG + Blobs + auto-save) + fix `object-fit:cover` slider. (4) Galerie : ajout (max 6) / suppression + delete Blob. (5) Garde-fous : verrou anti-upload concurrent (`isUploading`), validation `createImageBitmap` (rejet non-image), cohérence Blob/JSON (rollback du blob orphelin si save échoue ; suppression de l'ancienne image côté client après save), magic bytes serveur (JPEG/PNG/WebP). **Bonus site** : carousel galerie (`index.html`/`sassy-cms-loader.js`) — grille si ≤4, carousel horizontal si >4 (flèches desktop + scroll tactile mobile, scroll-snap).
-- **Redesign visuel LeLab** (charte violette) : reporté après photos.
-- **LeLab+** : tester le déverrouillage avec un vrai client (changer `config.plan` à `lelab_plus`).
+- **Déverrouillage LeLab+** : ✅ testé (dev `@lestud13` + bascule `config.plan` en prod). Reste : activer pour un **vrai client payant**.
+- **Redesign visuel du site public** (charte) : optionnel/à voir — l'**admin** est déjà à la charte LeLab.
 - **Éditeur events** : ✅ **FAIT** — éditeur dans l'admin (titre, date, heure, description ; ajout/suppression, max 5 ; save via `saveSection` section `events` → `_data/events.json`). Sans photo. Le site rend la liste via le script inline (`#events-grid`, filtre dates passées).
 - **Studio LeLab+** : ✅ **intégré** dans l'admin (`screen-studio`, déverrouillé si `config.plan = lelab_plus`) — thèmes adaptatifs (plat / menu / ambiance / événement → photo vs typo), formats (Story plein écran 9:16, désactivé pour le typo), éditeur de plats, preview Instagram live (téléphone à taille fixe). ⚠️ **Encore une maquette** : le bouton « Publier » n'est pas branché. Backlog ci-dessous.
 
