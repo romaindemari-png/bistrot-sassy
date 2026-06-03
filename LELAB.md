@@ -177,6 +177,8 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 1. **Stepper fonctionnel** — navigation étapes 1→2→3→4 avec boutons Continuer / Retour.
 2. **Upload photo réel** — brancher Blobs (`upload-image` / `serve-image`), support **multi-photos** avec vignettes.
+   - **2a. Capture directe** — `capture="environment"` sur l'`input[type=file]` → ouvre l'appareil photo directement sur mobile.
+   - **2b. Conversion auto au bon format** — toute image (HEIC, PNG, WebP, JPEG…) convertie en **JPEG** au ratio du format choisi : **1080×1080** (carré), **1080×1350** (portrait), **1080×1920** (story) — recadrage `cover` côté navigateur (canvas) **avant** envoi à Blobs et à l'API Instagram (qui n'accepte que JPEG). ⚠️ HEIC : décodage canvas OK sur Safari/iOS, **pas garanti** sur Chrome/Firefox desktop → prévoir un fallback (message clair, ou décodage via lib).
 3. **Contenu Story adapté** — champ texte court en overlay, **pas** de légende ni hashtags.
 4. **Carrousel** — multi-photos en Post/Portrait → carrousel Instagram.
 5. **Stories successives** — multi-photos en Story → publications séparées automatiques.
