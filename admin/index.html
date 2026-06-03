@@ -420,6 +420,8 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 
 /* mini preview (mobile studio) */
 .mini-preview{display:none;}
+#preview-backdrop{display:none;}
+.preview-close{display:none;}
 
 /* ── POPUP PUBLICATION (LeLab basique) ─────────────────── */
 .popup-overlay{
@@ -496,18 +498,28 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   .mp-chev{margin-left:auto;color:#B0B0AA;transition:transform .2s;}
   .mp-chev svg{width:16px;height:16px;}
   body.preview-open .mp-chev{transform:rotate(180deg);}
-  /* preview INLINE : bloc normal dans le flux, repliable sous le bandeau */
+  /* preview SHEET : descend depuis le haut, par-dessus le contenu */
+  #preview-backdrop{
+    display:block;position:fixed;inset:0;background:rgba(10,10,10,.45);
+    opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:70;
+  }
+  body.preview-open #preview-backdrop{opacity:1;pointer-events:auto;}
   .preview-pane{
-    position:static;width:100%;height:auto;border-left:none;
-    background:var(--blanc);
-    max-height:0;overflow:hidden;padding:0 16px;
-    transition:max-height .35s ease, padding .35s ease;
+    position:fixed;left:0;right:0;top:0;width:100%;height:70vh;
+    border-left:none;background:var(--blanc);
+    border-radius:0 0 20px 20px;overflow-y:auto;
+    box-shadow:0 12px 40px rgba(0,0,0,.22);
+    padding:20px 16px calc(20px + env(safe-area-inset-bottom));
+    transform:translateY(-100%);transition:transform .35s ease;
+    z-index:80;
   }
-  body.preview-open .preview-pane{
-    max-height:1400px;
-    padding:18px 16px calc(20px + env(safe-area-inset-bottom));
-    border-bottom:1px solid var(--bord);
+  body.preview-open .preview-pane{transform:translateY(0);}
+  .preview-close{
+    display:flex;align-items:center;justify-content:center;
+    position:absolute;top:12px;right:12px;width:34px;height:34px;
+    border-radius:50%;background:var(--gris-card);color:var(--noir);z-index:2;
   }
+  .preview-close svg{width:18px;height:18px;}
   .preview-pane .pp-tip{display:none;}
   .phone{width:auto;background:none;box-shadow:none;padding:0;display:flex;justify-content:center;}
   .phone-screen{border-radius:16px;border:1px solid var(--bord);width:210px;}
@@ -1024,7 +1036,9 @@ body.authed #login-gate{display:none;}
         </div>
 
         <!-- preview pane -->
+        <div id="preview-backdrop" onclick="document.body.classList.remove('preview-open')"></div>
         <div class="preview-pane">
+          <button class="preview-close" onclick="document.body.classList.remove('preview-open')" aria-label="Fermer l'aperçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
           <div class="pp-label">Aperçu Instagram</div>
           <div class="pp-live"><span class="d"></span>En direct</div>
           <div class="phone">
