@@ -14,6 +14,8 @@
     netlifyIdentity.init({
       APIUrl: 'https://gorgeous-heliotrope-e2e59d.netlify.app/.netlify/identity'
     });
+    var b = document.getElementById('btn-login');
+    if (b) b.addEventListener('click', openNetlifyLogin);
   });
 </script>
 <style>
@@ -643,7 +645,7 @@ body.authed #login-gate{display:none;}
   <img id="logo-login" alt="LeLab">
   <h1>Votre espace</h1>
   <p>Connectez-vous pour modifier votre site et publier sur Instagram.</p>
-  <button class="btn-login" onclick="openNetlifyLogin()">Se connecter →</button>
+  <button class="btn-login" id="btn-login">Se connecter →</button>
 </div>
 
 <div class="app">
@@ -1080,7 +1082,7 @@ body.authed #login-gate{display:none;}
 let currentPlan = 'lelab'; // 'lelab' | 'lelab_plus'
 
 /* ── NETLIFY IDENTITY (auth) ── */
-function openNetlifyLogin(){ netlifyIdentity.open('login'); }
+function openNetlifyLogin(){ if (window.netlifyIdentity) netlifyIdentity.open('login'); else showToast('⚠️ Connexion indisponible — réessaie'); }
 function doLogout(){ netlifyIdentity.logout(); }
 
 netlifyIdentity.on('init', user => {
