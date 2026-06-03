@@ -621,6 +621,11 @@ body.authed #login-gate{display:none;}
   align-items:center;gap:6px;cursor:pointer;margin-top:4px;}
 .add-dish svg{width:15px;height:15px;}
 #studio-unlocked .step-dot{cursor:pointer;}
+#studio-thumbs .thumb{position:relative;cursor:pointer;}
+#studio-thumbs .thumb.sel{outline:2px solid var(--noir);outline-offset:1px;}
+.thumb-x{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;
+  background:rgba(10,10,10,.7);color:#fff;font-size:10px;line-height:1;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;}
 
 .ia-hint .spark{color:#B0760A;}
 .ig-name .loc{font-size:10.5px;font-weight:400;color:#737373;}
@@ -921,15 +926,13 @@ body.authed #login-gate{display:none;}
             <!-- PHOTO zone (thèmes photo) -->
             <div id="photoZone" style="display:none;">
               <div class="field"><div class="field-lbl"><span>Photo</span></div>
-                <div class="upload">
+                <div class="upload" id="studio-upload" onclick="document.getElementById('studio-photo-input').click()">
                   <span class="u-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg></span>
                   <span class="u-tt">Glissez une photo ou cliquez</span>
-                  <span class="u-dd">JPG, PNG · 1080×1080 recommandé</span>
+                  <span class="u-dd">JPG, PNG, HEIC · recadrée automatiquement</span>
                 </div>
-                <div class="thumb-row">
-                  <div class="thumb" id="photoThumb" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&q=80')"></div>
-                  <div class="thumb add"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
-                </div>
+                <input type="file" id="studio-photo-input" accept="image/*" capture="environment" multiple hidden onchange="onStudioPhotos(this)">
+                <div class="thumb-row" id="studio-thumbs"><!-- rendu par renderStudioThumbs() --></div>
               </div>
               <div class="field"><div class="field-lbl"><span id="photoFieldLbl">Légende du plat</span></div>
                 <input class="inp" id="photoTitle" value="Tartare de thon, agrumes & sésame — 14 €" oninput="renderStudio()">
@@ -1270,6 +1273,7 @@ function selectFmt(btn){
   document.querySelectorAll('#fmtRow .fmt').forEach(f => f.classList.remove('sel'));
   btn.classList.add('sel');
   currentFmt = btn.dataset.fmt;
+  renderStudioThumbs();
   renderStudio();
 }
 
@@ -1303,7 +1307,8 @@ function renderStudio(){
     document.getElementById('tyDishes').innerHTML = html;
     document.getElementById('mpThumb').style.background = 'var(--sassy-creme, #FAF1E2)';
   } else {
-    const img = themeImage(currentTheme);
+    const sel = studioPhotos[studioPhotoIdx];
+    const img = sel ? studioPreviewUrl(sel, currentFmt) : themeImage(currentTheme);
     igTypo.style.display = 'none';
     igPhoto.style.display = 'block';
     igPhoto.className = 'ig-img ' + ratioClass;
@@ -1357,6 +1362,84 @@ function nextStep(){ goStep(currentStep + 1); }
 function prevStep(){ goStep(currentStep - 1); }
 function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublishMock(); }
 function studioPublishMock(){ showToast('🚀 Publication Instagram — bientôt disponible'); }
+
+/* ── Photos studio (en mémoire — upload Blobs différé à la publication) ── */
+let studioPhotos = [];      // [{ bitmap, cache:{fmt:dataURL} }]
+let studioPhotoIdx = 0;
+const STUDIO_MAX_PHOTOS = 10;
+const FMT_RATIO = { square:[1,1], portrait:[4,5], story:[9,16] };
+
+// Recadrage cover au ratio du format → dataURL JPEG (taille preview ; le 1080 final sera fait à la publication)
+function cropBitmap(bitmap, fmt, outW = 540){
+  const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
+  const tw = outW, th = Math.round(outW * rh / rw);
+  const c = document.createElement('canvas'); c.width = tw; c.height = th;
+  const ctx = c.getContext('2d');
+  const scale = Math.max(tw / bitmap.width, th / bitmap.height);
+  const dw = bitmap.width * scale, dh = bitmap.height * scale;
+  ctx.drawImage(bitmap, (tw - dw) / 2, (th - dh) / 2, dw, dh);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+function studioPreviewUrl(p, fmt){
+  p.cache = p.cache || {};
+  if (!p.cache[fmt]) p.cache[fmt] = cropBitmap(p.bitmap, fmt);
+  return p.cache[fmt];
+}
+
+function setUploadLoading(on){
+  const u = document.getElementById('studio-upload');
+  if (!u) return;
+  u.style.opacity = on ? '0.55' : '';
+  u.style.pointerEvents = on ? 'none' : '';
+  const tt = u.querySelector('.u-tt');
+  if (tt) tt.textContent = on ? '⏳ Conversion…' : 'Glissez une photo ou cliquez';
+}
+
+async function onStudioPhotos(input){
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length) return;
+  setUploadLoading(true);
+  try {
+    for (const f of files){
+      if (studioPhotos.length >= STUDIO_MAX_PHOTOS){ showToast('⚠️ Maximum 10 photos'); break; }
+      const isImg = f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name);
+      if (!isImg){ showToast('⚠️ Choisis une image'); continue; }
+      let bmp;
+      try { bmp = await createImageBitmap(f); }
+      catch { showToast('⚠️ Format non lu sur ce navigateur — réessaie depuis ton téléphone'); continue; }
+      studioPhotos.push({ bitmap: bmp, cache: {} });
+    }
+    if (studioPhotos.length) studioPhotoIdx = studioPhotos.length - 1;
+  } finally {
+    setUploadLoading(false);
+    renderStudioThumbs();
+    renderStudio();
+  }
+}
+
+function renderStudioThumbs(){
+  const row = document.getElementById('studio-thumbs');
+  if (!row) return;
+  let html = studioPhotos.map((p, i) =>
+    `<div class="thumb${i === studioPhotoIdx ? ' sel' : ''}" style="background-image:url('${studioPreviewUrl(p, currentFmt)}')" onclick="selectStudioPhoto(${i})">
+       <button class="thumb-x" onclick="event.stopPropagation();removeStudioPhoto(${i})">✕</button>
+     </div>`
+  ).join('');
+  if (studioPhotos.length < STUDIO_MAX_PHOTOS){
+    html += `<div class="thumb add" onclick="document.getElementById('studio-photo-input').click()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`;
+  }
+  row.innerHTML = html;
+}
+
+function selectStudioPhoto(i){ studioPhotoIdx = i; renderStudioThumbs(); renderStudio(); }
+function removeStudioPhoto(i){
+  const p = studioPhotos[i];
+  if (p && p.bitmap && p.bitmap.close) p.bitmap.close();
+  studioPhotos.splice(i, 1);
+  if (studioPhotoIdx >= studioPhotos.length) studioPhotoIdx = Math.max(0, studioPhotos.length - 1);
+  renderStudioThumbs(); renderStudio();
+}
 
 /* ════ MOTEUR D'ÉDITION (porté de l'ancien admin) ════ */
 
@@ -2028,6 +2111,7 @@ setFmtAvailability(currentKind === 'typo' ? ['square','portrait'] : ['square','p
 lastAutoCaption = (document.getElementById('caption') || {}).value || '';
 renderStudio();
 goStep(1);
+renderStudioThumbs();
 </script>
 <div class="toast" id="toast"></div>
 </body>
