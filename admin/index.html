@@ -588,6 +588,39 @@ body.authed #login-gate{display:none;}
   font-size:13.5px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.25);
   z-index:400;opacity:0;transition:all .3s;max-width:90vw;text-align:center;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ════ STUDIO LeLab+ — compléments (montée de version lelab-studio) ════ */
+.compose-head{margin-bottom:22px;}
+.compose-head h1{font-size:30px;font-weight:800;line-height:1.05;}
+.compose-head p{font-size:14px;color:var(--gris-txt);margin-top:6px;}
+
+.adaptive-note{font-size:12px;color:var(--gris-txt);background:var(--gris-card);border-radius:10px;
+  padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;gap:9px;}
+.adaptive-note svg{width:16px;height:16px;stroke:var(--noir);flex-shrink:0;}
+.adaptive-note b{color:var(--noir);font-weight:600;}
+
+.upload .u-ico{width:44px;height:44px;border-radius:12px;background:var(--gris-card);
+  display:flex;align-items:center;justify-content:center;}
+.upload .u-ico svg{width:22px;height:22px;stroke:var(--gris-txt);}
+.thumb-row{display:flex;gap:9px;margin-top:11px;}
+.thumb{width:62px;height:62px;border-radius:11px;background-size:cover;background-position:center;
+  border:1px solid var(--bord);flex-shrink:0;}
+.thumb.add{border:1.5px dashed var(--bord);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.thumb.add svg{width:18px;height:18px;stroke:var(--gris-txt);}
+
+.dish-edit{margin-top:6px;}
+.dish-row .d-name{flex:1;}
+.add-dish{font-size:13px;font-weight:600;color:var(--accent-txt);display:inline-flex;
+  align-items:center;gap:6px;cursor:pointer;margin-top:4px;}
+.add-dish svg{width:15px;height:15px;}
+
+.ia-hint .spark{color:#B0760A;}
+.ig-name .loc{font-size:10.5px;font-weight:400;color:#737373;}
+.ig-more{color:#262626;font-size:16px;letter-spacing:1px;}
+.ig-actions .sp{flex:1;}
+.foot-spacer{flex:1;}
+.preview-pane .pp-label{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+  color:#A0A09A;font-weight:700;align-self:flex-start;margin-bottom:4px;}
 </style>
 </head>
 <body>
@@ -810,12 +843,16 @@ body.authed #login-gate{display:none;}
       <div class="studio-wrap" id="studio-unlocked" style="display:none;">
         <!-- mini preview (mobile) -->
         <button class="mini-preview" onclick="document.body.classList.toggle('preview-open')">
-          <span class="mp-thumb" id="mp-thumb"></span>
+          <span class="mp-thumb" id="mpThumb"></span>
           <span style="flex:1;"><div class="mp-tt">Aperçu Instagram</div><div class="mp-dd"><span class="mp-dot"></span>en direct</div></span>
           <span class="mp-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg></span>
         </button>
+
         <div class="compose">
-          <div class="pg-head"><h1>Nouvelle publication</h1><p>Choisissez un thème — l'aperçu s'adapte en direct.</p></div>
+          <div class="compose-head">
+            <h1>Nouvelle publication</h1>
+            <p>Choisissez un thème, l'aperçu s'adapte en direct.</p>
+          </div>
 
           <div class="stepper">
             <div class="step-dot active"><span class="num">1</span><span class="lbl">Thème</span></div>
@@ -827,124 +864,132 @@ body.authed #login-gate{display:none;}
             <div class="step-dot"><span class="num">4</span><span class="lbl">Publier</span></div>
           </div>
 
+          <!-- STEP 1 : THÈME -->
           <div class="step-block">
             <div class="sh">Étape 1 — Que voulez-vous publier ?</div>
             <h2>Choisissez un thème</h2>
             <div class="tpl-grid">
-              <button class="tpl" data-kind="photo" onclick="selectTheme(this)">
-                <span class="t-ico">🍽️</span>
-                <span><span class="tt">Plat du jour</span><span class="dd">Photo + prix</span></span>
+              <button class="tpl" data-theme="plat" data-kind="photo" onclick="selectTheme(this)">
+                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M3 15l5-3 4 2 3-2 6 4"/></svg></span>
+                <span><span class="tt">Plat du jour</span><span class="dd">Une photo + un prix</span></span>
                 <span class="kind">photo</span>
               </button>
-              <button class="tpl sel" data-kind="typo" onclick="selectTheme(this)">
-                <span class="t-ico">📋</span>
+              <button class="tpl sel" data-theme="menu" data-kind="typo" onclick="selectTheme(this)">
+                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><path d="M5 12l5-7 5 9 4-5"/><path d="M4 19h16"/></svg></span>
                 <span><span class="tt">Menu du jour</span><span class="dd">Visuel typo, sans photo</span></span>
                 <span class="kind">typo</span>
               </button>
-              <button class="tpl" data-kind="photo" onclick="selectTheme(this)">
-                <span class="t-ico">🏡</span>
+              <button class="tpl" data-theme="ambiance" data-kind="photo" onclick="selectTheme(this)">
+                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></span>
                 <span><span class="tt">Photo d'ambiance</span><span class="dd">Salle, terrasse, déco</span></span>
                 <span class="kind">photo</span>
               </button>
-              <button class="tpl" data-kind="photo" onclick="selectTheme(this)">
-                <span class="t-ico">🎉</span>
+              <button class="tpl" data-theme="event" data-kind="photo" onclick="selectTheme(this)">
+                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>
                 <span><span class="tt">Événement</span><span class="dd">Soirée, concert, actu</span></span>
                 <span class="kind">photo</span>
               </button>
             </div>
           </div>
 
+          <!-- STEP 2 : CONTENU (adaptatif) -->
           <div class="step-block">
             <div class="sh">Étape 2 — Le contenu</div>
-            <h2 id="s2-title">Vos plats & votre titre</h2>
+            <h2 id="step2Title">Vos plats & votre titre</h2>
 
-            <div id="typo-note" style="font-size:12px;color:var(--gris-txt);background:var(--gris-card);border-radius:9px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-              <span><b>Menu du jour</b> — visuel typographique généré dans votre charte. Pas de photo à charger.</span>
+            <div class="adaptive-note" id="adaptiveNote">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+              <span id="adaptiveText"><b>Menu du jour</b> est un visuel typographique : pas de photo à charger, le rendu est généré dans votre charte.</span>
             </div>
 
-            <!-- format -->
-            <div class="field"><div class="field-lbl">Format</div>
-              <div class="fmt-row" id="fmt-row">
+            <div class="field"><div class="field-lbl"><span>Format</span></div>
+              <div class="fmt-row" id="fmtRow">
                 <button class="fmt sel" data-fmt="square" onclick="selectFmt(this)"><span class="f-shape sq"></span><span class="f-lbl">Post</span><span class="f-sub">carré</span></button>
                 <button class="fmt" data-fmt="portrait" onclick="selectFmt(this)"><span class="f-shape pt"></span><span class="f-lbl">Portrait</span><span class="f-sub">4:5</span></button>
-                <button class="fmt disabled" data-fmt="story" onclick="selectFmt(this)"><span class="f-shape st"></span><span class="f-lbl">Story</span><span class="f-sub">9:16</span></button>
+                <button class="fmt" data-fmt="story" onclick="selectFmt(this)"><span class="f-shape st"></span><span class="f-lbl">Story</span><span class="f-sub">9:16</span></button>
               </div>
             </div>
 
-            <!-- photo zone -->
-            <div id="photo-zone" style="display:none;">
-              <div class="field"><div class="field-lbl">Photo</div>
+            <!-- PHOTO zone (thèmes photo) -->
+            <div id="photoZone" style="display:none;">
+              <div class="field"><div class="field-lbl"><span>Photo</span></div>
                 <div class="upload">
-                  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+                  <span class="u-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg></span>
                   <span class="u-tt">Glissez une photo ou cliquez</span>
-                  <span class="u-dd">JPG · 1080×1080 recommandé</span>
+                  <span class="u-dd">JPG, PNG · 1080×1080 recommandé</span>
+                </div>
+                <div class="thumb-row">
+                  <div class="thumb" id="photoThumb" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&q=80')"></div>
+                  <div class="thumb add"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
                 </div>
               </div>
-              <div class="field"><div class="field-lbl">Légende du plat</div>
-                <input class="inp" value="Tartare de thon, agrumes & sésame — 14 €" oninput="renderStudio()">
+              <div class="field"><div class="field-lbl"><span id="photoFieldLbl">Légende du plat</span></div>
+                <input class="inp" id="photoTitle" value="Tartare de thon, agrumes & sésame — 14 €" oninput="renderStudio()">
               </div>
             </div>
 
-            <!-- typo zone -->
-            <div id="typo-zone">
-              <div class="field"><div class="field-lbl">Titre du visuel</div>
-                <input class="inp" id="menu-title" value="Menu du jour" oninput="renderStudio()">
+            <!-- TYPO zone (menu du jour) -->
+            <div id="typoZone">
+              <div class="field"><div class="field-lbl"><span>Titre du visuel</span></div>
+                <input class="inp" id="menuTitle" value="Menu du jour" oninput="renderStudio()">
               </div>
-              <div class="field"><div class="field-lbl">Vos plats</div>
-                <div id="dish-edit">
+              <div class="field"><div class="field-lbl"><span>Vos plats</span></div>
+                <div class="dish-edit" id="dishEdit">
                   <div class="dish-row"><input class="inp d-name" value="Tartare de thon, agrumes" oninput="renderStudio()"><input class="inp d-price" value="14 €" oninput="renderStudio()"></div>
                   <div class="dish-row"><input class="inp d-name" value="Pavé de bœuf, jus corsé" oninput="renderStudio()"><input class="inp d-price" value="22 €" oninput="renderStudio()"></div>
                   <div class="dish-row"><input class="inp d-name" value="Tarte fine aux pommes" oninput="renderStudio()"><input class="inp d-price" value="9 €" oninput="renderStudio()"></div>
                 </div>
+                <button class="add-dish" onclick="addDish()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Ajouter un plat</button>
               </div>
             </div>
           </div>
 
+          <!-- STEP 3 : LÉGENDE -->
           <div class="step-block">
             <div class="sh">Étape 3 — La légende</div>
-            <h2>Texte du post</h2>
+            <h2>Texte du post & hashtags</h2>
             <div class="field">
-              <div class="field-lbl"><span>Légende</span><button class="ia-btn">✦ Générer avec l'IA</button></div>
+              <div class="field-lbl"><span>Légende</span><button class="ia-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Générer avec l'IA</button></div>
               <textarea class="inp" id="caption" oninput="renderStudio()">Le menu du jour est servi 🍽️ Trois plats faits maison, à déguster midi & soir en terrasse. Réservation conseillée.</textarea>
+              <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
               <div class="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
             </div>
           </div>
 
           <div class="compose-foot">
-            <button class="btn btn-ghost">← Retour</button>
-            <div class="foot-sp"></div>
+            <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Retour</button>
+            <div class="foot-spacer"></div>
             <button class="btn btn-ghost">Brouillon</button>
-            <button class="btn btn-dark">Continuer →</button>
+            <button class="btn btn-dark">Continuer<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
           </div>
         </div>
 
         <!-- preview pane -->
         <div class="preview-pane">
-          <div class="pp-lbl">Aperçu Instagram</div>
+          <div class="pp-label">Aperçu Instagram</div>
           <div class="pp-live"><span class="d"></span>En direct</div>
           <div class="phone">
             <div class="phone-screen">
               <div class="ig-top">
                 <div class="ig-ava"><div></div></div>
-                <div class="ig-name">bistrotsassy<span style="font-size:10px;font-weight:400;color:#737373;display:block;">Marseille</span></div>
-                <div style="color:#262626;font-size:14px;letter-spacing:1px;">···</div>
+                <div class="ig-name">bistrotsassy<span class="loc"><br>Marseille</span></div>
+                <div class="ig-more">···</div>
               </div>
-              <div class="ig-img" id="ig-photo" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80');display:none;"></div>
-              <div class="ig-typo" id="ig-typo">
+              <div class="ig-img" id="igPhoto" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80');display:none;"></div>
+              <div class="ig-typo" id="igTypo">
                 <div class="ty-h">Aujourd'hui</div>
-                <div class="ty-title" id="ty-title">Menu du jour</div>
-                <div id="ty-dishes"></div>
+                <div class="ty-title" id="tyTitle">Menu du jour</div>
+                <div id="tyDishes"></div>
               </div>
               <div class="ig-actions">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.7"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.7"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.7"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
-                <span class="ig-sp"></span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.7"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1.1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                <span class="sp"></span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div class="ig-likes">128 j'aime</div>
-              <div class="ig-cap"><b>bistrotsassy</b> <span id="ig-cap-txt">Le menu du jour est servi 🍽️</span> <span style="color:#385185;">#bistrotsassy #marseille</span></div>
+              <div class="ig-cap"><b>bistrotsassy</b> <span id="igCap">Le menu du jour est servi 🍽️</span> <span style="color:#385185;">#bistrotsassy #marseille #menudujour</span></div>
             </div>
           </div>
           <div class="pp-tip">Ce que verront vos abonnés une fois publié.</div>
@@ -1131,64 +1176,86 @@ function handlePlusClick() {
 let currentKind = 'typo';
 let currentFmt = 'square';
 
-function selectTheme(btn) {
+function selectTheme(btn){
   document.querySelectorAll('.tpl').forEach(t => t.classList.remove('sel'));
   btn.classList.add('sel');
   currentKind = btn.dataset.kind;
   const isTypo = currentKind === 'typo';
+  const name = btn.querySelector('.tt').textContent;
 
-  document.getElementById('photo-zone').style.display = isTypo ? 'none' : 'block';
-  document.getElementById('typo-zone').style.display = isTypo ? 'block' : 'none';
-  document.getElementById('typo-note').style.display = isTypo ? 'flex' : 'none';
-  document.getElementById('s2-title').textContent = isTypo ? 'Vos plats & votre titre' : 'Votre photo & votre texte';
-
-  // story disabled for typo
-  document.querySelectorAll('#fmt-row .fmt').forEach(f => {
-    if (f.dataset.fmt === 'story') f.classList.toggle('disabled', isTypo);
-  });
-  if (isTypo && document.querySelector('#fmt-row .fmt.sel[data-fmt="story"]')) {
-    document.querySelectorAll('#fmt-row .fmt').forEach(f => f.classList.remove('sel'));
-    document.querySelector('#fmt-row .fmt[data-fmt="square"]').classList.add('sel');
-    currentFmt = 'square';
+  document.getElementById('photoZone').style.display    = isTypo ? 'none' : 'block';
+  document.getElementById('typoZone').style.display     = isTypo ? 'block' : 'none';
+  document.getElementById('adaptiveNote').style.display = isTypo ? 'flex' : 'none';
+  document.getElementById('step2Title').textContent     = isTypo ? 'Vos plats & votre titre' : 'Votre photo & votre texte';
+  if (isTypo){
+    document.getElementById('adaptiveText').innerHTML =
+      '<b>' + name + '</b> est un visuel typographique : pas de photo à charger, le rendu est généré dans votre charte.';
+  } else {
+    const lbl = document.getElementById('photoFieldLbl');
+    if (lbl) lbl.textContent = (btn.dataset.theme === 'plat' ? 'Légende du plat' : 'Texte');
   }
+
+  // Story indisponible pour les thèmes typo
+  setFmtAvailability(isTypo ? ['square','portrait'] : ['square','portrait','story']);
   renderStudio();
 }
 
-function selectFmt(btn) {
+function setFmtAvailability(allowed){
+  document.querySelectorAll('#fmtRow .fmt').forEach(f => {
+    if (allowed.includes(f.dataset.fmt)) { f.classList.remove('disabled'); }
+    else { f.classList.add('disabled'); f.classList.remove('sel'); }
+  });
+  if (!document.querySelector('#fmtRow .fmt.sel')){
+    const first = document.querySelector('#fmtRow .fmt:not(.disabled)');
+    if (first){ first.classList.add('sel'); currentFmt = first.dataset.fmt; }
+  }
+}
+
+function selectFmt(btn){
   if (btn.classList.contains('disabled')) return;
-  document.querySelectorAll('#fmt-row .fmt').forEach(f => f.classList.remove('sel'));
+  document.querySelectorAll('#fmtRow .fmt').forEach(f => f.classList.remove('sel'));
   btn.classList.add('sel');
   currentFmt = btn.dataset.fmt;
   renderStudio();
 }
 
-function renderStudio() {
-  const igPhoto = document.getElementById('ig-photo');
-  const igTypo = document.getElementById('ig-typo');
-  const ratioClass = currentFmt === 'portrait' ? 'portrait' : '';
+function addDish(){
+  const list = document.getElementById('dishEdit');
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'dish-row';
+  row.innerHTML = '<input class="inp d-name" placeholder="Nom du plat" oninput="renderStudio()">' +
+                  '<input class="inp d-price" placeholder="Prix" oninput="renderStudio()">';
+  list.appendChild(row);
+  renderStudio();
+}
 
-  if (currentKind === 'typo') {
+function renderStudio(){
+  const igPhoto = document.getElementById('igPhoto');
+  const igTypo  = document.getElementById('igTypo');
+  if (!igPhoto || !igTypo) return;
+  const ratioClass = currentFmt === 'story' ? 'story' : (currentFmt === 'portrait' ? 'portrait' : '');
+
+  if (currentKind === 'typo'){
     igPhoto.style.display = 'none';
     igTypo.style.display = 'flex';
     igTypo.className = 'ig-typo ' + ratioClass;
-    document.getElementById('ty-title').textContent = document.getElementById('menu-title').value || 'Menu du jour';
-    const rows = document.querySelectorAll('#dish-edit .dish-row');
+    document.getElementById('tyTitle').textContent = document.getElementById('menuTitle').value || 'Menu du jour';
     let html = '';
-    rows.forEach(r => {
-      const n = r.querySelector('.d-name').value;
-      const p = r.querySelector('.d-price').value;
+    document.querySelectorAll('#dishEdit .dish-row').forEach(r => {
+      const n = r.querySelector('.d-name').value, p = r.querySelector('.d-price').value;
       if (n) html += `<div class="ty-dish"><span class="ty-n">${n}</span><span class="ty-p">${p}</span></div>`;
     });
-    document.getElementById('ty-dishes').innerHTML = html;
-    document.getElementById('mp-thumb').style.background = '#FAF1E2';
+    document.getElementById('tyDishes').innerHTML = html;
+    document.getElementById('mpThumb').style.background = 'var(--sassy-creme, #FAF1E2)';
   } else {
     igTypo.style.display = 'none';
     igPhoto.style.display = 'block';
     igPhoto.className = 'ig-img ' + ratioClass;
-    document.getElementById('mp-thumb').style.backgroundImage = "url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120&q=80')";
+    document.getElementById('mpThumb').style.backgroundImage = "url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120&q=80')";
   }
   const cap = document.getElementById('caption').value;
-  document.getElementById('ig-cap-txt').textContent = cap.split('#')[0].trim();
+  document.getElementById('igCap').textContent = cap.split('#')[0].trim();
 }
 
 /* ════ MOTEUR D'ÉDITION (porté de l'ancien admin) ════ */
@@ -1857,6 +1924,7 @@ async function savePhotos(){
   sassyData.photos = data;
 }
 
+setFmtAvailability(currentKind === 'typo' ? ['square','portrait'] : ['square','portrait','story']);
 renderStudio();
 </script>
 <div class="toast" id="toast"></div>
