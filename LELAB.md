@@ -196,6 +196,11 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 6. **IA légende** — génération via **Claude API** depuis le bouton ✦.
 7. **Wiring « Publier »** → `publish-instagram` (**OAuth déjà en place**) : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST.
 8. **Photos d'événements** — upload dans l'éditeur Events (réutilise `fileToJpegBase64` + `upload-image` + le pattern galerie ; champ `photo` déjà dans le schéma `events.json` et déjà affiché sur le site). Ensuite `themeImage('event')` utilisera la vraie photo de l'événement.
+9. **Reels (vidéo MP4)** — nouveau type de média. Contraintes techniques :
+   - **Upload MP4**, codec **H.264** (audio AAC), **durée 3-90 s**, **résolution 1080×1920** (9:16).
+   - **Publication différente des images** : container vidéo Instagram (`media_type=REELS`, `video_url` = URL **publique**) → le traitement est **asynchrone** : il faut **poller le statut du container** (`status_code` → `FINISHED`) **avant** `media_publish` (l'image, elle, est quasi instantanée).
+   - **Hébergement** : stocker le MP4 dans **Blobs** + une fonction de service type `serve-video` (≠ `serve-image`) renvoyant l'URL publique.
+   - ⚠️ **Pas de transcodage navigateur** : on ne peut pas convertir une vidéo en JS comme une image (canvas). Si l'iPhone enregistre en **HEVC/H.265** (par défaut sur iOS récent), il faudra soit demander un MP4 H.264, soit prévoir un transcodage serveur — **à cadrer**. Valider durée/format côté client reste limité.
 
 ---
 
