@@ -362,6 +362,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   font-size:14px;line-height:1;padding:0 3px;border-radius:50%;opacity:.55;
 }
 .htag-x:hover{opacity:1;background:rgba(0,0,0,.08);}
+.htag-placeholder{font-size:12px;color:rgba(0,0,0,0.35);font-style:italic;}
 /* badge statut Instagram (compose-head studio + écran Publier) */
 .ig-status{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:20px;text-decoration:none;}
 .ig-status.on{background:#E7F6EC;color:#1A8F4C;}
@@ -1504,13 +1505,17 @@ function studioContentText(){
 }
 
 // Hashtags : état source de vérité (= ce qui partira à la publication), éditable (× pour retirer)
-let studioHashtags = ['#bistrotsassy', '#marseille', '#menudujour', '#faitmaison'];
+let studioHashtags = [];
 
 function renderHashtagsRow(){
   const row = document.getElementById('hashtags');
-  if (row) row.innerHTML = studioHashtags.map((t, i) =>
-    `<span class="htag">${t}<button class="htag-x" onclick="removeHashtag(${i})" aria-label="Retirer ${t}">×</button></span>`
-  ).join('');
+  if (row){
+    row.innerHTML = studioHashtags.length
+      ? studioHashtags.map((t, i) =>
+          `<span class="htag">${t}<button class="htag-x" onclick="removeHashtag(${i})" aria-label="Retirer ${t}">×</button></span>`
+        ).join('')
+      : `<span class="htag-placeholder">Les hashtags apparaîtront après la génération IA ✦</span>`;
+  }
   const ig = document.getElementById('igTags');
   if (ig) ig.textContent = studioHashtags.join(' ');
 }
