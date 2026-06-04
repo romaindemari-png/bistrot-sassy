@@ -240,6 +240,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - **Évaluation PWA vs App native** (iOS / Android).
 - Si App native : **React Native**, soumission **App Store**.
 - **Marque blanche** pour agences partenaires.
+- **Interface « Studio seul »** : pour les clients qui ont déjà un site ailleurs (ou n'en veulent pas). Dashboard épuré avec **uniquement le Studio Instagram** — pas de section « Mon site », pas d'éditeur de contenu. **Nouvelle offre tarifaire à définir** (ex. *LeLab+ Studio* à X€/mois, sans le site). **Architecture à prévoir** : `config.json` avec `mode = "studio_only"` qui masque toute la partie site.
 
 ---
 
