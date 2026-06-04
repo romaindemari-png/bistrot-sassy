@@ -1522,8 +1522,10 @@ async function generateCaption(btn){
         contentText: studioContentText()
       })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur');
+    const raw = await res.text();
+    let data = {};
+    try { data = JSON.parse(raw); } catch { throw new Error('HTTP ' + res.status + ' — ' + raw.slice(0, 120)); }
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + (data.error || 'Erreur'));
     if (data.caption){
       const capEl = document.getElementById('caption');
       capEl.value = data.caption;
@@ -1533,7 +1535,8 @@ async function generateCaption(btn){
     renderStudio();
     showToast('✦ Légende générée');
   } catch (e){
-    showToast('⚠️ Génération indisponible');
+    console.error('generate-caption :', e);
+    showToast('⚠️ ' + (e && e.message ? e.message : 'Génération indisponible'));
   } finally {
     btn.disabled = false; btn.classList.remove('loading');
     if (txtEl) txtEl.textContent = orig || "Générer avec l'IA";
