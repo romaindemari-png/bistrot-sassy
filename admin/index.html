@@ -349,12 +349,25 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ia-btn.loading svg{animation:ia-spin .8s linear infinite;}
 @keyframes ia-spin{to{transform:rotate(360deg);}}
 .inp.loading{opacity:.7;}
+.cap-count{font-size:11px;color:var(--gris-txt);text-align:right;margin-top:4px;font-weight:600;}
+.cap-count.over{color:#D92D20;}
 .hashtags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
 .htag{
   font-size:11.5px;font-weight:600;color:var(--jaune-txt);
   background:var(--jaune-soft);border:1px solid var(--jaune-bord);
-  padding:3px 9px;border-radius:16px;
+  padding:3px 4px 3px 9px;border-radius:16px;display:inline-flex;align-items:center;gap:3px;
 }
+.htag-x{
+  border:none;background:transparent;color:var(--jaune-txt);cursor:pointer;
+  font-size:14px;line-height:1;padding:0 3px;border-radius:50%;opacity:.55;
+}
+.htag-x:hover{opacity:1;background:rgba(0,0,0,.08);}
+/* badge statut Instagram (compose-head studio + écran Publier) */
+.ig-status{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:20px;text-decoration:none;}
+.ig-status.on{background:#E7F6EC;color:#1A8F4C;}
+.ig-status.on .d{width:7px;height:7px;border-radius:50%;background:#1A8F4C;box-shadow:0 0 0 3px rgba(26,143,76,.18);}
+.ig-status.off{background:var(--noir);color:#fff;}
+.ig-status.off svg{width:14px;height:14px;}
 .compose-foot{
   display:flex;align-items:center;gap:10px;
   position:sticky;bottom:0;z-index:20;
@@ -877,12 +890,8 @@ body.authed #login-gate{display:none;}
 
         <div class="pub-zone" style="margin-bottom:12px">
           <h2>Compte Instagram</h2>
-          <p>Connectez votre compte Instagram professionnel (relié à une Page Facebook) pour publier directement depuis votre espace.</p>
-          <a class="btn-pub" href="https://www.instagram.com/oauth/authorize?client_id=1300156898763730&redirect_uri=https%3A%2F%2Fgorgeous-heliotrope-e2e59d.netlify.app%2F.netlify%2Ffunctions%2Fauth-callback&response_type=code&scope=instagram_business_basic%2Cinstagram_business_content_publish" style="text-decoration:none"
-             onclick="window.location.href=this.href;return false;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="pointer-events:none"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="#fff" stroke="none"/></svg>
-            Connecter Instagram
-          </a>
+          <p id="igStatusText">Connectez votre compte Instagram professionnel pour publier directement depuis votre espace.</p>
+          <div id="igStatusPublier"></div>
         </div>
 
         <div class="pub-zone">
@@ -938,6 +947,7 @@ body.authed #login-gate{display:none;}
           <div class="compose-head">
             <h1>Nouvelle publication</h1>
             <p>Choisissez un thème, l'aperçu s'adapte en direct.</p>
+            <div id="igStatusStudio" style="margin-top:10px;"></div>
           </div>
 
           <div class="stepper">
@@ -1049,8 +1059,9 @@ body.authed #login-gate{display:none;}
               <div class="field-lbl"><span id="captionLbl">Légende</span><button class="ia-btn" id="iaBtn" onclick="generateCaption(this)"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><span class="ia-btn-txt">Générer avec l'IA</span></button></div>
               <div id="captionBody">
                 <textarea class="inp" id="caption" placeholder="Votre légende apparaîtra ici…" oninput="renderStudio()"></textarea>
+                <div class="cap-count" id="capCount">0/2200</div>
                 <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
-                <div class="hashtags" id="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
+                <div class="hashtags" id="hashtags"><!-- rendu par renderStudioHashtags() --></div>
               </div>
             </div>
           </div>
@@ -1187,6 +1198,7 @@ function boot(user){
   if (name){ const g = document.querySelector('.hello h1'); if (g) g.textContent = 'Bonjour, ' + name + ' 👋'; }
   showScreen('dashboard');
   loadSassyData();   // ↪ défini au bloc 4 (charge les JSON + applique le plan)
+  loadInstagramStatus();   // statut Instagram (badge studio + écran Publier)
 }
 
 /* ════ AUTH CUSTOM (API GoTrue — remplace le widget) ════ */
@@ -1491,12 +1503,55 @@ function studioContentText(){
   return (document.getElementById('photoTitle') || {}).value || '';
 }
 
-function renderStudioHashtags(tags){
-  if (!Array.isArray(tags) || !tags.length) return;
+// Hashtags : état source de vérité (= ce qui partira à la publication), éditable (× pour retirer)
+let studioHashtags = ['#bistrotsassy', '#marseille', '#menudujour', '#faitmaison'];
+
+function renderHashtagsRow(){
   const row = document.getElementById('hashtags');
-  if (row) row.innerHTML = tags.map(t => `<span class="htag">${t}</span>`).join('');
+  if (row) row.innerHTML = studioHashtags.map((t, i) =>
+    `<span class="htag">${t}<button class="htag-x" onclick="removeHashtag(${i})" aria-label="Retirer ${t}">×</button></span>`
+  ).join('');
   const ig = document.getElementById('igTags');
-  if (ig) ig.textContent = tags.join(' ');
+  if (ig) ig.textContent = studioHashtags.join(' ');
+}
+
+function renderStudioHashtags(tags){
+  if (Array.isArray(tags) && tags.length) studioHashtags = tags.slice(0, 8);
+  renderHashtagsRow();
+  saveStudioDraft();
+}
+
+function removeHashtag(i){
+  studioHashtags.splice(i, 1);
+  renderHashtagsRow();
+  saveStudioDraft();
+}
+
+/* ── Statut connexion Instagram (badge studio + écran Publier) ── */
+const IG_OAUTH_URL = 'https://www.instagram.com/oauth/authorize?client_id=1300156898763730&redirect_uri=https%3A%2F%2Fgorgeous-heliotrope-e2e59d.netlify.app%2F.netlify%2Ffunctions%2Fauth-callback&response_type=code&scope=instagram_business_basic%2Cinstagram_business_content_publish';
+
+function igStatusHTML(status){
+  if (status && status.connected){
+    return `<span class="ig-status on"><span class="d"></span>Connecté${status.username ? ' @' + status.username : ''}</span>`;
+  }
+  return `<a class="ig-status off" href="${IG_OAUTH_URL}" onclick="window.location.href=this.href;return false;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="pointer-events:none"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="#fff" stroke="none"/></svg>Connecter Instagram</a>`;
+}
+
+async function loadInstagramStatus(){
+  let status = { connected: false, username: null };
+  try {
+    const token = await getToken();
+    const res = await fetch('/.netlify/functions/get-instagram-status', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (res.ok) status = await res.json();
+  } catch (e){ /* silencieux → affiché comme non connecté */ }
+  const s1 = document.getElementById('igStatusStudio');
+  if (s1) s1.innerHTML = igStatusHTML(status);
+  const s2 = document.getElementById('igStatusPublier');
+  if (s2) s2.innerHTML = igStatusHTML(status);
+  const txt = document.getElementById('igStatusText');
+  if (txt) txt.textContent = status.connected
+    ? 'Votre compte Instagram est connecté. Vous pouvez publier directement depuis votre espace.'
+    : 'Connectez votre compte Instagram professionnel pour publier directement depuis votre espace.';
 }
 
 let studioGenerating = false;
@@ -1610,6 +1665,8 @@ function renderStudio(){
 
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
+  const capCountEl = document.getElementById('capCount');
+  if (capCountEl){ capCountEl.textContent = cap.length + '/2200'; capCountEl.classList.toggle('over', cap.length > 2200); }
 
   // badge "Exemple" sur la photo placeholder (thème photo, aucune vraie photo uploadée)
   const igSample = document.getElementById('igSample');
@@ -1737,6 +1794,7 @@ function saveStudioDraft(){
       menuTitle: (document.getElementById('menuTitle') || {}).value || '',
       photoTitle:(document.getElementById('photoTitle')|| {}).value || '',
       storyOverlay:(document.getElementById('storyOverlay')|| {}).value || '',
+      hashtags: studioHashtags,
       dishes
     }));
   } catch (e){}
@@ -1757,6 +1815,7 @@ function restoreStudioDraft(){
   }
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
   set('menuTitle', d.menuTitle); set('photoTitle', d.photoTitle); set('caption', d.caption); set('storyOverlay', d.storyOverlay);  // après selectTheme → écrase le prefill
+  if (Array.isArray(d.hashtags)){ studioHashtags = d.hashtags; renderHashtagsRow(); }
   const fbtn = document.querySelector('#fmtRow .fmt[data-fmt="' + d.fmt + '"]');
   if (fbtn && !fbtn.classList.contains('disabled')) selectFmt(fbtn);
   goStep(d.step || 1);
@@ -2530,6 +2589,7 @@ lastAutoCaption = '';   // caption vide par défaut → garde-fou anti-écraseme
 renderStudio();
 goStep(1);
 renderStudioThumbs();
+renderHashtagsRow();    // hashtags par défaut (éditables)
 initStudioSwipe();      // navigation tactile du carrousel dans la preview
 restoreStudioDraft();   // ré-applique le brouillon si présent (saves bloqués tant que studioReady=false)
 studioReady = true;     // à partir d'ici, chaque modif est persistée
