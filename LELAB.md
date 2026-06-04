@@ -203,7 +203,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 3. **Contenu Story adapté** — champ texte court en overlay, **pas** de légende ni hashtags.
 4. **Carrousel** — multi-photos en Post/Portrait → carrousel Instagram.
 5. **Stories successives** — multi-photos en Story → publications séparées automatiques.
-6. **IA légende** — génération via **Claude API** depuis le bouton ✦.
+6. ✅ **IA légende** — génération via **Claude API** depuis le bouton ✦ (étape 3). **FAIT** : fonction `generate-caption.mjs` (protégée par JWT Identity, modèle `claude-sonnet-4-20250514`) → renvoie `{caption, hashtags}` ; le client remplit `#caption` (légende seule) et la rangée `#hashtags` (les hashtags ne sont PAS dans la légende publiée). ⚠️ **Requiert la variable d'env Netlify `ANTHROPIC_API_KEY`** (clé jamais exposée au client).
 7. **Wiring « Publier »** → `publish-instagram` (**OAuth déjà en place**) : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST.
 8. **Photos d'événements** — upload dans l'éditeur Events (réutilise `fileToJpegBase64` + `upload-image` + le pattern galerie ; champ `photo` déjà dans le schéma `events.json` et déjà affiché sur le site). Ensuite `themeImage('event')` utilisera la vraie photo de l'événement.
 9. **Reels (vidéo MP4)** — nouveau type de média. Contraintes techniques :

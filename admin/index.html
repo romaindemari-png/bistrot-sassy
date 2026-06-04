@@ -345,6 +345,9 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   padding:7px 12px;font-size:12px;font-weight:700;
   display:inline-flex;align-items:center;gap:5px;
 }
+.ia-btn:disabled{opacity:.6;cursor:default;}
+.ia-btn.loading svg{animation:ia-spin .8s linear infinite;}
+@keyframes ia-spin{to{transform:rotate(360deg);}}
 .hashtags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
 .htag{
   font-size:11.5px;font-weight:600;color:var(--jaune-txt);
@@ -1041,10 +1044,10 @@ body.authed #login-gate{display:none;}
               <span>Pas de légende ni de hashtags pour une story — tout est dans le visuel.</span>
             </div>
             <div class="field" id="captionField">
-              <div class="field-lbl"><span>Légende</span><button class="ia-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Générer avec l'IA</button></div>
+              <div class="field-lbl"><span>Légende</span><button class="ia-btn" id="iaBtn" onclick="generateCaption(this)"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><span class="ia-btn-txt">Générer avec l'IA</span></button></div>
               <textarea class="inp" id="caption" oninput="renderStudio()">Le menu du jour est servi 🍽️ Trois plats faits maison, à déguster midi & soir en terrasse. Réservation conseillée.</textarea>
               <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
-              <div class="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
+              <div class="hashtags" id="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
             </div>
           </div>
 
@@ -1105,7 +1108,7 @@ body.authed #login-gate{display:none;}
                 <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
               </div>
               <div class="ig-likes">128 j'aime</div>
-              <div class="ig-cap"><b>bistrotsassy</b> <span id="igCap">Le menu du jour est servi 🍽️</span> <span style="color:#385185;">#bistrotsassy #marseille #menudujour</span></div>
+              <div class="ig-cap"><b>bistrotsassy</b> <span id="igCap">Le menu du jour est servi 🍽️</span> <span id="igTags" style="color:#385185;">#bistrotsassy #marseille #menudujour</span></div>
             </div>
           </div>
           <div class="pp-tip">Ce que verront vos abonnés une fois publié.</div>
@@ -1468,6 +1471,73 @@ function addDish(){
                   '<input class="inp d-price" placeholder="Prix" oninput="renderStudio()">';
   list.appendChild(row);
   renderStudio();
+}
+
+// ── IA légende (Claude API via Netlify Function) ──
+function studioContentText(){
+  if (currentKind === 'typo'){
+    const title = (document.getElementById('menuTitle') || {}).value || '';
+    const dishes = Array.from(document.querySelectorAll('#dishEdit .dish-row')).map(r => {
+      const n = (r.querySelector('.d-name') || {}).value || '';
+      const p = (r.querySelector('.d-price') || {}).value || '';
+      return n ? (n + (p ? ' (' + p + ')' : '')) : '';
+    }).filter(Boolean);
+    let t = title ? ('Titre : ' + title) : '';
+    if (dishes.length) t += (t ? '. ' : '') + 'Plats : ' + dishes.join(', ');
+    return t;
+  }
+  return (document.getElementById('photoTitle') || {}).value || '';
+}
+
+function renderStudioHashtags(tags){
+  if (!Array.isArray(tags) || !tags.length) return;
+  const row = document.getElementById('hashtags');
+  if (row) row.innerHTML = tags.map(t => `<span class="htag">${t}</span>`).join('');
+  const ig = document.getElementById('igTags');
+  if (ig) ig.textContent = tags.join(' ');
+}
+
+async function generateCaption(btn){
+  if (btn.disabled) return;
+  const txtEl = btn.querySelector('.ia-btn-txt');
+  const orig = txtEl ? txtEl.textContent : '';
+  btn.disabled = true; btn.classList.add('loading');
+  if (txtEl) txtEl.textContent = 'Génération…';
+  try {
+    const com = (sassyData && sassyData.config && sassyData.config.commerce) || {};
+    const gen = (sassyData && sassyData.general) || {};
+    let ville = 'Marseille';
+    const m = /\d{5}\s+([A-Za-zÀ-ÿ'’ \-]+)/.exec(gen.adresse || '');
+    if (m) ville = m[1].trim();
+    const token = await getToken();
+    const res = await fetch('/.netlify/functions/generate-caption', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        nom: com.nom || 'Bistrot Sassy',
+        type: com.type || 'restaurant',
+        ville,
+        theme: currentTheme,
+        format: currentFmt,
+        contentText: studioContentText()
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    if (data.caption){
+      const capEl = document.getElementById('caption');
+      capEl.value = data.caption;
+      lastAutoCaption = data.caption;
+    }
+    renderStudioHashtags(data.hashtags);
+    renderStudio();
+    showToast('✦ Légende générée');
+  } catch (e){
+    showToast('⚠️ Génération indisponible');
+  } finally {
+    btn.disabled = false; btn.classList.remove('loading');
+    if (txtEl) txtEl.textContent = orig || "Générer avec l'IA";
+  }
 }
 
 function renderStudio(){
