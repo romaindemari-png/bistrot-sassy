@@ -56,19 +56,36 @@ export const handler = async (event) => {
   const theme = THEME_LABEL[body.theme] || 'publication';
   const format = FORMAT_LABEL[body.format] || 'post';
   const contentText = (body.contentText || '').toString().slice(0, 600);
+  // base64 JPEG nu (sans préfixe data:) — envoyé seulement si le champ texte est vide côté client
+  const imageBase64 = (body.imageBase64 || '').toString().replace(/^data:image\/\w+;base64,/, '');
 
   const system = `Tu es community manager pour un ${type} nommé "${nom}" à ${ville}. ` +
     `Tu écris des légendes Instagram en français : chaleureuses, concises (2 à 3 phrases), ` +
     `emojis avec parcimonie (1 à 3), sans superlatifs creux ni clichés marketing. ` +
     `Tu proposes aussi 3 à 5 hashtags pertinents et locaux (incluant la ville et le type de commerce), en minuscules.`;
 
-  const userMsg =
-    `Contexte de la publication :\n` +
-    `- Type de visuel : ${theme}\n` +
-    `- Format : ${format}\n` +
-    (contentText ? `- Contenu mis en avant : ${contentText}\n` : '') +
+  const jsonInstruction =
     `\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n` +
     `{"caption": "la légende", "hashtags": ["#tag1", "#tag2", "#tag3"]}`;
+
+  // Message utilisateur : vision (photo) si fournie, sinon contexte texte
+  let userContent;
+  if (imageBase64) {
+    userContent = [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+      { type: 'text', text:
+        `Voici une photo à publier sur Instagram (type de visuel : ${theme}, format : ${format}). ` +
+        `Identifie ce qui est montré (plat, ambiance, lieu…) et rédige une légende adaptée.` +
+        jsonInstruction }
+    ];
+  } else {
+    userContent =
+      `Contexte de la publication :\n` +
+      `- Type de visuel : ${theme}\n` +
+      `- Format : ${format}\n` +
+      (contentText ? `- Contenu mis en avant : ${contentText}\n` : '') +
+      jsonInstruction;
+  }
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -82,7 +99,7 @@ export const handler = async (event) => {
         model: 'claude-sonnet-4-5',
         max_tokens: 400,
         system,
-        messages: [{ role: 'user', content: userMsg }]
+        messages: [{ role: 'user', content: userContent }]
       })
     });
 

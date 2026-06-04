@@ -1510,6 +1510,16 @@ async function generateCaption(btn){
     const m = /\d{5}\s+([A-Za-zÀ-ÿ'’ \-]+)/.exec(gen.adresse || '');
     if (m) ville = m[1].trim();
     const token = await getToken();
+    // Option C : si le champ texte est vide ET qu'une photo est dispo → vision (Claude analyse la photo)
+    const contentText = studioContentText();
+    let imageBase64 = '';
+    if (!contentText.trim() && studioPhotos.length){
+      const p = studioPhotos[studioPhotoIdx] || studioPhotos[0];
+      if (p && p.bitmap){
+        const dataUrl = cropBitmap(p.bitmap, currentFmt, 768);
+        imageBase64 = (dataUrl.split(',')[1]) || '';
+      }
+    }
     const res = await fetch('/.netlify/functions/generate-caption', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -1519,7 +1529,8 @@ async function generateCaption(btn){
         ville,
         theme: currentTheme,
         format: currentFmt,
-        contentText: studioContentText()
+        contentText,
+        imageBase64
       })
     });
     const raw = await res.text();
