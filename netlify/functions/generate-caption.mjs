@@ -59,14 +59,26 @@ export const handler = async (event) => {
   // base64 JPEG nu (sans préfixe data:) — envoyé seulement si le champ texte est vide côté client
   const imageBase64 = (body.imageBase64 || '').toString().replace(/^data:image\/\w+;base64,/, '');
 
-  const system = `Tu es community manager pour un ${type} nommé "${nom}" à ${ville}. ` +
-    `Tu écris des légendes Instagram en français : chaleureuses, concises (2 à 3 phrases), ` +
-    `emojis avec parcimonie (1 à 3), sans superlatifs creux ni clichés marketing. ` +
-    `Tu proposes aussi 3 à 5 hashtags pertinents et locaux (incluant la ville et le type de commerce), en minuscules.`;
+  const isStory = body.format === 'story';
 
-  const jsonInstruction =
-    `\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n` +
-    `{"caption": "la légende", "hashtags": ["#tag1", "#tag2", "#tag3"]}`;
+  const system = isStory
+    ? `Tu es community manager pour un ${type} nommé "${nom}" à ${ville}. ` +
+      `Tu écris des accroches très courtes (max 10 mots) à afficher en gros texte sur la photo d'une story Instagram : ` +
+      `percutantes, en français, 0 à 1 emoji, SANS hashtags, SANS phrase longue.`
+    : `Tu es community manager pour un ${type} nommé "${nom}" à ${ville}. ` +
+      `Tu écris des légendes Instagram en français : chaleureuses, concises (2 à 3 phrases), ` +
+      `emojis avec parcimonie (1 à 3), sans superlatifs creux ni clichés marketing. ` +
+      `Tu proposes aussi 3 à 5 hashtags pertinents et locaux (incluant la ville et le type de commerce), en minuscules.`;
+
+  const jsonInstruction = isStory
+    ? `\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n` +
+      `{"caption": "le texte court (max 10 mots)", "hashtags": []}`
+    : `\nRéponds UNIQUEMENT avec un objet JSON valide, sans texte autour, au format :\n` +
+      `{"caption": "la légende", "hashtags": ["#tag1", "#tag2", "#tag3"]}`;
+
+  const task = isStory
+    ? `Propose un texte court et accrocheur (max 10 mots) à afficher en overlay sur cette story, sans hashtags.`
+    : `Identifie ce qui est montré (plat, ambiance, lieu…) et rédige une légende adaptée.`;
 
   // Message utilisateur : vision (photo) si fournie, sinon contexte texte
   let userContent;
@@ -75,8 +87,7 @@ export const handler = async (event) => {
       { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
       { type: 'text', text:
         `Voici une photo à publier sur Instagram (type de visuel : ${theme}, format : ${format}). ` +
-        `Identifie ce qui est montré (plat, ambiance, lieu…) et rédige une légende adaptée.` +
-        jsonInstruction }
+        task + jsonInstruction }
     ];
   } else {
     userContent =
@@ -84,6 +95,7 @@ export const handler = async (event) => {
       `- Type de visuel : ${theme}\n` +
       `- Format : ${format}\n` +
       (contentText ? `- Contenu mis en avant : ${contentText}\n` : '') +
+      `\n${task}` +
       jsonInstruction;
   }
 

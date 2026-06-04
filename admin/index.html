@@ -1042,13 +1042,15 @@ body.authed #login-gate{display:none;}
             <h2>Texte du post & hashtags</h2>
             <div class="adaptive-note" id="captionStoryNote" style="display:none;">
               <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-              <span>Pas de légende ni de hashtags pour une story — tout est dans le visuel.</span>
+              <span>En story, l'IA génère un texte court affiché sur la photo — ni légende longue ni hashtags.</span>
             </div>
             <div class="field" id="captionField">
-              <div class="field-lbl"><span>Légende</span><button class="ia-btn" id="iaBtn" onclick="generateCaption(this)"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><span class="ia-btn-txt">Générer avec l'IA</span></button></div>
-              <textarea class="inp" id="caption" placeholder="Votre légende apparaîtra ici…" oninput="renderStudio()"></textarea>
-              <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
-              <div class="hashtags" id="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
+              <div class="field-lbl"><span id="captionLbl">Légende</span><button class="ia-btn" id="iaBtn" onclick="generateCaption(this)"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><span class="ia-btn-txt">Générer avec l'IA</span></button></div>
+              <div id="captionBody">
+                <textarea class="inp" id="caption" placeholder="Votre légende apparaîtra ici…" oninput="renderStudio()"></textarea>
+                <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
+                <div class="hashtags" id="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
+              </div>
             </div>
           </div>
 
@@ -1431,12 +1433,10 @@ function selectTheme(btn){
     if (img) document.getElementById('photoThumb').style.backgroundImage = `url('${img}')`;
   }
 
-  // Légende du thème — uniquement si champ vide OU encore la valeur auto précédente
+  // Changement de thème → légende remise à zéro (la prochaine génération auto repart propre)
   const capEl = document.getElementById('caption');
-  if (t.caption && (capEl.value.trim() === '' || capEl.value === lastAutoCaption)){
-    capEl.value = t.caption;
-    lastAutoCaption = t.caption;
-  }
+  if (capEl) capEl.value = '';
+  lastAutoCaption = '';
 
   // Story indisponible pour les thèmes typo
   setFmtAvailability(isTypo ? ['square','portrait'] : ['square','portrait','story']);
@@ -1505,10 +1505,11 @@ async function generateCaption(btn){
   const txtEl = btn ? btn.querySelector('.ia-btn-txt') : null;
   const orig = txtEl ? txtEl.textContent : '';
   if (btn){ btn.disabled = true; btn.classList.add('loading'); if (txtEl) txtEl.textContent = 'Génération…'; }
-  // loader dans le champ caption (notamment pour la génération auto sans bouton)
-  const capEl = document.getElementById('caption');
-  const prevPh = capEl ? capEl.placeholder : '';
-  if (capEl){ capEl.disabled = true; capEl.classList.add('loading'); capEl.value = ''; capEl.placeholder = '✦ Génération en cours…'; }
+  // en story → on écrit le texte court dans l'overlay (étape 2), sinon dans la légende (étape 3)
+  const isStory = currentKind !== 'typo' && currentFmt === 'story';
+  const targetEl = document.getElementById(isStory ? 'storyOverlay' : 'caption');
+  const prevPh = targetEl ? targetEl.placeholder : '';
+  if (targetEl){ targetEl.disabled = true; targetEl.classList.add('loading'); targetEl.value = ''; targetEl.placeholder = '✦ Génération en cours…'; }
   try {
     const com = (sassyData && sassyData.config && sassyData.config.commerce) || {};
     const gen = (sassyData && sassyData.general) || {};
@@ -1543,20 +1544,20 @@ async function generateCaption(btn){
     let data = {};
     try { data = JSON.parse(raw); } catch { throw new Error('HTTP ' + res.status + ' — ' + raw.slice(0, 120)); }
     if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + (data.error || 'Erreur'));
-    if (data.caption && capEl){
-      capEl.value = data.caption;
-      lastAutoCaption = data.caption;
+    if (data.caption && targetEl){
+      targetEl.value = isStory ? data.caption.slice(0, 80) : data.caption;   // overlay borné à 80 car .value ignore maxlength
+      if (!isStory) lastAutoCaption = data.caption;
     }
-    renderStudioHashtags(data.hashtags);
+    if (!isStory) renderStudioHashtags(data.hashtags);   // pas de hashtags en story
     renderStudio();
-    showToast('✦ Légende générée');
+    showToast(isStory ? '✦ Texte généré' : '✦ Légende générée');
   } catch (e){
     console.error('generate-caption :', e);
     showToast('⚠️ ' + (e && e.message ? e.message : 'Génération indisponible'));
   } finally {
     studioGenerating = false;
     if (btn){ btn.disabled = false; btn.classList.remove('loading'); if (txtEl) txtEl.textContent = orig || "Générer avec l'IA"; }
-    if (capEl){ capEl.disabled = false; capEl.classList.remove('loading'); capEl.placeholder = prevPh; }
+    if (targetEl){ targetEl.disabled = false; targetEl.classList.remove('loading'); targetEl.placeholder = prevPh; }
   }
 }
 
@@ -1594,8 +1595,11 @@ function renderStudio(){
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
   show('overlayField', storyMode);
   show('photoTitleField', false);   // champ "Légende du plat / Texte" retiré (la légende vient de l'IA / vision)
-  show('captionField', !storyMode);
+  show('captionField', true);       // toujours visible → le bouton ✦ reste accessible (y compris en story)
+  show('captionBody', !storyMode);  // textarea + hashtags masqués en story
   show('captionStoryNote', storyMode);
+  const capLbl = document.getElementById('captionLbl');
+  if (capLbl) capLbl.textContent = storyMode ? 'Texte de la story' : 'Légende';
 
   const ov = (document.getElementById('storyOverlay') || {}).value || '';
   const igOv = document.querySelector('#igOverlay span');
@@ -1665,6 +1669,12 @@ function updateRecap(){
 
 function goStep(n){
   currentStep = Math.max(1, Math.min(4, n));
+  // retour à l'étape 1 (navigation réelle, pas restauration de brouillon) → légende remise à zéro
+  if (currentStep === 1 && studioReady){
+    const capEl = document.getElementById('caption');
+    if (capEl) capEl.value = '';
+    lastAutoCaption = '';
+  }
   // afficher uniquement le bloc de l'étape courante
   document.querySelectorAll('#studio-unlocked .step-block').forEach(b => {
     b.style.display = (Number(b.dataset.step) === currentStep) ? 'block' : 'none';
