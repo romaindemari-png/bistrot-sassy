@@ -181,6 +181,10 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
   - **Étape 4 « Publier » redesignée** (carte récap : thème / format / extrait de légende, pictos en carrés arrondis suivant l'accent du plan).
   - **Bandeau aperçu Instagram « variante A » jaune** (`#FFF28C`, miniature + sous-titre format/`en direct` + flèche animée qui pivote à l'ouverture).
 - **Login admin custom GoTrue** : ✅ **FAIT** (mergé dans `main`) — formulaire maison (`/.netlify/identity/token` password grant + `/user` + refresh), session `localStorage`, auto-refresh. **Remplace le widget Netlify Identity** (cassé sur Safari iOS) ; validé sur iPhone Safari, bouton de déconnexion visible sur mobile.
+- **Transitions UX studio** : ✅ **FAIT** — **slide horizontal** du stepper (étapes en `translateX`, hauteur dynamique), **typewriter** sur la légende IA (curseur clignotant), **fade** entre écrans (Accueil / Mon site / Studio), **fondu** photo à l'upload.
+- **Bandeau aperçu « cinéma »** : ✅ **FAIT** — bandeau jaune `#FFF28C` (ligne de scan animée, icône Instagram pulse, point « en direct » clignotant, flèche qui pivote) + panneau clair `#fafaf8` (poignée + iPhone + bouton « Fermer ↑ »). Corrige aussi la surcharge `prefers-color-scheme:dark` qui forçait le bandeau en blanc.
+- **Hashtags fantômes par thème** : ✅ **FAIT** — quand aucun vrai hashtag, tags grisés (opacity .35) selon le thème, clic → lance l'IA ; remplacés par les vrais tags après génération, jamais publiés.
+- **Frictions UX corrigées** : ✅ **FAIT** — caption **vide par défaut** (placeholder) ; champ « Légende du plat » **retiré** de l'étape 2 (hors story) ; **génération IA auto conditionnelle** (one-shot, seulement si photo/plat présent) ; **upload mobile explicite** (« Appuyez pour ajouter une photo ») + choix galerie/appareil (retrait `capture`) ; **compteur de légende** `x/2200` (rouge si dépassé) ; **hashtags éditables** (× pour retirer, persistés) ; **statut Instagram live** (badge « ● Connecté @… » / « Connecter Instagram » via `get-instagram-status.mjs`, dans le studio + l'écran Publier) ; **badge « Exemple »** sur la photo placeholder.
 
 ### Backlog Studio LeLab+ (par ordre de priorité)
 
@@ -200,10 +204,10 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
    - **Formats acceptés** : HEIC (Apple), PNG, WebP, JPEG → tout converti en **JPEG propre** (Blobs + API Instagram n'acceptent que JPEG). ⚠️ HEIC : décodage canvas OK sur **Safari/iOS** (cas nominal : upload depuis iPhone), non garanti sur Chrome/Firefox desktop → fallback message clair si décodage impossible.
    - **Vignettes multiples** pour le carrousel (jusqu'à **10 photos**).
    - **Priorité** : rapide, sans bug, **sans dépendance externe**.
-3. **Contenu Story adapté** — champ texte court en overlay, **pas** de légende ni hashtags.
-4. **Carrousel** — multi-photos en Post/Portrait → carrousel Instagram.
+3. ✅ **Contenu Story adapté** — **FAIT** : en story, champ **« Texte en overlay »** (max 80, compteur) à l'étape 2 ; preview live du texte centré/blanc/ombré sur la photo ; étape 3 → note (ni légende ni hashtags) ; le bouton ✦ génère un **texte court** (max 10 mots) dans l'overlay.
+4. ✅ **Carrousel** — **FAIT** : 2 à 10 photos en Post/Portrait → carrousel auto (pas de 4ᵉ format). Preview avec **compteur 1/N + icône carrés empilés**, **dots cliquables**, **swipe tactile**. Bandeau/récap adaptés. `publish-instagram.js` durci (garde 2-10 + polling `status_code`).
 5. **Stories successives** — multi-photos en Story → publications séparées automatiques.
-6. ✅ **IA légende** — génération via **Claude API** depuis le bouton ✦ (étape 3). **FAIT** : fonction `generate-caption.mjs` (protégée par JWT Identity, modèle `claude-sonnet-4-20250514`) → renvoie `{caption, hashtags}` ; le client remplit `#caption` (légende seule) et la rangée `#hashtags` (les hashtags ne sont PAS dans la légende publiée). ⚠️ **Requiert la variable d'env Netlify `ANTHROPIC_API_KEY`** (clé jamais exposée au client).
+6. ✅ **IA légende** — **FAIT** : fonction `generate-caption.mjs` (protégée par JWT Identity, modèle **`claude-sonnet-4-5`**) → `{caption, hashtags}`. Le client remplit `#caption` (légende seule) + rangée `#hashtags` éditable. **Vision (Option C)** : si le champ texte est vide et qu'une photo est présente, la photo est envoyée à Claude (base64) pour identifier le plat/visuel. **Génération auto au passage 2→3** (one-shot, seulement si contenu présent) + bouton ✦ manuel. ⚠️ **Requiert `ANTHROPIC_API_KEY`** (Netlify, clé jamais exposée au client).
 7. **Wiring « Publier »** → `publish-instagram` (**OAuth déjà en place**) : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST.
 8. **Photos d'événements** — upload dans l'éditeur Events (réutilise `fileToJpegBase64` + `upload-image` + le pattern galerie ; champ `photo` déjà dans le schéma `events.json` et déjà affiché sur le site). Ensuite `themeImage('event')` utilisera la vraie photo de l'événement.
 9. **Reels (vidéo MP4)** — nouveau type de média. Contraintes techniques :
@@ -211,6 +215,31 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
    - **Publication différente des images** : container vidéo Instagram (`media_type=REELS`, `video_url` = URL **publique**) → le traitement est **asynchrone** : il faut **poller le statut du container** (`status_code` → `FINISHED`) **avant** `media_publish` (l'image, elle, est quasi instantanée).
    - **Hébergement** : stocker le MP4 dans **Blobs** + une fonction de service type `serve-video` (≠ `serve-image`) renvoyant l'URL publique.
    - ⚠️ **Pas de transcodage navigateur** : on ne peut pas convertir une vidéo en JS comme une image (canvas). Si l'iPhone enregistre en **HEVC/H.265** (par défaut sur iOS récent), il faudra soit demander un MP4 H.264, soit prévoir un transcodage serveur — **à cadrer**. Valider durée/format côté client reste limité.
+
+---
+
+## ROADMAP PRODUIT
+
+### Phase 1 — En cours
+- **Point 7 — Wiring « Publier »** : génération de l'image finale (canvas, ou typo rendue dans la charte) → **upload Blobs** + URL publique (`serve-image`) → appel `publish-instagram` (post / carrousel) → **feedback** (succès / erreur, lien vers la publication).
+
+### Phase 2 — Après le wiring
+- **Point 5 — Stories successives** (multi-photos en Story → publications séparées automatiques).
+- **Point 8 — Photos d'événements** (upload dans l'éditeur Events ; `themeImage('event')` utilisera la vraie photo).
+- **Refresh token Instagram automatique** (token long-lived ~60 j → `ig_refresh_token` planifié).
+- **Mot de passe oublié** (flux GoTrue de récupération).
+- **App Review Meta + passage en mode Live** (permissions `instagram_business_basic` + `instagram_business_content_publish`) pour publier sur des comptes non-testeurs.
+
+### Phase 3 — Commercial
+- **Domaine** (`lelab.app` ou équivalent).
+- **PWA** (installation sur l'écran d'accueil iPhone).
+- **Premier client payant onboardé**.
+- **Démo commerciale préparée**.
+
+### Phase 4 — Application native
+- **Évaluation PWA vs App native** (iOS / Android).
+- Si App native : **React Native**, soumission **App Store**.
+- **Marque blanche** pour agences partenaires.
 
 ---
 
