@@ -404,6 +404,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-img{position:relative;}
 .ig-count{display:none;position:absolute;top:8px;right:8px;z-index:3;align-items:center;gap:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:11px;}
 .ig-count svg{width:12px;height:12px;stroke:#fff;}
+.ig-sample{display:none;position:absolute;top:8px;left:8px;z-index:3;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9px;}
 .phone-screen.story .ig-count{display:none!important;}
 .ig-dots{display:none;justify-content:center;gap:5px;padding:7px 0 3px;}
 .ig-dots .dot{width:6px;height:6px;border-radius:50%;background:#cfcfcf;cursor:pointer;}
@@ -1095,7 +1096,7 @@ body.authed #login-gate{display:none;}
                 <div class="ig-name">bistrotsassy<span class="loc"><br>Marseille</span></div>
                 <div class="ig-more">···</div>
               </div>
-              <div class="ig-img" id="igPhoto" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80');display:none;"><div class="ig-count" id="igCount"></div></div>
+              <div class="ig-img" id="igPhoto" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80');display:none;"><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div></div>
               <div class="ig-typo" id="igTypo">
                 <div class="ty-h">Aujourd'hui</div>
                 <div class="ty-title" id="tyTitle">Menu du jour</div>
@@ -1609,6 +1610,10 @@ function renderStudio(){
 
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
+
+  // badge "Exemple" sur la photo placeholder (thème photo, aucune vraie photo uploadée)
+  const igSample = document.getElementById('igSample');
+  if (igSample) igSample.style.display = (currentKind !== 'typo' && studioPhotos.length === 0) ? 'block' : 'none';
 
   // carrousel : 2+ photos en Post/Portrait (jamais en story ni typo)
   const isCarousel = isCarouselActive();
