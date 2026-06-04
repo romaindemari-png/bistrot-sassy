@@ -391,6 +391,11 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .phone-screen.story .ig-top{position:absolute;top:0;left:0;right:0;z-index:2;background:linear-gradient(rgba(0,0,0,.5),transparent);padding:12px 12px 22px;}
 .phone-screen.story .ig-name,.phone-screen.story .ig-name .loc,.phone-screen.story .ig-more{color:#fff;}
 .phone-screen.story .ig-actions,.phone-screen.story .ig-likes,.phone-screen.story .ig-cap{display:none;}
+/* texte en overlay (story uniquement) */
+.ig-overlay{display:none;}
+.phone-screen.story .ig-overlay{display:flex;position:absolute;inset:0;z-index:2;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;}
+.ig-overlay span{color:#fff;font-weight:800;font-size:19px;line-height:1.25;text-shadow:0 2px 10px rgba(0,0,0,.5);}
+.ov-count{margin-left:auto;font-size:11px;color:var(--gris-txt);font-weight:600;}
 .ig-top{display:flex;align-items:center;gap:8px;padding:10px 11px;}
 .ig-ava{width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2px;flex-shrink:0;}
 .ig-ava div{width:100%;height:100%;border-radius:50%;background:#fff url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=60&q=80') center/cover;border:1.5px solid #fff;}
@@ -989,8 +994,13 @@ body.authed #login-gate{display:none;}
                 <input type="file" id="studio-photo-input" accept="image/*" capture="environment" multiple hidden onchange="onStudioPhotos(this)">
                 <div class="thumb-row" id="studio-thumbs"><!-- rendu par renderStudioThumbs() --></div>
               </div>
-              <div class="field"><div class="field-lbl"><span id="photoFieldLbl">Légende du plat</span></div>
+              <div class="field" id="photoTitleField"><div class="field-lbl"><span id="photoFieldLbl">Légende du plat</span></div>
                 <input class="inp" id="photoTitle" value="Tartare de thon, agrumes & sésame — 14 €" oninput="renderStudio()">
+              </div>
+              <div class="field" id="overlayField" style="display:none;">
+                <div class="field-lbl"><span>Texte en overlay</span><span class="ov-count" id="overlayCount">0/80</span></div>
+                <input class="inp" id="storyOverlay" maxlength="80" placeholder="Ex. Menu du jour 🍽️" oninput="renderStudio()">
+                <div class="ia-hint">Court — s'affiche centré sur la photo. Une story est visuelle, pas textuelle.</div>
               </div>
             </div>
 
@@ -1014,7 +1024,11 @@ body.authed #login-gate{display:none;}
           <div class="step-block" data-step="3">
             <div class="sh">Étape 3 — La légende</div>
             <h2>Texte du post & hashtags</h2>
-            <div class="field">
+            <div class="adaptive-note" id="captionStoryNote" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+              <span>Pas de légende ni de hashtags pour une story — tout est dans le visuel.</span>
+            </div>
+            <div class="field" id="captionField">
               <div class="field-lbl"><span>Légende</span><button class="ia-btn"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Générer avec l'IA</button></div>
               <textarea class="inp" id="caption" oninput="renderStudio()">Le menu du jour est servi 🍽️ Trois plats faits maison, à déguster midi & soir en terrasse. Réservation conseillée.</textarea>
               <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
@@ -1069,6 +1083,7 @@ body.authed #login-gate{display:none;}
                 <div class="ty-title" id="tyTitle">Menu du jour</div>
                 <div id="tyDishes"></div>
               </div>
+              <div class="ig-overlay" id="igOverlay"><span></span></div>
               <div class="ig-actions">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
                 <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1.1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
@@ -1468,8 +1483,23 @@ function renderStudio(){
     if (img) igPhoto.style.backgroundImage = `url('${img}')`;
   }
   // Story : layout plein écran (classe sur l'écran) — uniquement pour les thèmes photo
+  const storyMode = currentKind !== 'typo' && currentFmt === 'story';
   const screen = document.querySelector('#studio-unlocked .phone-screen');
-  if (screen) screen.classList.toggle('story', currentKind !== 'typo' && currentFmt === 'story');
+  if (screen) screen.classList.toggle('story', storyMode);
+
+  // contenu adapté en story : overlay au lieu de légende du plat / hashtags
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('overlayField', storyMode);
+  show('photoTitleField', !storyMode);
+  show('captionField', !storyMode);
+  show('captionStoryNote', storyMode);
+
+  const ov = (document.getElementById('storyOverlay') || {}).value || '';
+  const igOv = document.querySelector('#igOverlay span');
+  if (igOv) igOv.textContent = ov;
+  const ovCount = document.getElementById('overlayCount');
+  if (ovCount) ovCount.textContent = ov.length + '/80';
+
   const cap = document.getElementById('caption').value;
   document.getElementById('igCap').textContent = cap.split('#')[0].trim();
 
@@ -1499,7 +1529,13 @@ function updateRecap(){
   const rc = document.getElementById('recap-caption');
   if (rt){ const sel = document.querySelector('#studio-unlocked .tpl.sel .tt'); rt.textContent = sel ? sel.textContent : '—'; }
   if (rf){ const m = { square:'Post (carré)', portrait:'Portrait (4:5)', story:'Story (9:16)' }; rf.textContent = m[currentFmt] || currentFmt; }
-  if (rc){ const cap = (document.getElementById('caption') || {}).value || ''; rc.textContent = cap.split('#')[0].trim() || '—'; }
+  if (rc){
+    const storyMode = currentKind !== 'typo' && currentFmt === 'story';
+    const txt = storyMode
+      ? ((document.getElementById('storyOverlay') || {}).value || '')
+      : ((document.getElementById('caption') || {}).value || '').split('#')[0].trim();
+    rc.textContent = txt || '—';
+  }
 }
 
 function goStep(n){
@@ -1548,6 +1584,7 @@ function saveStudioDraft(){
       caption:   (document.getElementById('caption')   || {}).value || '',
       menuTitle: (document.getElementById('menuTitle') || {}).value || '',
       photoTitle:(document.getElementById('photoTitle')|| {}).value || '',
+      storyOverlay:(document.getElementById('storyOverlay')|| {}).value || '',
       dishes
     }));
   } catch (e){}
@@ -1567,7 +1604,7 @@ function restoreStudioDraft(){
     ).join('');
   }
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
-  set('menuTitle', d.menuTitle); set('photoTitle', d.photoTitle); set('caption', d.caption);  // après selectTheme → écrase le prefill
+  set('menuTitle', d.menuTitle); set('photoTitle', d.photoTitle); set('caption', d.caption); set('storyOverlay', d.storyOverlay);  // après selectTheme → écrase le prefill
   const fbtn = document.querySelector('#fmtRow .fmt[data-fmt="' + d.fmt + '"]');
   if (fbtn && !fbtn.classList.contains('disabled')) selectFmt(fbtn);
   goStep(d.step || 1);
