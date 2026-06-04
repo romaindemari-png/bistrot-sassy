@@ -348,6 +348,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ia-btn:disabled{opacity:.6;cursor:default;}
 .ia-btn.loading svg{animation:ia-spin .8s linear infinite;}
 @keyframes ia-spin{to{transform:rotate(360deg);}}
+.inp.loading{opacity:.7;}
 .hashtags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
 .htag{
   font-size:11.5px;font-weight:600;color:var(--jaune-txt);
@@ -999,8 +1000,8 @@ body.authed #login-gate{display:none;}
               <div class="field"><div class="field-lbl"><span>Photo</span></div>
                 <div class="upload" id="studio-upload" onclick="document.getElementById('studio-photo-input').click()">
                   <span class="u-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg></span>
-                  <span class="u-tt">Glissez une photo ou cliquez</span>
-                  <span class="u-dd">JPG, PNG, HEIC · recadrée automatiquement</span>
+                  <span class="u-tt">Appuyez pour ajouter une photo</span>
+                  <span class="u-dd">Depuis votre galerie ou votre appareil photo</span>
                 </div>
                 <input type="file" id="studio-photo-input" accept="image/*" multiple hidden onchange="onStudioPhotos(this)">
                 <div class="thumb-row" id="studio-thumbs"><!-- rendu par renderStudioThumbs() --></div>
@@ -1045,7 +1046,7 @@ body.authed #login-gate{display:none;}
             </div>
             <div class="field" id="captionField">
               <div class="field-lbl"><span>Légende</span><button class="ia-btn" id="iaBtn" onclick="generateCaption(this)"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><span class="ia-btn-txt">Générer avec l'IA</span></button></div>
-              <textarea class="inp" id="caption" oninput="renderStudio()">Le menu du jour est servi 🍽️ Trois plats faits maison, à déguster midi & soir en terrasse. Réservation conseillée.</textarea>
+              <textarea class="inp" id="caption" placeholder="Votre légende apparaîtra ici…" oninput="renderStudio()"></textarea>
               <div class="ia-hint"><span class="spark">✦</span>Légende générée par l'IA — modifiable à volonté</div>
               <div class="hashtags" id="hashtags"><span class="htag">#bistrotsassy</span><span class="htag">#marseille</span><span class="htag">#menudujour</span><span class="htag">#faitmaison</span></div>
             </div>
@@ -1497,12 +1498,17 @@ function renderStudioHashtags(tags){
   if (ig) ig.textContent = tags.join(' ');
 }
 
+let studioGenerating = false;
 async function generateCaption(btn){
-  if (btn.disabled) return;
-  const txtEl = btn.querySelector('.ia-btn-txt');
+  if (studioGenerating) return;
+  studioGenerating = true;
+  const txtEl = btn ? btn.querySelector('.ia-btn-txt') : null;
   const orig = txtEl ? txtEl.textContent : '';
-  btn.disabled = true; btn.classList.add('loading');
-  if (txtEl) txtEl.textContent = 'Génération…';
+  if (btn){ btn.disabled = true; btn.classList.add('loading'); if (txtEl) txtEl.textContent = 'Génération…'; }
+  // loader dans le champ caption (notamment pour la génération auto sans bouton)
+  const capEl = document.getElementById('caption');
+  const prevPh = capEl ? capEl.placeholder : '';
+  if (capEl){ capEl.disabled = true; capEl.classList.add('loading'); capEl.value = ''; capEl.placeholder = '✦ Génération en cours…'; }
   try {
     const com = (sassyData && sassyData.config && sassyData.config.commerce) || {};
     const gen = (sassyData && sassyData.general) || {};
@@ -1537,8 +1543,7 @@ async function generateCaption(btn){
     let data = {};
     try { data = JSON.parse(raw); } catch { throw new Error('HTTP ' + res.status + ' — ' + raw.slice(0, 120)); }
     if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + (data.error || 'Erreur'));
-    if (data.caption){
-      const capEl = document.getElementById('caption');
+    if (data.caption && capEl){
       capEl.value = data.caption;
       lastAutoCaption = data.caption;
     }
@@ -1549,8 +1554,9 @@ async function generateCaption(btn){
     console.error('generate-caption :', e);
     showToast('⚠️ ' + (e && e.message ? e.message : 'Génération indisponible'));
   } finally {
-    btn.disabled = false; btn.classList.remove('loading');
-    if (txtEl) txtEl.textContent = orig || "Générer avec l'IA";
+    studioGenerating = false;
+    if (btn){ btn.disabled = false; btn.classList.remove('loading'); if (txtEl) txtEl.textContent = orig || "Générer avec l'IA"; }
+    if (capEl){ capEl.disabled = false; capEl.classList.remove('loading'); capEl.placeholder = prevPh; }
   }
 }
 
@@ -1587,7 +1593,7 @@ function renderStudio(){
   // contenu adapté en story : overlay au lieu de légende du plat / hashtags
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
   show('overlayField', storyMode);
-  show('photoTitleField', !storyMode);
+  show('photoTitleField', false);   // champ "Légende du plat / Texte" retiré (la légende vient de l'IA / vision)
   show('captionField', !storyMode);
   show('captionStoryNote', storyMode);
 
@@ -1684,7 +1690,19 @@ function goStep(n){
   saveStudioDraft();
 }
 
-function nextStep(){ goStep(currentStep + 1); }
+function nextStep(){
+  const from = currentStep;
+  goStep(currentStep + 1);
+  // étape 2 → 3 : génère la légende automatiquement (sauf story, et sans écraser une saisie manuelle)
+  if (from === 2 && currentStep === 3){
+    const storyMode = currentKind !== 'typo' && currentFmt === 'story';
+    const capEl = document.getElementById('caption');
+    const cap = capEl ? capEl.value : '';
+    if (!storyMode && (cap.trim() === '' || cap === lastAutoCaption)){
+      generateCaption(null);
+    }
+  }
+}
 function prevStep(){ goStep(currentStep - 1); }
 function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublishMock(); }
 function studioPublishMock(){ showToast('🚀 Publication Instagram — bientôt disponible'); }
@@ -1759,7 +1777,7 @@ function setUploadLoading(on){
   u.style.opacity = on ? '0.55' : '';
   u.style.pointerEvents = on ? 'none' : '';
   const tt = u.querySelector('.u-tt');
-  if (tt) tt.textContent = on ? '⏳ Conversion…' : 'Glissez une photo ou cliquez';
+  if (tt) tt.textContent = on ? '⏳ Conversion…' : 'Appuyez pour ajouter une photo';
 }
 
 async function onStudioPhotos(input){
@@ -2493,7 +2511,7 @@ async function savePhotos(){
 }
 
 setFmtAvailability(currentKind === 'typo' ? ['square','portrait'] : ['square','portrait','story']);
-lastAutoCaption = (document.getElementById('caption') || {}).value || '';
+lastAutoCaption = '';   // caption vide par défaut → garde-fou anti-écrasement actif dès le départ
 renderStudio();
 goStep(1);
 renderStudioThumbs();
