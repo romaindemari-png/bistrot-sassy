@@ -78,6 +78,13 @@ exports.handler = async (event) => {
 
     // ── CARROUSEL ────────────────────────────────────────────
     if (format === 'carousel') {
+      // Garde Instagram : un carrousel contient entre 2 et 10 médias
+      if (!Array.isArray(slides) || slides.length < 2 || slides.length > 10) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Un carrousel doit contenir entre 2 et 10 photos' })
+        };
+      }
       // Étape 1 : créer un container pour chaque slide
       const childIds = await Promise.all(
         slides.map(async (slide) => {
@@ -116,6 +123,9 @@ exports.handler = async (event) => {
       const carousel = await carouselRes.json();
       if (!carousel.id) throw new Error(carousel.error?.message || 'Erreur carrousel');
 
+      // Étape 2bis : attendre que le container parent soit prêt (FINISHED) avant de publier
+      await waitForContainer(carousel.id, ACCESS_TOKEN);
+
       // Étape 3 : publier
       const publishRes = await fetch(
         `https://graph.instagram.com/v21.0/${INSTAGRAM_ID}/media_publish`,
@@ -145,3 +155,17 @@ exports.handler = async (event) => {
     };
   }
 };
+
+// Poll le statut d'un container média jusqu'à FINISHED (recommandé pour le carrousel)
+async function waitForContainer(containerId, accessToken, maxTries = 20, delayMs = 2000) {
+  for (let i = 0; i < maxTries; i++) {
+    const res = await fetch(
+      `https://graph.instagram.com/v21.0/${containerId}?fields=status_code&access_token=${accessToken}`
+    );
+    const data = await res.json();
+    if (data.status_code === 'FINISHED') return;
+    if (data.status_code === 'ERROR') throw new Error('Traitement du carrousel échoué côté Instagram');
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw new Error('Délai de traitement du carrousel dépassé');
+}
