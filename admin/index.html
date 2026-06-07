@@ -1955,7 +1955,7 @@ const STUDIO_MAX_PHOTOS = 10;
 const FMT_RATIO = { square:[1,1], portrait:[4,5], story:[9,16] };
 
 // Recadrage cover au ratio du format → dataURL JPEG (taille preview ; le 1080 final sera fait à la publication)
-function cropBitmap(bitmap, fmt, outW = 540){
+function cropBitmap(bitmap, fmt, outW = 540, quality = 0.9){
   const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
   const tw = outW, th = Math.round(outW * rh / rw);
   const c = document.createElement('canvas'); c.width = tw; c.height = th;
@@ -1963,7 +1963,15 @@ function cropBitmap(bitmap, fmt, outW = 540){
   const scale = Math.max(tw / bitmap.width, th / bitmap.height);
   const dw = bitmap.width * scale, dh = bitmap.height * scale;
   ctx.drawImage(bitmap, (tw - dw) / 2, (th - dh) / 2, dw, dh);
-  return c.toDataURL('image/jpeg', 0.9);
+  return c.toDataURL('image/jpeg', quality);
+}
+
+// ── Génération de l'image FINALE de publication (1080, JPEG 0.92) ──
+// Étape B : thème photo en Post (1080×1080) / Portrait (1080×1350).
+// La photo est recadrée cover au format — identique à la preview (object-fit:cover).
+// Le titre/légende ne sont PAS brûlés dans l'image (ils partent comme légende Instagram).
+function renderFinalPhoto(bitmap, fmt){
+  return cropBitmap(bitmap, fmt, 1080, 0.92);   // -> 'data:image/jpeg;base64,...'
 }
 function studioPreviewUrl(p, fmt){
   p.cache = p.cache || {};
