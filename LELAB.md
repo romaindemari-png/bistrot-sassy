@@ -259,6 +259,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 ## OUTILS INTERNES
 
 - **Générateur de thèmes / habillages** : module **fonctionnel en démo** (8 secteurs, 6 formes universelles, upload PNG transparent, zones en drag, export JSON). **À brancher dans LeLab+** : lecture du format de thème + composition **3 couches** dans le canvas (photo → habillage → texte).
+- **Catalogue de contenus** : **6 formes figées** (Mise en avant, Événement, Ambiance, Annonce, Citation, Liste) + **dictionnaires secteurs** (resto, boulangerie, musique, artisan, traiteur, théâtre, sport, podcast). Les formes **ne changent jamais** — le secteur ne fait que **renommer les libellés**. Ajouter un secteur = écrire un dictionnaire (**5 min, zéro code**). Fichier de référence : `lelab-catalogue-contenus.json`.
 
 ---
 
