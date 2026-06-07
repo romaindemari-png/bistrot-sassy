@@ -259,7 +259,12 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ## OUTILS INTERNES
 
-- **Générateur de thèmes / habillages** : module **fonctionnel en démo** (8 secteurs, 6 formes universelles, upload PNG transparent, zones en drag, export JSON). **À brancher dans LeLab+** : lecture du format de thème + composition **3 couches** dans le canvas (photo → habillage → texte).
+- **Thèmes custom / habillages** :
+  - **Workflow retenu** : les habillages sont **créés sur Photoshop par Romain**, puis intégrés via le **module (mode A)** — upload du **PNG transparent** + définition des **zones** (`zonePhoto` / `zoneTexte`) + **export `themes.json`**.
+  - **Branché dans le studio LeLab+** ✅ : lecture de `_data/themes.json` + composition **3 couches** (photo dans `zonePhoto` → habillage PNG → texte au `zoneTexte`), preview live + rendu canvas à la publication (carrousel : habillage sur toutes les slides, texte sur la 1ʳᵉ). Thème de référence conservé : `demo-cadre`.
+  - **Génération auto** (canvas Python + HTML/CSS rendu PNG via Chrome headless) : **abandonnée** — rendu jugé **insuffisant** (mesh/organique/arche/cadre testés puis retirés).
+  - **Déclinaison IA multi-format** : **en réserve**, à explorer **quand le volume client le justifiera**.
+  - **Dette** : `themes.json` stocke les PNG en **base64 inline** (~8-15 Ko/format) — migrer vers **Blobs** si le poids/nombre de thèmes augmente.
 - **Catalogue de contenus** : **6 formes figées** (Mise en avant, Événement, Ambiance, Annonce, Citation, Liste) + **dictionnaires secteurs** (resto, boulangerie, musique, artisan, traiteur, théâtre, sport, podcast). Les formes **ne changent jamais** — le secteur ne fait que **renommer les libellés**. Ajouter un secteur = écrire un dictionnaire (**5 min, zéro code**). Fichier de référence : `lelab-catalogue-contenus.json`.
 
 ---
