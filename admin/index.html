@@ -1973,6 +1973,114 @@ function cropBitmap(bitmap, fmt, outW = 540, quality = 0.9){
 function renderFinalPhoto(bitmap, fmt){
   return cropBitmap(bitmap, fmt, 1080, 0.92);   // -> 'data:image/jpeg;base64,...'
 }
+
+// Charge les polices utilisées par la carte typo AVANT de dessiner (sinon fallback système)
+async function ensureStudioFonts(){
+  try {
+    await Promise.all([
+      document.fonts.load("800 80px 'Bricolage Grotesque'"),
+      document.fonts.load("700 40px Inter"),
+      document.fonts.load("600 40px Inter")
+    ]);
+    await document.fonts.ready;
+  } catch (e){ /* on dessine quand même */ }
+}
+
+// Découpe un texte en lignes qui tiennent dans maxW (mot à mot)
+function wrapText(ctx, text, maxW){
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = []; let line = '';
+  for (const w of words){
+    const test = line ? line + ' ' + w : w;
+    if (ctx.measureText(test).width > maxW && line){ lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+// Dessine un texte avec un letter-spacing (baseline courant)
+function drawSpacedText(ctx, text, x, y, spacing){
+  let cx = x;
+  for (const ch of String(text)){
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + spacing;
+  }
+}
+
+// ── Génération de l'image FINALE — carte typo "Menu du jour" (1080, JPEG 0.92) ──
+// Étape C : reproduit la preview .ig-typo (fond crème, eyebrow, titre Bricolage, plats/prix + séparateurs).
+// Échelle dérivée de la largeur de référence de la preview (260px). Formats carré / portrait.
+async function renderFinalTypo(fmt){
+  await ensureStudioFonts();
+  const W = 1080;
+  const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
+  const H = Math.round(W * rh / rw);                 // 1080 (carré) ou 1350 (portrait)
+  const S = W / 260;                                 // 260 = largeur preview de référence
+  const BLUE = '#2050E7';
+  const padX = 20 * S;
+
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#FAF1E2'; ctx.fillRect(0, 0, W, H);   // fond crème
+
+  // données studio
+  const title = document.getElementById('menuTitle').value || 'Menu du jour';
+  const dishes = Array.from(document.querySelectorAll('#dishEdit .dish-row')).map(r => ({
+    n: (r.querySelector('.d-name').value || '').trim(),
+    p: (r.querySelector('.d-price').value || '').trim()
+  })).filter(d => d.n);
+
+  // tailles (× S, calquées sur le CSS)
+  const ehSize = 10 * S, titleSize = 22 * S, dishSize = 12 * S;
+  const ehGap = 3 * S, titleBottom = 12 * S, dishPadV = 5 * S, sepH = Math.max(1, Math.round(S));
+  const lineHTitle = titleSize * 1.05;
+  const dishRowH = dishSize * 1.2 + dishPadV * 2;
+  const maxTextW = W - padX * 2;
+
+  // hauteur du bloc → centrage vertical (flex justify-center)
+  ctx.font = `800 ${titleSize}px 'Bricolage Grotesque', sans-serif`;
+  const titleLines = wrapText(ctx, title, maxTextW);
+  const blockH = ehSize + ehGap + titleLines.length * lineHTitle + titleBottom + dishes.length * dishRowH;
+  let y = Math.max(padX, (H - blockH) / 2);
+
+  ctx.fillStyle = BLUE;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+
+  // eyebrow "AUJOURD'HUI"
+  ctx.font = `700 ${ehSize}px Inter, sans-serif`;
+  drawSpacedText(ctx, "AUJOURD'HUI", padX, y, 1.4 * S);
+  y += ehSize + ehGap;
+
+  // titre (peut wrapper)
+  ctx.font = `800 ${titleSize}px 'Bricolage Grotesque', sans-serif`;
+  titleLines.forEach(line => { ctx.fillText(line, padX, y); y += lineHTitle; });
+  y += titleBottom;
+
+  // plats
+  dishes.forEach((d, i) => {
+    const ty = y + dishPadV;
+    ctx.textBaseline = 'top';
+    ctx.font = `600 ${dishSize}px Inter, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(d.n, padX, ty);
+    if (d.p){
+      ctx.font = `700 ${dishSize}px Inter, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText(d.p, W - padX, ty);
+      ctx.textAlign = 'left';
+    }
+    y = ty + dishSize * 1.2 + dishPadV;
+    if (i < dishes.length - 1){
+      ctx.fillStyle = 'rgba(32,80,231,.15)';
+      ctx.fillRect(padX, y, W - padX * 2, sepH);
+      ctx.fillStyle = BLUE;
+    }
+  });
+
+  return c.toDataURL('image/jpeg', 0.92);
+}
 function studioPreviewUrl(p, fmt){
   p.cache = p.cache || {};
   if (!p.cache[fmt]) p.cache[fmt] = cropBitmap(p.bitmap, fmt);
