@@ -1,11 +1,31 @@
 // netlify/functions/publish-instagram.js
 // Fonction Netlify pour publier sur Instagram via l'API Meta
 
+// Toujours cibler l'Identity de prod (même depuis un deploy preview)
+const SITE_URL = process.env.IDENTITY_URL || 'https://gorgeous-heliotrope-e2e59d.netlify.app';
+
+async function verifyIdentity(token) {
+  if (!token) return false;
+  try {
+    const res = await fetch(`${SITE_URL}/.netlify/identity/user`, { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 exports.handler = async (event) => {
 
   // Sécurité : POST uniquement
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+
+  // Sécurité : utilisateur authentifié (JWT Netlify Identity)
+  const authHeader = event.headers['authorization'] || event.headers['Authorization'] || '';
+  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!(await verifyIdentity(idToken))) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Non autorisé' }) };
   }
 
   // Connexion via OAuth (Blobs) en priorité, sinon fallback env (transition)
@@ -57,6 +77,9 @@ exports.handler = async (event) => {
       const container = await containerRes.json();
       if (!container.id) throw new Error(container.error?.message || 'Erreur container');
 
+      // attendre que le container soit prêt (FINISHED) avant de publier
+      await waitForContainer(container.id, ACCESS_TOKEN);
+
       // Étape 2 : publier
       const publishRes = await fetch(
         `https://graph.instagram.com/v21.0/${INSTAGRAM_ID}/media_publish`,
@@ -70,9 +93,11 @@ exports.handler = async (event) => {
         }
       );
       const published = await publishRes.json();
+      if (!published.id) throw new Error(published.error?.message || 'Publication échouée');
+      const permalink = await fetchPermalink(published.id, ACCESS_TOKEN);
       return {
         statusCode: 200,
-        body: JSON.stringify({ success: true, id: published.id })
+        body: JSON.stringify({ success: true, id: published.id, permalink })
       };
     }
 
@@ -139,9 +164,11 @@ exports.handler = async (event) => {
         }
       );
       const published = await publishRes.json();
+      if (!published.id) throw new Error(published.error?.message || 'Publication échouée');
+      const permalink = await fetchPermalink(published.id, ACCESS_TOKEN);
       return {
         statusCode: 200,
-        body: JSON.stringify({ success: true, id: published.id })
+        body: JSON.stringify({ success: true, id: published.id, permalink })
       };
     }
 
@@ -168,4 +195,15 @@ async function waitForContainer(containerId, accessToken, maxTries = 20, delayMs
     await new Promise((r) => setTimeout(r, delayMs));
   }
   throw new Error('Délai de traitement du carrousel dépassé');
+}
+
+// Récupère le lien public du média publié (best-effort)
+async function fetchPermalink(mediaId, accessToken) {
+  try {
+    const res = await fetch(`https://graph.instagram.com/v21.0/${mediaId}?fields=permalink&access_token=${accessToken}`);
+    const data = await res.json();
+    return data.permalink || null;
+  } catch {
+    return null;
+  }
 }

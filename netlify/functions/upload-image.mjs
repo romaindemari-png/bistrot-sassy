@@ -63,7 +63,7 @@ export const handler = async (event) => {
 
     // — Upload —
     const { target, dataBase64 } = body;
-    if (!['slider', 'galerie'].includes(target) || !dataBase64) {
+    if (!['slider', 'galerie', 'studio'].includes(target) || !dataBase64) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Paramètres manquants' }) };
     }
 
