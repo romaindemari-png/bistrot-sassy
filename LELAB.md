@@ -230,6 +230,7 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ### Phase 2 — Prochain chantier
 - **App Review Meta + passage en mode Live** — **PRIORITÉ** : permissions `instagram_business_basic` + `instagram_business_content_publish` (+ vérif Business) pour publier sur des comptes **non-testeurs** (= condition pour un vrai client).
+  - **App Review Meta** : soumise le **7 juin 2026**, `instagram_business_basic` **en cours d'examen** (résultat sous **3-20 jours**). Permission `instagram_business_content_publish` **à soumettre** dès que le bouton se débloque (~24h). Politique de confidentialité en ligne (`lestudsite.netlify.app/privacy.html`), portefeuille business LeStud **vérifié** associé, plateforme **web** déclarée.
 - **Stories** (point 5) — `media_type=STORIES` puis multi-photos → publications successives.
 - **Refresh token Instagram automatique** (token long-lived ~60 j → `ig_refresh_token` planifié).
 - **Mot de passe oublié** (flux GoTrue de récupération).
