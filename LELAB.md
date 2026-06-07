@@ -208,7 +208,12 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 4. ✅ **Carrousel** — **FAIT** : 2 à 10 photos en Post/Portrait → carrousel auto (pas de 4ᵉ format). Preview avec **compteur 1/N + icône carrés empilés**, **dots cliquables**, **swipe tactile**. Bandeau/récap adaptés. `publish-instagram.js` durci (garde 2-10 + polling `status_code`).
 5. **Stories successives** — multi-photos en Story → publications séparées automatiques.
 6. ✅ **IA légende** — **FAIT** : fonction `generate-caption.mjs` (protégée par JWT Identity, modèle **`claude-sonnet-4-5`**) → `{caption, hashtags}`. Le client remplit `#caption` (légende seule) + rangée `#hashtags` éditable. **Vision (Option C)** : si le champ texte est vide et qu'une photo est présente, la photo est envoyée à Claude (base64) pour identifier le plat/visuel. **Génération auto au passage 2→3** (one-shot, seulement si contenu présent) + bouton ✦ manuel. ⚠️ **Requiert `ANTHROPIC_API_KEY`** (Netlify, clé jamais exposée au client).
-7. **Wiring « Publier »** → `publish-instagram` (**OAuth déjà en place**) : générer le visuel (photo, ou typo → image rendue dans la charte) puis POST.
+7. ✅ **Wiring « Publier »** — **FAIT** : bouton Publier réel (étape 4) qui publie sur Instagram.
+   - **Génération image canvas** : photo Post/Portrait + **carrousel** (`renderFinalPhoto`, 1080, JPEG 0.92) ; **carte typo « Menu du jour »** rendue dans la charte (`renderFinalTypo` : fond crème, titre Bricolage, plats/prix, polices chargées avant dessin).
+   - **Upload** via `upload-image` (`target:'studio'` → Blobs) puis **URL publique absolue** servie par `serve-image`.
+   - **`publish-instagram`** : **auth Identity** (verifyIdentity), **polling** `status_code`→FINISHED (post + carrousel), **permalink** renvoyé.
+   - **Feedback** : spinner par étapes (Génération → Envoi → Publication), succès ✓ + lien permalink, **erreurs mappées** (token expiré / image lourde / 2-10…), **reset** du studio après succès.
+   - **Story différée au point 5** : bouton « 🎬 Story — bientôt » désactivé en format story.
 8. **Photos d'événements** — upload dans l'éditeur Events (réutilise `fileToJpegBase64` + `upload-image` + le pattern galerie ; champ `photo` déjà dans le schéma `events.json` et déjà affiché sur le site). Ensuite `themeImage('event')` utilisera la vraie photo de l'événement.
 9. **Reels (vidéo MP4)** — nouveau type de média. Contraintes techniques :
    - **Upload MP4**, codec **H.264** (audio AAC), **durée 3-90 s**, **résolution 1080×1920** (9:16).
@@ -220,15 +225,14 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 ## ROADMAP PRODUIT
 
-### Phase 1 — En cours
-- **Point 7 — Wiring « Publier »** : génération de l'image finale (canvas, ou typo rendue dans la charte) → **upload Blobs** + URL publique (`serve-image`) → appel `publish-instagram` (post / carrousel) → **feedback** (succès / erreur, lien vers la publication).
+### Phase 1 — ✅ TERMINÉE
+- **Point 7 — Wiring « Publier »** : ✅ **FAIT** (génération canvas photo/carrousel/typo → upload Blobs + `serve-image` → `publish-instagram` auth/poll/permalink → feedback + reset ; story différée). Validé sur le compte testeur **@lestud13**.
 
-### Phase 2 — Après le wiring
-- **Point 5 — Stories successives** (multi-photos en Story → publications séparées automatiques).
-- **Point 8 — Photos d'événements** (upload dans l'éditeur Events ; `themeImage('event')` utilisera la vraie photo).
+### Phase 2 — Prochain chantier
+- **App Review Meta + passage en mode Live** — **PRIORITÉ** : permissions `instagram_business_basic` + `instagram_business_content_publish` (+ vérif Business) pour publier sur des comptes **non-testeurs** (= condition pour un vrai client).
+- **Stories** (point 5) — `media_type=STORIES` puis multi-photos → publications successives.
 - **Refresh token Instagram automatique** (token long-lived ~60 j → `ig_refresh_token` planifié).
 - **Mot de passe oublié** (flux GoTrue de récupération).
-- **App Review Meta + passage en mode Live** (permissions `instagram_business_basic` + `instagram_business_content_publish`) pour publier sur des comptes non-testeurs.
 
 ### Phase 3 — Commercial
 - **Domaine** (`lelab.app` ou équivalent).
@@ -241,6 +245,20 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 - Si App native : **React Native**, soumission **App Store**.
 - **Marque blanche** pour agences partenaires.
 - **Interface « Studio seul »** : pour les clients qui ont déjà un site ailleurs (ou n'en veulent pas). Dashboard épuré avec **uniquement le Studio Instagram** — pas de section « Mon site », pas d'éditeur de contenu. **Nouvelle offre tarifaire à définir** (ex. *LeLab+ Studio* à X€/mois, sans le site). **Architecture à prévoir** : `config.json` avec `mode = "studio_only"` qui masque toute la partie site.
+
+---
+
+## EN PRODUCTION
+
+- **Démo / admin Bistrot Sassy** : `gorgeous-heliotrope-e2e59d.netlify.app` (site vitrine + admin LeLab/LeLab+, studio Instagram).
+- **Page présentation LeLab** : `lestudsite.netlify.app/lelab.html`.
+- **Formulaire onboarding client** : `lestudsite.netlify.app/onboarding.html` — **Netlify Forms** (form `onboarding`), **bilingue FR/ES**. Carte + horaires sérialisés en champs cachés pour une capture complète. Accessible depuis `lelab.html` (CTA « Remplir le formulaire »).
+
+---
+
+## OUTILS INTERNES
+
+- **Générateur de thèmes / habillages** : module **fonctionnel en démo** (8 secteurs, 6 formes universelles, upload PNG transparent, zones en drag, export JSON). **À brancher dans LeLab+** : lecture du format de thème + composition **3 couches** dans le canvas (photo → habillage → texte).
 
 ---
 
