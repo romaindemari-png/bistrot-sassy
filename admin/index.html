@@ -352,6 +352,8 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ia-btn.loading svg{animation:ia-spin .8s linear infinite;}
 @keyframes ia-spin{to{transform:rotate(360deg);}}
 .inp.loading{opacity:.7;}
+#studio-primary:disabled{opacity:.6;cursor:default;}
+.pub-spin{animation:ia-spin .8s linear infinite;}
 .cap-count{font-size:11px;color:var(--gris-txt);text-align:right;margin-top:4px;font-weight:600;}
 .cap-count.over{color:#D92D20;}
 .hashtags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
@@ -1593,6 +1595,7 @@ function igStatusHTML(status){
   return `<a class="ig-status off" href="${IG_OAUTH_URL}" onclick="window.location.href=this.href;return false;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="pointer-events:none"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="#fff" stroke="none"/></svg>Connecter Instagram</a>`;
 }
 
+let igStatus = { connected: false, username: null };
 async function loadInstagramStatus(){
   let status = { connected: false, username: null };
   try {
@@ -1600,6 +1603,7 @@ async function loadInstagramStatus(){
     const res = await fetch('/.netlify/functions/get-instagram-status', { headers: { 'Authorization': 'Bearer ' + token } });
     if (res.ok) status = await res.json();
   } catch (e){ /* silencieux → affiché comme non connecté */ }
+  igStatus = status;
   const s1 = document.getElementById('igStatusStudio');
   if (s1) s1.innerHTML = igStatusHTML(status);
   const s2 = document.getElementById('igStatusPublier');
@@ -1873,9 +1877,16 @@ function goStep(n){
   if (back) back.style.visibility = currentStep > 1 ? 'visible' : 'hidden';
   const primary = document.getElementById('studio-primary');
   if (primary){
-    primary.innerHTML = currentStep < 4
-      ? 'Continuer <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Publier';
+    if (currentStep < 4){
+      primary.disabled = false;
+      primary.innerHTML = 'Continuer <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>';
+    } else if (currentKind !== 'typo' && currentFmt === 'story'){
+      primary.disabled = true;   // publication story différée (point 5)
+      primary.innerHTML = '🎬 Story — bientôt';
+    } else {
+      primary.disabled = false;
+      primary.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Publier';
+    }
   }
   updateRecap();
   saveStudioDraft();
@@ -1898,8 +1909,117 @@ function nextStep(){
   }
 }
 function prevStep(){ goStep(currentStep - 1); }
-function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublishMock(); }
-function studioPublishMock(){ showToast('🚀 Publication Instagram — bientôt disponible'); }
+function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublish(); }
+
+// Upload un dataURL JPEG dans Blobs (target studio) → URL ABSOLUE (Instagram doit pouvoir la fetch)
+async function uploadStudioImage(dataUrl, token){
+  const dataBase64 = (dataUrl.split(',')[1]) || '';
+  const res = await fetch('/.netlify/functions/upload-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ target: 'studio', dataBase64 })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.url) throw new Error(data.error || 'Upload image échoué');
+  return location.origin + data.url;   // URL absolue (domaine prod)
+}
+
+function setPubBtn(btn, html, disabled){ btn.disabled = !!disabled; btn.innerHTML = html; }
+
+function mapPublishError(msg){
+  const m = (msg || '').toLowerCase();
+  if (m.includes('token') || m.includes('session') || m.includes('oauth') || m.includes('190') || m.includes('expir')) return 'Connexion Instagram expirée — reconnectez votre compte.';
+  if (m.includes('non autoris')) return 'Session expirée — reconnectez-vous.';
+  if (m.includes('trop lourde') || m.includes('413')) return 'Image trop lourde.';
+  if (m.includes('2 et 10')) return 'Le carrousel doit contenir entre 2 et 10 photos.';
+  return msg || 'Publication impossible.';
+}
+
+const PUB_SPIN = '<svg class="pub-spin" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/></svg> ';
+
+let studioPublishing = false;
+async function studioPublish(){
+  if (studioPublishing) return;
+  const btn = document.getElementById('studio-primary');
+  if (!btn) return;
+
+  const isStory = currentKind !== 'typo' && currentFmt === 'story';
+  if (isStory){ showToast('🎬 Story — bientôt disponible'); return; }
+  // garde-fous
+  if (!igStatus.connected){ showToast('⚠️ Connectez d\'abord votre compte Instagram'); return; }
+  if (currentKind !== 'typo' && studioPhotos.length === 0){ showToast('⚠️ Ajoutez une photo avant de publier'); return; }
+
+  studioPublishing = true;
+  const restore = btn.innerHTML;
+  try {
+    const token = await getToken();
+    const carousel = isCarouselActive();
+    let imageUrls = [];
+
+    // 1) génération de l'image / des images + upload
+    if (currentKind === 'typo'){
+      setPubBtn(btn, PUB_SPIN + 'Génération…', true);
+      const dataUrl = await renderFinalTypo(currentFmt);
+      setPubBtn(btn, PUB_SPIN + 'Envoi…', true);
+      imageUrls = [ await uploadStudioImage(dataUrl, token) ];
+    } else if (carousel){
+      for (let i = 0; i < studioPhotos.length; i++){
+        setPubBtn(btn, PUB_SPIN + 'Envoi ' + (i + 1) + '/' + studioPhotos.length + '…', true);
+        const dataUrl = renderFinalPhoto(studioPhotos[i].bitmap, currentFmt);
+        imageUrls.push(await uploadStudioImage(dataUrl, token));
+      }
+    } else {
+      setPubBtn(btn, PUB_SPIN + 'Génération…', true);
+      const p = studioPhotos[studioPhotoIdx] || studioPhotos[0];
+      const dataUrl = renderFinalPhoto(p.bitmap, currentFmt);
+      setPubBtn(btn, PUB_SPIN + 'Envoi…', true);
+      imageUrls = [ await uploadStudioImage(dataUrl, token) ];
+    }
+
+    // 2) légende = texte + hashtags
+    const cap = (document.getElementById('caption').value || '').trim();
+    const tags = studioHashtags.join(' ');
+    const caption = [cap, tags].filter(Boolean).join('\n\n');
+
+    // 3) publication
+    setPubBtn(btn, PUB_SPIN + 'Publication…', true);
+    const payload = carousel
+      ? { format: 'carousel', slides: imageUrls.map(u => ({ imageUrl: u })), caption }
+      : { format: 'post', imageUrl: imageUrls[0], caption };
+    const res = await fetch('/.netlify/functions/publish-instagram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Publication échouée');
+
+    // 4) succès
+    setPubBtn(btn, '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M5 13l4 4L19 7"/></svg> Publié !', true);
+    showToast(data.permalink ? ('✅ Publié sur Instagram — ' + data.permalink) : '✅ Publié sur Instagram !');
+    setTimeout(resetStudioAfterPublish, 1500);
+  } catch (e){
+    console.error('publish:', e);
+    showToast('⚠️ ' + mapPublishError(e && e.message));
+    setPubBtn(btn, restore, false);
+  } finally {
+    studioPublishing = false;
+  }
+}
+
+function resetStudioAfterPublish(){
+  studioPhotos.forEach(p => { if (p.bitmap && p.bitmap.close) p.bitmap.close(); });
+  studioPhotos = []; studioPhotoIdx = 0;
+  studioHashtags = [];
+  const capEl = document.getElementById('caption'); if (capEl) capEl.value = '';
+  const ov = document.getElementById('storyOverlay'); if (ov) ov.value = '';
+  lastAutoCaption = ''; captionAutoGenerated = false; lastIgPhotoImg = '';
+  clearStudioDraft();
+  renderStudioThumbs();
+  renderHashtagsRow();
+  goStep(1);
+  renderStudio();
+}
 
 /* ── Persistance brouillon studio (sessionStorage) ── */
 let studioReady = false;
