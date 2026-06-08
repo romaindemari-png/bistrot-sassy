@@ -311,3 +311,28 @@ Chaque site = un **SOCLE commun** + des **BLOCS optionnels** activables par clie
 
 - **`netlify/functions/upload-image.mjs`** : l'URL Identity de prod est **codée en dur** en fallback — `process.env.IDENTITY_URL || 'https://gorgeous-heliotrope-e2e59d.netlify.app'`. Pour un nouveau site : définir la variable d'env **`IDENTITY_URL`** avec l'URL du nouveau client (ou retirer le fallback). Vérifier au passage qu'aucune autre URL `gorgeous-heliotrope-e2e59d…` ne traîne en dur (ex. `INSTAGRAM_REDIRECT_URI`, config Meta).
 - **`admin/index.html`** (bouton « Connecter Instagram ») : l'URL OAuth Instagram est **construite en dur côté client** (App ID `1300156898763730` + `redirect_uri` `…/auth-callback` + scopes) pour contourner un **blocage du redirect 302 sur Safari iOS**. Pour un nouveau client : remplacer **App ID** + **redirect_uri** dans le lien. `instagram-auth.js` (flux 302) reste en place mais n'est **plus utilisé** par le bouton.
+
+---
+
+## INSTANCE MASA MADRE — migration LeLab+ (en cours)
+
+*(Fork de ce repo → instance LeLab+ pour **Masa Madre**, boulangerie artisanale, Marseille, `@masamadre.marseille`. Décision : **option B** — forker `bistrot-sassy` puis réinjecter l'identité Masa Madre.)*
+
+- **Repo** : `romaindemari-png/masamadre-lelab` · **Clone local** : `/Users/demariromain/Documents/masamadre-lelab` · **Site** : `masamadre-site.netlify.app`.
+- **Plan** : `lelab_plus`. **Sections éditables au lancement** : **Galerie** + **« Ce matin »** uniquement. **Carte en dur** (éditable en V2 si la cliente le demande). Autres sections (engagements, histoire, citation, savoir-faire, mot du boulanger) **en dur**.
+- ⚠️ Ne pas confondre avec le repo statique d'origine `romaindemari-png/masamadre` (la maquette HTML, conservée comme **archive** + copies `~/Desktop/Masa Madre`, `~/Downloads/masa-madre*.html`) — c'est la **source design** de la Phase 3.
+
+### Phase 1 — Infra & URLs en dur ✅
+- Repo `masamadre-lelab` = fork de la plomberie Sassy. Netlify `masamadre-site` branché ; **Identity + Git Gateway + Blobs** activés.
+- **6 URLs en dur** reconfigurées `gorgeous-heliotrope…` → `masamadre-site.netlify.app` : fallback `IDENTITY_URL` des 5 fonctions + `admin/index.html` `IG_OAUTH_URL` (`redirect_uri`). **App ID LeLab Social `1300156898763730` conservé.**
+- **Variable Blobs renommée `NETLIFY_API_TOKEN` → `BLOBS_TOKEN`** (Netlify réserve le préfixe `NETLIFY_`). **`SITE_ID` = auto-fourni** par Netlify (réservé, ne pas créer).
+- **Meta** : app **LeLab Social réutilisée**, redirect URI Masa Madre **ajoutée** (Instagram → *API setup with Instagram login* → *Business login settings* → **OAuth redirect URIs**) → **pas de nouvelle App Review**.
+- ✅ **4 tests prod OK** : login, Git Gateway (commit `[Admin]`), Blobs (upload), OAuth Instagram.
+- ⚠️ **Trou connu** : l'admin custom ne gère **pas** l'invitation / confirmation / mot de passe oublié GoTrue. Connexion d'un nouvel utilisateur = accepter l'invite via `POST /.netlify/identity/verify` `{type:"signup", token:<invite_token du mail>, password}`. À industrialiser (handler `#invite_token` / `#recovery_token`).
+
+### Phase 2 — Purge données Sassy ✅
+- `_data/` rebasé Masa Madre : `config` (commerce boulangerie `masa-madre`, plan `lelab_plus`, **blocs inchangés → redéfinis en Phase 4**) ; `general` (coordonnées ; **tél/email vides**, à fournir par la cliente) ; `horaires` (Mercredi fermé). `carte` / `photos` / `events` **vidés** ; `themes.json` → `[]` (retrait `demo-cadre`). 1 Blob de test orphelin (inoffensif).
+
+### Phase 3 — Rhabillage identité Masa Madre (À VENIR — point de reprise)
+- Fonts **ElmsSans** + **Sackers Gothic**, palette Masa Madre, `motifs_masa.png`, **hero slideshow GSAP** (⚠️ conflit potentiel avec le carousel galerie Sassy → à isoler), collage des sections narratives en dur. Source : repo statique `masamadre`.
+- **Ensuite** : **Phase 4** (mapping sections → blocs : Galerie réutilisable ; « Ce matin » = **nouveau bloc** cartes `{nom, desc, prix, disponible}` ; remplacer les `data-editable` orphelins par les hooks `cms-*`) · **Phase 5** (éditeurs admin : Galerie réutilisable quasi tel quel ; « Ce matin » à créer sur le **pattern events**). **Carte** : schéma masamadre = **4 catégories** (Pains/Viennoiseries/Salé/Café) × `{nom, prix}` **sans description** — divergent de Sassy, mais **hors-scope au lancement** (carte en dur).
