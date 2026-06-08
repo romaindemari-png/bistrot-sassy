@@ -1283,32 +1283,94 @@ async function customLogin(event){
   return false;
 }
 
-// Renvoie un access_token valide (refresh auto si expiré / <60 s)
+const TOKEN_BUFFER_MS = 120000;   // refresh anticipé (absorbe un décalage d'horloge desktop/serveur)
+let refreshPromise = null;        // refresh en vol partagé → ne dépense jamais 2× le refresh token (usage unique GoTrue)
+
+function readStoredSession(){
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e){ return null; }
+}
+function failRefresh(){
+  clearSession();
+  document.body.classList.remove('authed');
+  showToast('⚠️ Session expirée — reconnecte-toi');
+  return null;
+}
+
+// Renvoie un access_token valide. Réconcilie avec localStorage (multi-onglets / appels concurrents),
+// puis rafraîchit de façon sérialisée si expiré (avec buffer).
 async function getToken(){
   if (!session) return null;
-  if (Date.now() > session.expires_at - 60000){
-    try {
-      const res = await fetch(IDENTITY + '/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: session.refresh_token })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.access_token) throw new Error('refresh failed');
-      saveSession({
-        ...session,
-        access_token: data.access_token,
-        refresh_token: data.refresh_token || session.refresh_token,
-        expires_at: Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000)
-      });
-    } catch (e){
-      clearSession();
-      document.body.classList.remove('authed');
-      showToast('⚠️ Session expirée — reconnecte-toi');
-      return null;
-    }
+  // adopter un token plus frais déposé par un autre onglet / appel
+  const stored = readStoredSession();
+  if (stored && stored.access_token && (stored.expires_at || 0) > (session.expires_at || 0)){
+    session = { ...session, ...stored };
   }
+  if (Date.now() <= session.expires_at - TOKEN_BUFFER_MS) return session.access_token;
+  return refreshToken(false);
+}
+
+// Force un refresh, même si le token paraît encore valide côté client (utilisé sur 401 serveur).
+function forceRefresh(){ return refreshToken(true); }
+
+// Refresh SÉRIALISÉ : un seul appel /token concurrent, partagé par tous les appelants.
+function refreshToken(force){
+  if (!refreshPromise) refreshPromise = doRefresh(force).finally(() => { refreshPromise = null; });
+  return refreshPromise;
+}
+
+async function doRefresh(force){
+  // un autre onglet/appel a peut-être déjà rafraîchi → l'adopter plutôt que brûler notre refresh token
+  const fresh = readStoredSession();
+  if (!force && fresh && fresh.access_token && Date.now() <= (fresh.expires_at || 0) - TOKEN_BUFFER_MS){
+    session = { ...session, ...fresh };
+    return session.access_token;
+  }
+  const rt = (session && session.refresh_token) || (fresh && fresh.refresh_token);
+  if (!rt) return failRefresh();
+  let res, data;
+  try {
+    res = await fetch(IDENTITY + '/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rt })
+    });
+    data = await res.json().catch(() => ({}));
+  } catch (e){
+    return (session && session.access_token) || null;   // réseau KO : ne pas détruire la session
+  }
+  if (!res.ok || !data.access_token){
+    // dernier recours : un autre onglet a peut-être posé un token frais entre-temps
+    const again = readStoredSession();
+    if (again && again.access_token && Date.now() <= (again.expires_at || 0) - TOKEN_BUFFER_MS){
+      session = { ...session, ...again };
+      return session.access_token;
+    }
+    return failRefresh();
+  }
+  saveSession({
+    ...session,
+    access_token: data.access_token,
+    refresh_token: data.refresh_token || session.refresh_token,
+    expires_at: Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000)
+  });
   return session.access_token;
+}
+
+// POST JSON authentifié, avec retry UNIQUE sur 401 (token rejeté côté serveur → refresh forcé + 1 retry).
+async function authedFetch(url, payload){
+  const token = await getToken();
+  if (!token) throw new Error('Non connecté');
+  const call = (t) => fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
+    body: JSON.stringify(payload)
+  });
+  let res = await call(token);
+  if (res.status === 401){
+    const t2 = await forceRefresh();
+    if (t2) res = await call(t2);
+  }
+  return res;
 }
 
 function customLogout(){
@@ -2050,11 +2112,7 @@ function studioPrimary(){ if (currentStep < 4) nextStep(); else studioPublish();
 // Upload un dataURL JPEG dans Blobs (target studio) → URL ABSOLUE (Instagram doit pouvoir la fetch)
 async function uploadStudioImage(dataUrl, token){
   const dataBase64 = (dataUrl.split(',')[1]) || '';
-  const res = await fetch('/.netlify/functions/upload-image', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ target: 'studio', dataBase64 })
-  });
+  const res = await authedFetch('/.netlify/functions/upload-image', { target: 'studio', dataBase64 });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.url) throw new Error(data.error || 'Upload image échoué');
   return location.origin + data.url;   // URL absolue (domaine prod)
@@ -2895,11 +2953,7 @@ async function saveSection(){
       }).filter(e => e.titre || e.date);   // ignore les cartes totalement vides
     }
 
-    const res = await fetch('/.netlify/functions/save-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ section: currentSection, data })
-    });
+    const res = await authedFetch('/.netlify/functions/save-data', { section: currentSection, data });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
 
@@ -2966,11 +3020,7 @@ async function saveBlocs(){
       const key = cb.getAttribute('data-bloc');
       if (next.blocs.optionnels[key]) next.blocs.optionnels[key].actif = cb.checked;
     });
-    const res = await fetch('/.netlify/functions/save-data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ section: 'config', data: next })
-    });
+    const res = await authedFetch('/.netlify/functions/save-data', { section: 'config', data: next });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
     sassyData.config = next;
@@ -3038,11 +3088,7 @@ function pickGaleriePhoto(){
 async function deleteBlobKey(key, token){
   if (!key) return;
   try {
-    await fetch('/.netlify/functions/upload-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ action: 'delete', key })
-    });
+    await authedFetch('/.netlify/functions/upload-image', { action: 'delete', key });
   } catch (e){ console.warn('deleteBlobKey:', e); }
 }
 
@@ -3070,11 +3116,7 @@ async function onPhotoPicked(input){
     if (!sassyData.photos.slider)  sassyData.photos.slider  = [];
     if (!sassyData.photos.galerie) sassyData.photos.galerie = [];
 
-    const res = await fetch('/.netlify/functions/upload-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ target: action.type, dataBase64 })
-    });
+    const res = await authedFetch('/.netlify/functions/upload-image', { target: action.type, dataBase64 });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Upload échoué');
 
@@ -3130,11 +3172,7 @@ async function deleteGaleriePhoto(index){
 
     const key = blobKeyFromUrl(item.image);
     if (key){
-      const res = await fetch('/.netlify/functions/upload-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'delete', key })
-      });
+      const res = await authedFetch('/.netlify/functions/upload-image', { action: 'delete', key });
       if (!res.ok){ const r = await res.json().catch(() => ({})); throw new Error(r.error || 'Suppression Blob échouée'); }
     }
     // retire du modèle + auto-save (même si image legacy sans clé Blob)
@@ -3158,11 +3196,7 @@ async function savePhotos(){
     slider:  (sassyData.photos && sassyData.photos.slider)  || [],
     galerie: (sassyData.photos && sassyData.photos.galerie) || []
   };
-  const res = await fetch('/.netlify/functions/save-data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ section: 'photos', data })
-  });
+  const res = await authedFetch('/.netlify/functions/save-data', { section: 'photos', data });
   const result = await res.json();
   if (!res.ok) throw new Error(result.error || 'Sauvegarde échouée');
   sassyData.photos = data;
