@@ -35,8 +35,8 @@
   --ink-3:         rgba(28,26,25,.22);
 
   /* Cards */
-  --card-bg:       rgba(255,255,255,.60);
-  --card-shadow:   0 6px 28px rgba(28,26,25,.09), 0 1px 5px rgba(28,26,25,.05);
+  --card-bg:       rgba(255,255,255,.66);
+  --card-shadow:   0 6px 24px rgba(28,26,25,.08), 0 1px 4px rgba(28,26,25,.05);
   --card-radius:   16px;
 
   /* LeLab+ (jaune) */
@@ -209,7 +209,7 @@ body::before{
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   opacity: .20;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -302,7 +302,13 @@ body.lelab-plus .lelab-star path{ fill:var(--g-color); }
 body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
 
 /* ── MAIN ──────────────────────────────────────────────── */
-.main{flex:1;min-width:0;display:flex;flex-direction:column;transition:opacity .2s ease;background:var(--bg);}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;transition:opacity .2s ease;background:var(--bg);position:relative;}
+/* grain CLAIR du contenu sable (doux, distinct du grain sombre de la sidebar) */
+.main::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  opacity:.06;mix-blend-mode:multiply;background-size:200px;background-repeat:repeat;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='ng'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23ng)'/%3E%3C/svg%3E");
+}
 .main.fading{opacity:0;}
 .ig-img-reveal{transition:opacity .3s ease;}
 .topbar-m{display:none;}
@@ -426,23 +432,63 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
 /* studio unlocked */
 .studio-wrap{display:flex;flex:1;min-height:0;max-width:1080px;width:100%;margin-inline:auto;}
 .compose{flex:1;min-width:0;padding:28px 30px 60px;max-width:640px;}
-.stepper{display:flex;align-items:center;gap:0;margin-bottom:26px;}
-.step-dot{display:flex;align-items:center;gap:8px;}
-.step-dot .num{
-  width:26px;height:26px;border-radius:50%;background:var(--gris-card);
-  color:var(--gris-txt);display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:700;flex-shrink:0;transition:all .2s;
-}
-.step-dot .lbl{font-size:12px;font-weight:600;color:var(--gris-txt);white-space:nowrap;}
-.step-dot.done .num{background:var(--noir);color:#fff;}
-.step-dot.active .num{background:var(--jaune);color:var(--jaune-txt);}
-.step-dot.active .lbl{color:var(--noir);}
-.step-line{flex:1;height:2px;background:var(--bord);margin:0 8px;border-radius:2px;min-width:10px;}
-.step-line.done{background:var(--noir);}
+.stepper{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:7px;}
+.step-dot{cursor:pointer;display:flex;}
+.step-dot .num{width:7px;height:7px;border-radius:99px;background:rgba(28,26,25,.18);font-size:0;color:transparent;padding:0;transition:all .25s cubic-bezier(.32,.72,0,1);}
+.step-dot .lbl{display:none;}
+.step-dot.done .num{background:#211f1e;}
+.plan-plus .step-dot.active .num{background:var(--g-toggle);width:22px;}
+.plan-lab  .step-dot.active .num{background:var(--m-toggle);width:22px;}
+.step-line{display:none;}
+.step-counter{text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:700;margin-bottom:24px;}
 .steps-viewport{position:relative;overflow:clip;overflow-clip-margin:24px;transition:height .35s cubic-bezier(0.4,0,0.2,1);}
-.step-block{position:absolute;top:0;left:0;width:100%;transition:transform .35s cubic-bezier(0.4,0,0.2,1);}
+.step-block{position:absolute;top:0;left:0;width:100%;transition:transform .26s cubic-bezier(.32,.72,0,1), opacity .26s cubic-bezier(.32,.72,0,1);}
+@media (prefers-reduced-motion: reduce){
+  .step-block{transition:opacity .2s ease;}
+}
 .step-block .sh{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:#A0A09A;font-weight:700;margin-bottom:3px;}
+/* en-tête immersif : grande question centrée + sous-titre */
+.studio-head{max-width:460px;margin:4px auto 26px;text-align:center;}
+.studio-head h2,.step-block h2.studio-q{font-family:var(--titre);font-size:26px;font-weight:800;line-height:1.12;color:var(--ink);margin:0 0 7px;}
+.studio-sub{font-size:13px;line-height:1.45;color:var(--ink-2);margin:0;}
 .step-block h2{font-size:18px;font-weight:700;margin-bottom:13px;}
+/* hover noir des cards studio (pastille couleur plan conservée, texte inversé) */
+#studio-unlocked .lelab-card{transition:box-shadow .2s,transform .18s,background .2s;}
+#studio-unlocked .lelab-card:hover{background:#211f1e;}
+#studio-unlocked .lelab-card:hover .lelab-card__title{color:#fff;}
+#studio-unlocked .lelab-card:hover .lelab-card__sub{color:rgba(255,255,255,.6);}
+#studio-unlocked .lelab-card:hover .lelab-card__label{color:rgba(255,255,255,.42);}
+/* overlay étoile LeStud (publication) */
+.star-overlay{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;}
+.star-overlay.show{display:flex;}
+.star-burst{width:170px;height:170px;will-change:transform;}
+.plan-plus .star-burst{fill:var(--g-color);}
+.plan-lab  .star-burst{fill:var(--m-color);}
+.star-overlay.show .star-burst{animation:starWipe 1s cubic-bezier(.83,0,.17,1) forwards;}
+@keyframes starWipe{
+  0%{transform:scale(0) rotate(0);opacity:1;}
+  28%{transform:scale(1) rotate(120deg);opacity:1;}
+  100%{transform:scale(26) rotate(300deg);opacity:1;}
+}
+.star-overlay.success{pointer-events:auto;}
+.plan-plus .star-overlay.success{background:var(--g-color);}
+.plan-lab  .star-overlay.success{background:var(--m-color);}
+.star-overlay.success .star-burst{display:none;}
+.star-success{display:none;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:30px;}
+.star-overlay.success .star-success{display:flex;}
+.star-success-ico{width:54px;height:54px;}
+.plan-plus .star-success-ico{fill:var(--g-on-color);}
+.plan-lab  .star-success-ico{fill:var(--m-on-color);}
+.star-success-tt{font-family:var(--titre);font-size:24px;font-weight:800;}
+.plan-plus .star-success-tt,.plan-plus .star-success-link{color:var(--g-on-color);}
+.plan-lab  .star-success-tt,.plan-lab  .star-success-link{color:var(--m-on-color);}
+.star-success-link{font-size:13px;font-weight:600;text-decoration:underline;}
+.star-success-btn{margin-top:8px;background:#211f1e;border:none;border-radius:14px;padding:13px 22px;font-family:var(--font-admin);font-size:13px;font-weight:700;cursor:pointer;}
+.plan-plus .star-success-btn{color:var(--g-color);}
+.plan-lab  .star-success-btn{color:var(--m-color);}
+@media (prefers-reduced-motion: reduce){
+  .star-overlay.show .star-burst{animation:none;display:none;}
+}
 
 /* format pills */
 .fmt-row{display:flex;gap:9px;margin-top:14px;}
@@ -539,7 +585,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 
 /* preview pane */
 .preview-pane{
-  width:380px;flex-shrink:0;background:var(--blanc);border-left:1px solid var(--bord);
+  width:380px;flex-shrink:0;background:rgba(28,26,25,.03);border-left:.5px solid rgba(28,26,25,.07);
   padding:24px 20px;position:sticky;top:0;height:100vh;
   display:flex;flex-direction:column;align-items:center;
 }
@@ -882,9 +928,8 @@ body.authed #login-gate{display:none;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 
 /* ════ STUDIO LeLab+ — compléments (montée de version lelab-studio) ════ */
-.compose-head{margin-bottom:22px;padding-bottom:16px;box-shadow:0 2px 12px rgba(28,26,25,.05);}
-.compose-head h1{font-size:30px;font-weight:800;line-height:1.05;}
-.compose-head p{font-size:14px;color:var(--gris-txt);margin-top:6px;}
+.compose-head{display:flex;justify-content:flex-end;margin-bottom:14px;min-height:8px;}
+.compose-head:empty{display:none;}
 
 .adaptive-note{font-size:12px;color:var(--gris-txt);background:var(--gris-card);border-radius:10px;
   padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;gap:9px;}
@@ -1172,9 +1217,7 @@ body.authed #login-gate{display:none;}
 
         <div class="compose">
           <div class="compose-head">
-            <h1>Nouvelle publication</h1>
-            <p>Choisissez un thème, l'aperçu s'adapte en direct.</p>
-            <div id="igStatusStudio" style="margin-top:10px;"></div>
+            <div id="igStatusStudio"></div>
           </div>
 
           <div class="stepper">
@@ -1186,12 +1229,15 @@ body.authed #login-gate{display:none;}
             <div class="step-line"></div>
             <div class="step-dot" onclick="goStep(4)"><span class="num">4</span><span class="lbl">Publier</span></div>
           </div>
+          <div class="step-counter" id="stepCounter">Étape 1 sur 4</div>
 
           <div class="steps-viewport" id="stepsViewport">
           <!-- STEP 1 : THÈME -->
           <div class="step-block" data-step="1">
-            <div class="sh">Étape 1 — Que voulez-vous publier ?</div>
-            <h2>Choisissez un thème</h2>
+            <div class="studio-head">
+              <h2 class="studio-q">Que voulez-vous publier ?</h2>
+              <p class="studio-sub">Choisissez le type de post.</p>
+            </div>
             <div class="lelab-grid lelab-grid--2" id="themeGrid">
 
               <!-- Plat du jour (photo) -->
@@ -1244,8 +1290,10 @@ body.authed #login-gate{display:none;}
 
           <!-- STEP 2 : CONTENU (adaptatif) -->
           <div class="step-block" data-step="2">
-            <div class="sh">Étape 2 — Le contenu</div>
-            <h2 id="step2Title">Vos plats & votre titre</h2>
+            <div class="studio-head">
+              <h2 class="studio-q" id="step2Title">Vos plats & votre titre</h2>
+              <p class="studio-sub">Choisissez le format, puis ajoutez votre contenu.</p>
+            </div>
 
             <div class="adaptive-note" id="adaptiveNote">
               <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
@@ -1303,8 +1351,10 @@ body.authed #login-gate{display:none;}
 
           <!-- STEP 3 : LÉGENDE -->
           <div class="step-block" data-step="3">
-            <div class="sh">Étape 3 — La légende</div>
-            <h2>Texte du post & hashtags</h2>
+            <div class="studio-head">
+              <h2 class="studio-q">Rédigez votre légende</h2>
+              <p class="studio-sub">Une légende qui donne envie. L'IA peut aider.</p>
+            </div>
             <div class="adaptive-note" id="captionStoryNote" style="display:none;">
               <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
               <span>En story, l'IA génère un texte court affiché sur la photo — ni légende longue ni hashtags.</span>
@@ -1322,8 +1372,10 @@ body.authed #login-gate{display:none;}
 
           <!-- STEP 4 : PUBLIER -->
           <div class="step-block" data-step="4">
-            <div class="sh">Étape 4 — Publier</div>
-            <h2>Prêt à publier ?</h2>
+            <div class="studio-head">
+              <h2 class="studio-q">Votre post est prêt</h2>
+              <p class="studio-sub">Vérifiez l'aperçu et publiez.</p>
+            </div>
             <div class="recap-card">
               <div class="recap-row">
                 <span class="recap-ico">🎨</span>
@@ -1383,6 +1435,17 @@ body.authed #login-gate{display:none;}
           </div>
           <div class="pp-tip">Ce que verront vos abonnés une fois publié.</div>
           <button class="preview-close" onclick="document.body.classList.remove('preview-open')">Fermer <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M18 15l-6-6-6 6"/></svg></button>
+        </div>
+
+        <!-- overlay étoile LeStud (publication) — couche visuelle, ne touche pas studioPublish -->
+        <div class="star-overlay" id="starOverlay" aria-hidden="true">
+          <svg class="star-burst" viewBox="0 0 100 100" aria-hidden="true"><path d="M50,0 L61.1,26 L85.1,14.9 L74,38.9 L100,50 L74,61.1 L85.1,85.1 L61.1,74 L50,100 L38.9,74 L14.9,85.1 L26,61.1 L0,50 L26,38.9 L14.9,14.9 L38.9,26 Z"/></svg>
+          <div class="star-success">
+            <svg class="star-success-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M50,0 L61.1,26 L85.1,14.9 L74,38.9 L100,50 L74,61.1 L85.1,85.1 L61.1,74 L50,100 L38.9,74 L14.9,85.1 L26,61.1 L0,50 L26,38.9 L14.9,14.9 L38.9,26 Z"/></svg>
+            <div class="star-success-tt">Publié sur Instagram</div>
+            <a class="star-success-link" id="starPermalink" href="#" target="_blank" rel="noopener">Voir la publication →</a>
+            <button class="star-success-btn" onclick="hideStudioStar()">Nouvelle publication</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2255,25 +2318,32 @@ function adjustStepsHeight(){
 // slide horizontal entre étapes (avant entre par la droite, retour par la gauche)
 function slideToStep(prev, cur){
   const forward = cur >= prev;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   document.querySelectorAll('#studio-unlocked .step-block').forEach(b => {
     const num = Number(b.dataset.step);
     if (num !== cur && num !== prev) b.style.display = 'none';
   });
   const curEl  = document.querySelector('#studio-unlocked .step-block[data-step="' + cur + '"]');
   const prevEl = (prev !== cur) ? document.querySelector('#studio-unlocked .step-block[data-step="' + prev + '"]') : null;
+  // entrée : depuis +24px (avance) / -24px (recul) + fondu ; reveal scale pour l'étape 4 en avant
+  const enterFrom = reduce ? 'none'
+    : (cur === 4 && forward ? 'scale(.95)' : 'translateX(' + (forward ? '24px' : '-24px') + ')');
   if (curEl){
     curEl.style.display = 'block';
     if (prevEl){
       curEl.style.transition = 'none';
-      curEl.style.transform = 'translateX(' + (forward ? '100%' : '-100%') + ')';
-      void curEl.offsetWidth;            // reflow → l'entrée part bien de l'extérieur
+      curEl.style.transform = enterFrom;
+      curEl.style.opacity = '0';
+      void curEl.offsetWidth;            // reflow → l'entrée part bien de l'état initial
       curEl.style.transition = '';
     }
-    curEl.style.transform = 'translateX(0)';
+    curEl.style.transform = 'none';
+    curEl.style.opacity = '1';
   }
   if (prevEl){
-    prevEl.style.transform = 'translateX(' + (forward ? '-100%' : '100%') + ')';
-    setTimeout(() => { if (currentStep !== prev) prevEl.style.display = 'none'; }, 380);
+    prevEl.style.opacity = '0';
+    if (!reduce) prevEl.style.transform = 'translateX(' + (forward ? '-24px' : '24px') + ')';
+    setTimeout(() => { if (currentStep !== prev){ prevEl.style.display = 'none'; prevEl.style.transform = 'none'; } }, 300);
   }
   adjustStepsHeight();
 }
@@ -2298,6 +2368,8 @@ function goStep(n){
   document.querySelectorAll('#studio-unlocked .step-line').forEach((l, i) => {
     l.classList.toggle('done', i < currentStep - 1);
   });
+  const sc = document.getElementById('stepCounter');
+  if (sc) sc.textContent = 'Étape ' + currentStep + ' sur 4';
   // pied : Retour masqué à l'étape 1 ; bouton principal = Continuer (<4) / Publier (==4)
   const back = document.getElementById('studio-back');
   if (back) back.style.visibility = currentStep > 1 ? 'visible' : 'hidden';
@@ -2359,6 +2431,27 @@ function mapPublishError(msg){
 
 const PUB_SPIN = '<svg class="pub-spin" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/></svg> ';
 
+// ── Overlay étoile LeStud (couche visuelle de publication) ──
+function studioStarReduce(){ return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+function showStudioStar(){
+  const ov = document.getElementById('starOverlay');
+  if (!ov) return;
+  ov.classList.remove('success');
+  if (studioStarReduce()) return;            // pas de wipe animé en reduced-motion
+  ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');   // (re)joue le wipe
+}
+function studioStarSuccess(permalink){
+  const ov = document.getElementById('starOverlay');
+  if (!ov) return;
+  const lk = document.getElementById('starPermalink');
+  if (lk){ if (permalink){ lk.href = permalink; lk.style.display = ''; } else { lk.style.display = 'none'; } }
+  ov.classList.add('show', 'success');       // écran succès (étoile + permalink)
+}
+function hideStudioStar(){
+  const ov = document.getElementById('starOverlay');
+  if (ov) ov.classList.remove('show', 'success');
+}
+
 let studioPublishing = false;
 async function studioPublish(){
   if (studioPublishing) return;
@@ -2372,6 +2465,7 @@ async function studioPublish(){
   if (currentKind !== 'typo' && studioPhotos.length === 0){ showToast('⚠️ Ajoutez une photo avant de publier'); return; }
 
   studioPublishing = true;
+  showStudioStar();                          // overlay étoile déclenché au clic (couche visuelle)
   const restore = btn.innerHTML;
   try {
     const token = await getToken();
@@ -2433,10 +2527,12 @@ async function studioPublish(){
 
     // 4) succès
     setPubBtn(btn, '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M5 13l4 4L19 7"/></svg> Publié !', true);
+    studioStarSuccess(data.permalink);       // écran succès (étoile + permalink)
     showToast(data.permalink ? ('✅ Publié sur Instagram — ' + data.permalink) : '✅ Publié sur Instagram !');
     setTimeout(resetStudioAfterPublish, 1500);
   } catch (e){
     console.error('publish:', e);
+    hideStudioStar();                        // erreur → on retire l'overlay étoile
     showToast('⚠️ ' + mapPublishError(e && e.message));
     setPubBtn(btn, restore, false);
   } finally {
