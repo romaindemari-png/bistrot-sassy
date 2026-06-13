@@ -207,6 +207,23 @@
 .plan-plus .lelab-save { background: var(--g-on-color); color: var(--g-color); }
 .plan-lab  .lelab-save { background: var(--m-color);    color: var(--m-on-color); }
 
+/* ── ADMIN REDESIGN — BLOC "SECTIONS DE MON SITE" ── */
+.lelab-section-wrap { margin-top: 20px; }
+.lelab-bloc-header { margin-bottom: 10px; }
+.lelab-bloc-header__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+/* Toggle piloté par checkbox caché (état lu par saveBlocs), visuel via :has() */
+.lelab-toggle:has(input) { background: rgba(28,26,25,.15); }
+.lelab-toggle:has(input)::after { left: 3px; }
+.lelab-toggle input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.plan-plus .lelab-toggle:has(input:checked) { background: var(--g-color); }
+.plan-lab  .lelab-toggle:has(input:checked) { background: var(--m-color); }
+.lelab-toggle:has(input:checked)::after { left: 19px; }
+
 /* quand LeLab+ est actif, les accents passent au jaune */
 body.lelab-plus{
   --accent:var(--jaune);--accent-soft:var(--jaune-soft);
@@ -1124,13 +1141,13 @@ body.authed #login-gate{display:none;}
           </div>
 
           <!-- blocs interrupteurs -->
-          <div class="sec-item insta-pub" style="cursor:default;flex-direction:column;align-items:flex-start;gap:12px;">
-            <div style="display:flex;align-items:center;gap:14px;width:100%;">
-              <div class="sec-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M4 6h16M4 12h10M4 18h14"/></svg></div>
-              <div class="sec-info"><div class="sec-tt">Sections de mon site</div><div class="sec-dd">Activez ou masquez des sections</div></div>
+          <div class="lelab-section-wrap">
+            <div class="lelab-bloc-header">
+              <div class="lelab-row__label">Visibilité des sections</div>
+              <div class="lelab-bloc-header__title">Sections de mon site</div>
             </div>
-            <div class="blocs-grid" id="blocs-list" style="width:100%;"><!-- rendu dynamique depuis config.json --></div>
-            <button class="btn-save" id="btn-save-blocs" onclick="saveBlocs()" style="margin-top:2px;">💾 Enregistrer les sections</button>
+            <div id="blocs-list"><!-- rendu dynamique depuis config.json --></div>
+            <button class="lelab-save" id="btn-save-blocs" onclick="saveBlocs()">Enregistrer les sections</button>
           </div>
         </div>
       </div>
@@ -3207,6 +3224,15 @@ async function saveSection(){
 /* ════ BLOCS (interrupteurs de sections — porté de l'ancien admin, rendu inline) ════ */
 const BLOC_ICONS = { carte:'🍽️', photos:'📷', infos:'📍', events:'📅', reservation:'📞' };
 const BLOC_DESCS = { events:'Soirées, concerts…', reservation:'Bouton WhatsApp' };
+// Direction C : svg inline + label uppercase par section (cohérent avec les 5 rows statiques)
+const BLOC_SVG = {
+  carte:       '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1.5"/><path d="M9 12h6M9 16h4"/>',
+  photos:      '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-5-5L5 19"/>',
+  infos:       '<path d="M12 21s-8-4.5-8-11a8 8 0 0 1 16 0c0 6.5-8 11-8 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  events:      '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01"/>',
+  reservation: '<path d="M3 5a2 2 0 0 1 2-2h3l2 4.5-2.5 1.5a11 11 0 0 0 5.5 5.5l1.5-2.5L19.5 16V19a2 2 0 0 1-2 2A17 17 0 0 1 3 5z"/>'
+};
+const BLOC_LABEL = { carte:'MENU', photos:'GALERIE', infos:'PRATIQUE', events:'AGENDA', reservation:'CONTACT' };
 
 function renderBlocs(){
   const list = document.getElementById('blocs-list');
@@ -3222,16 +3248,31 @@ function renderBlocs(){
   if (saveBtn) saveBtn.style.display = '';
   const socle = config.blocs.socle || {};
   const optionnels = config.blocs.optionnels || {};
-  const ico = k => BLOC_ICONS[k] || '🔧';
+  const svg = k => BLOC_SVG[k] || '';
+  const lab = k => BLOC_LABEL[k] || '';
   const rowSocle = (key, b) => `
-    <div class="bloc-row locked-bloc">
-      <div class="b-info"><span class="b-ico">${ico(key)}</span><div><div class="b-tt">${b.label || key}</div><div class="b-dd">Toujours affichée</div></div></div>
-      <label class="toggle" style="opacity:.35;pointer-events:none;"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+    <div class="lelab-row is-locked">
+      <div class="lelab-row__ico"><svg viewBox="0 0 24 24">${svg(key)}</svg></div>
+      <div class="lelab-row__body">
+        <div class="lelab-row__label">${lab(key)}</div>
+        <div class="lelab-row__title">${b.label || key}</div>
+        <div class="lelab-row__sub">Toujours affichée</div>
+      </div>
+      <div class="lelab-row__right">
+        <label class="lelab-toggle"><input type="checkbox" checked disabled></label>
+      </div>
     </div>`;
   const rowOpt = (key, b) => `
-    <div class="bloc-row">
-      <div class="b-info"><span class="b-ico">${ico(key)}</span><div><div class="b-tt">${b.label || key}</div><div class="b-dd">${BLOC_DESCS[key] || 'Section optionnelle'}</div></div></div>
-      <label class="toggle"><input type="checkbox" data-bloc="${key}" ${b.actif !== false ? 'checked' : ''}><span class="toggle-slider"></span></label>
+    <div class="lelab-row">
+      <div class="lelab-row__ico"><svg viewBox="0 0 24 24">${svg(key)}</svg></div>
+      <div class="lelab-row__body">
+        <div class="lelab-row__label">${lab(key)}</div>
+        <div class="lelab-row__title">${b.label || key}</div>
+        <div class="lelab-row__sub">${BLOC_DESCS[key] || 'Section optionnelle'}</div>
+      </div>
+      <div class="lelab-row__right">
+        <label class="lelab-toggle"><input type="checkbox" data-bloc="${key}" ${b.actif !== false ? 'checked' : ''}></label>
+      </div>
     </div>`;
   list.innerHTML =
     Object.entries(socle).map(([k,b]) => rowSocle(k,b)).join('') +
