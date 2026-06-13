@@ -224,6 +224,221 @@
 .plan-lab  .lelab-toggle:has(input:checked) { background: var(--m-color); }
 .lelab-toggle:has(input:checked)::after { left: 19px; }
 
+/* ── PHASE 4 — STUDIO CARDS MOSAÏQUE ── */
+
+.studio-mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* Grande card — template star (première position) */
+.scard {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  transition: box-shadow .2s, transform .18s;
+  border: none;
+}
+.scard:hover {
+  box-shadow: 0 12px 40px rgba(28,26,25,.14), 0 2px 8px rgba(28,26,25,.07);
+  transform: translateY(-2px);
+}
+.scard.is-selected {
+  outline: 2.5px solid var(--g-color);
+  outline-offset: -2px;
+}
+.plan-lab .scard.is-selected {
+  outline-color: var(--m-color);
+}
+
+.scard-big {
+  grid-row: span 2;
+}
+
+/* Zone image */
+.scard-img {
+  overflow: hidden;
+  position: relative;
+  background: rgba(28,26,25,.06);
+}
+.scard-img-big { height: 200px; }
+.scard-img-sm  { height: 110px; }
+
+.scard-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .3s ease;
+}
+.scard:hover .scard-img img { transform: scale(1.03); }
+
+/* Badge type en overlay */
+.scard-kind {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--g-color);
+  color: var(--g-on-color);
+}
+.plan-lab .scard-kind {
+  background: var(--m-color);
+  color: var(--m-on-color);
+}
+
+/* Check sélection */
+.scard-check {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--g-color);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.scard-check svg {
+  width: 12px; height: 12px;
+  stroke: var(--g-on-color);
+  stroke-width: 2.5;
+  fill: none;
+}
+.scard.is-selected .scard-check { display: flex; }
+.plan-lab .scard-check { background: var(--m-color); }
+.plan-lab .scard-check svg { stroke: var(--m-on-color); }
+
+/* Corps texte */
+.scard-body { padding: 12px 14px 14px; }
+.scard-body-big { padding: 16px; }
+
+.scard-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 3px;
+}
+.scard-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.scard-title-big {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+.scard-sub {
+  font-size: 10.5px;
+  color: var(--ink-2);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.scard-sub-big {
+  font-size: 11px;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+/* Card wide — Cadre démo (pleine largeur) */
+.scard-wide {
+  grid-column: span 2;
+  display: flex;
+  align-items: stretch;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  transition: box-shadow .2s, transform .18s;
+  border: none;
+}
+.scard-wide:hover {
+  box-shadow: 0 12px 40px rgba(28,26,25,.14);
+  transform: translateY(-2px);
+}
+.scard-wide.is-selected {
+  outline: 2.5px solid var(--g-color);
+  outline-offset: -2px;
+}
+.plan-lab .scard-wide.is-selected { outline-color: var(--m-color); }
+
+.scard-wide-img {
+  width: 120px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: rgba(28,26,25,.06);
+}
+.scard-wide-img img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.scard-wide-body {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.scard-wide-badge {
+  margin-top: 8px;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2.5px 9px;
+  border-radius: 99px;
+  background: var(--g-color);
+  color: var(--g-on-color);
+}
+.plan-lab .scard-wide-badge {
+  background: var(--m-color);
+  color: var(--m-on-color);
+}
+
+/* Placeholder image si pas de thumbnail */
+.scard-img-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(28,26,25,.05);
+}
+.scard-img-placeholder svg {
+  width: 28px; height: 28px;
+  stroke: var(--ink-3);
+  stroke-width: 1.4; fill: none;
+}
+
+@media (max-width: 540px) {
+  .studio-mosaic {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .scard-big {
+    grid-row: auto;
+  }
+  .scard-img-big { height: 160px; }
+  #themeBottomRow {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* quand LeLab+ est actif, les accents passent au jaune */
 body.lelab-plus{
   --accent:var(--jaune);--accent-soft:var(--jaune-soft);
@@ -1235,27 +1450,67 @@ body.authed #login-gate{display:none;}
           <div class="step-block" data-step="1">
             <div class="sh">Étape 1 — Que voulez-vous publier ?</div>
             <h2>Choisissez un thème</h2>
-            <div class="tpl-grid">
-              <button class="tpl" data-theme="plat" data-kind="photo" onclick="selectTheme(this)">
-                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M3 15l5-3 4 2 3-2 6 4"/></svg></span>
-                <span><span class="tt">Plat du jour</span><span class="dd">Une photo + un prix</span></span>
-                <span class="kind">photo</span>
-              </button>
-              <button class="tpl sel" data-theme="menu" data-kind="typo" onclick="selectTheme(this)">
-                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><path d="M5 12l5-7 5 9 4-5"/><path d="M4 19h16"/></svg></span>
-                <span><span class="tt">Menu du jour</span><span class="dd">Visuel typo, sans photo</span></span>
-                <span class="kind">typo</span>
-              </button>
-              <button class="tpl" data-theme="ambiance" data-kind="photo" onclick="selectTheme(this)">
-                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></span>
-                <span><span class="tt">Photo d'ambiance</span><span class="dd">Salle, terrasse, déco</span></span>
-                <span class="kind">photo</span>
-              </button>
-              <button class="tpl" data-theme="event" data-kind="photo" onclick="selectTheme(this)">
-                <span class="t-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>
-                <span><span class="tt">Événement</span><span class="dd">Soirée, concert, actu</span></span>
-                <span class="kind">photo</span>
-              </button>
+            <div class="studio-mosaic">
+
+              <!-- Grande card — Plat du jour (template photo star) -->
+              <div class="scard scard-big is-selected" data-theme="plat" data-kind="photo" onclick="selectTheme(this)">
+                <div class="scard-img scard-img-big" data-theme-img>
+                  <div class="scard-img-placeholder"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-5-5L5 19"/></svg></div>
+                  <div class="scard-kind">Photo</div>
+                  <div class="scard-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+                </div>
+                <div class="scard-body-big">
+                  <div class="scard-label">Le plus publié</div>
+                  <div class="scard-title-big tt">Plat du jour</div>
+                  <div class="scard-sub-big">Une photo mise en valeur avec son prix</div>
+                </div>
+              </div>
+
+              <!-- Menu du jour (typo, sans photo) -->
+              <div class="scard" data-theme="menu" data-kind="typo" onclick="selectTheme(this)">
+                <div class="scard-img scard-img-sm">
+                  <div class="scard-img-placeholder"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div>
+                  <div class="scard-kind">Typo</div>
+                  <div class="scard-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+                </div>
+                <div class="scard-body">
+                  <div class="scard-label">Typo</div>
+                  <div class="scard-title tt">Menu du jour</div>
+                  <div class="scard-sub">Visuel texte, sans photo</div>
+                </div>
+              </div>
+
+              <!-- Photo d'ambiance -->
+              <div class="scard" data-theme="ambiance" data-kind="photo" onclick="selectTheme(this)">
+                <div class="scard-img scard-img-sm" data-theme-img>
+                  <div class="scard-img-placeholder"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-5-5L5 19"/></svg></div>
+                  <div class="scard-kind">Photo</div>
+                  <div class="scard-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+                </div>
+                <div class="scard-body">
+                  <div class="scard-label">Ambiance</div>
+                  <div class="scard-title tt">Photo d'ambiance</div>
+                  <div class="scard-sub">Salle, terrasse, déco</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Ligne du bas : Événement + thèmes sur-mesure (injectés dynamiquement) -->
+            <div class="studio-mosaic-row" id="themeBottomRow" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div class="scard" data-theme="event" data-kind="photo" onclick="selectTheme(this)">
+                <div class="scard-img scard-img-sm" data-theme-img>
+                  <div class="scard-img-placeholder"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+                  <div class="scard-kind">Photo</div>
+                  <div class="scard-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+                </div>
+                <div class="scard-body">
+                  <div class="scard-label">Agenda</div>
+                  <div class="scard-title tt">Événement</div>
+                  <div class="scard-sub">Soirée, concert, actu</div>
+                </div>
+              </div>
+              <!-- thèmes custom injectés ici par renderCustomThemes() -->
             </div>
           </div>
 
@@ -1663,6 +1918,8 @@ async function loadSassyData(){
   renderBlocs();
   // Boutons des thèmes custom (générateur d'habillages)
   renderCustomThemes();
+  // Photos réelles du site dans les cards de thème (fallback placeholder si absente)
+  renderThemeCardImages();
 }
 
 /* ── Upsell LeLab+ (ne déverrouille pas : action commerciale) ── */
@@ -1757,9 +2014,9 @@ function handlePlusClick() {
 }
 
 // ── STUDIO ────────────────────────────────────────────────
-let currentKind = 'typo';
+let currentKind = 'photo';
 let currentFmt = 'square';
-let currentTheme = 'menu';
+let currentTheme = 'plat';
 let currentCustomTheme = null;   // objet thème custom sélectionné (null = thème générique)
 let pendingCustomDraft = null;   // brouillon en attente d'un bouton custom pas encore injecté (chargement async)
 let lastAutoCaption = '';   // dernière légende remplie auto (pour ne pas écraser le client)
@@ -1805,42 +2062,62 @@ function themeImage(theme){
 
 // Injecte les boutons des thèmes custom à la suite des thèmes génériques (idempotent).
 function renderCustomThemes(){
-  const grid = document.querySelector('.tpl-grid');
-  if (!grid) return;
-  grid.querySelectorAll('.tpl[data-custom]').forEach(b => b.remove());   // évite les doublons
+  const row = document.getElementById('themeBottomRow');
+  if (!row) return;
+  row.querySelectorAll('.scard[data-custom]').forEach(b => b.remove());   // évite les doublons
   (sassyData.themes || []).forEach(theme => {
     if (!theme || !theme.id || !theme.formats) return;
     const kind = theme.type === 'typo' ? 'typo' : 'photo';
-    const btn = document.createElement('button');
-    btn.className = 'tpl';
-    btn.dataset.custom = '1';
-    btn.dataset.theme = 'custom:' + theme.id;
-    btn.dataset.kind = kind;
-    btn.setAttribute('onclick', 'selectTheme(this)');
-    const ico = document.createElement('span'); ico.className = 't-ico';
-    ico.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0A0A0A" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><rect x="8" y="8" width="8" height="8" rx="1.5"/></svg>';
-    const mid = document.createElement('span');
-    const tt = document.createElement('span'); tt.className = 'tt'; tt.textContent = theme.nom || theme.id;
-    const dd = document.createElement('span'); dd.className = 'dd'; dd.textContent = 'Habillage sur-mesure';
-    mid.appendChild(tt); mid.appendChild(dd);
-    const kindEl = document.createElement('span'); kindEl.className = 'kind'; kindEl.textContent = kind;
-    btn.appendChild(ico); btn.appendChild(mid); btn.appendChild(kindEl);
-    grid.appendChild(btn);
+    const card = document.createElement('div');
+    card.className = 'scard';
+    card.dataset.custom = '1';
+    card.dataset.theme = 'custom:' + theme.id;
+    card.dataset.kind = kind;
+    card.setAttribute('onclick', 'selectTheme(this)');
+    const kindLabel = kind === 'typo' ? 'Typo' : 'Photo';
+    const nom = String(theme.nom || theme.id).replace(/</g, '&lt;');
+    card.innerHTML =
+      '<div class="scard-img scard-img-sm">' +
+        '<div class="scard-img-placeholder"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>' +
+        '<div class="scard-kind">' + kindLabel + '</div>' +
+        '<div class="scard-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>' +
+      '</div>' +
+      '<div class="scard-body">' +
+        '<div class="scard-label">Sur-mesure</div>' +
+        '<div class="scard-title tt">' + nom + '</div>' +
+        '<div class="scard-sub">Habillage sur-mesure</div>' +
+      '</div>';
+    row.appendChild(card);
   });
-  // Le restore initial (synchrone) tourne AVANT l'injection des boutons (chargement async) : le thème
-  // custom est alors mis en attente (pendingCustomDraft). Son bouton existe désormais → on rejoue le
+  // Le restore initial (synchrone) tourne AVANT l'injection des cards (chargement async) : le thème
+  // custom est alors mis en attente (pendingCustomDraft). Sa card existe désormais → on rejoue le
   // brouillon CAPTURÉ (pas relu du sessionStorage, qui a pu être réécrit avec le thème par défaut).
-  // Thème absent de themes.json (supprimé) → bouton jamais injecté → reste en attente, pas de crash.
-  if (pendingCustomDraft && document.querySelector('#studio-unlocked .tpl[data-theme="' + pendingCustomDraft.theme + '"]')){
+  // Thème absent de themes.json (supprimé) → card jamais injectée → reste en attente, pas de crash.
+  if (pendingCustomDraft && document.querySelector('#studio-unlocked .scard[data-theme="' + pendingCustomDraft.theme + '"]')){
     const d = pendingCustomDraft;
     pendingCustomDraft = null;
     restoreStudioDraft(d);
   }
 }
 
+// Peuple les cards de thème "photo" avec une vraie photo du site (themeImage) ; sinon garde le placeholder SVG.
+function renderThemeCardImages(){
+  document.querySelectorAll('#studio-unlocked .scard-img[data-theme-img]').forEach(box => {
+    const card = box.closest('.scard');
+    const ph = box.querySelector('.scard-img-placeholder');
+    if (!card || !ph) return;                       // déjà peuplée (placeholder remplacé) → on saute
+    const url = themeImage(card.dataset.theme);
+    if (!url) return;                               // aucune photo réelle → on garde le placeholder
+    const img = document.createElement('img');
+    img.src = url; img.alt = ''; img.loading = 'lazy';
+    img.onerror = function(){ this.replaceWith(ph); };   // réseau/CORS KO → on remet le placeholder
+    ph.replaceWith(img);
+  });
+}
+
 function selectTheme(btn){
-  document.querySelectorAll('.tpl').forEach(t => t.classList.remove('sel'));
-  btn.classList.add('sel');
+  document.querySelectorAll('#studio-unlocked .scard').forEach(t => t.classList.remove('is-selected'));
+  btn.classList.add('is-selected');
   currentTheme = btn.dataset.theme;
   currentKind  = btn.dataset.kind;
   const isTypo = currentKind === 'typo';
@@ -2255,7 +2532,7 @@ function updateRecap(){
   const rt = document.getElementById('recap-theme');
   const rf = document.getElementById('recap-format');
   const rc = document.getElementById('recap-caption');
-  if (rt){ const sel = document.querySelector('#studio-unlocked .tpl.sel .tt'); rt.textContent = sel ? sel.textContent : '—'; }
+  if (rt){ const sel = document.querySelector('#studio-unlocked .scard.is-selected .tt'); rt.textContent = sel ? sel.textContent : '—'; }
   if (rf){ const m = { square:'Post (carré)', portrait:'Portrait (4:5)', story:'Story (9:16)' }; rf.textContent = isCarouselActive() ? ('Carrousel (' + studioPhotos.length + ' photos)') : (m[currentFmt] || currentFmt); }
   if (rc){
     const storyMode = currentKind !== 'typo' && currentFmt === 'story';
@@ -2506,7 +2783,7 @@ function restoreStudioDraft(draft){
   let d = draft || null;
   if (!d){ try { d = JSON.parse(sessionStorage.getItem('lelab_studio_draft') || 'null'); } catch (e){} }
   if (!d) return;
-  const tbtn = document.querySelector('#studio-unlocked .tpl[data-theme="' + d.theme + '"]');
+  const tbtn = document.querySelector('#studio-unlocked .scard[data-theme="' + d.theme + '"]');
   if (tbtn){ selectTheme(tbtn); pendingCustomDraft = null; }   // applique zones + formats dispo
   else if (typeof d.theme === 'string' && d.theme.indexOf('custom:') === 0){
     pendingCustomDraft = d;   // bouton custom pas encore injecté → rejoué par renderCustomThemes
@@ -3483,6 +3760,10 @@ goStep(1);
 renderStudioThumbs();
 renderHashtagsRow();    // hashtags par défaut (éditables)
 initStudioSwipe();      // navigation tactile du carrousel dans la preview
+// Sélection initiale du thème par défaut → synchronise zones photo/typo, titre, formats, légende.
+// Placé AVANT restoreStudioDraft : un brouillon enregistré l'écrase juste après.
+const defaultThemeCard = document.querySelector('#studio-unlocked .scard.is-selected');
+if (defaultThemeCard) selectTheme(defaultThemeCard);
 restoreStudioDraft();   // ré-applique le brouillon si présent (saves bloqués tant que studioReady=false)
 studioReady = true;     // à partir d'ici, chaque modif est persistée
 </script>
