@@ -489,8 +489,35 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
 .star-success-btn{margin-top:8px;background:#211f1e;border:none;border-radius:14px;padding:13px 22px;font-family:var(--font-admin);font-size:13px;font-weight:700;cursor:pointer;}
 .plan-plus .star-success-btn{color:var(--g-color);}
 .plan-lab  .star-success-btn{color:var(--m-color);}
+/* état ATTENTE (après le wipe, pendant le POST) — fond couleur plan, étoile qui pulse */
+.star-overlay.loading{pointer-events:none;}
+.plan-plus .star-overlay.loading{background:var(--g-color);}
+.plan-lab  .star-overlay.loading{background:var(--m-color);}
+.star-overlay.loading .star-burst{display:none;}
+.star-loading{display:none;flex-direction:column;align-items:center;gap:13px;text-align:center;padding:30px;}
+.star-overlay.loading .star-loading{display:flex;}
+.star-pulse{width:62px;height:62px;animation:starPulse 1.4s ease-in-out infinite;}
+@keyframes starPulse{0%,100%{transform:scale(1);opacity:.85;}50%{transform:scale(1.06);opacity:1;}}
+.plan-plus .star-pulse{fill:var(--g-on-color);}
+.plan-lab  .star-pulse{fill:var(--m-on-color);}
+.star-loading-tt{font-family:var(--titre);font-size:22px;font-weight:800;}
+.star-loading-sub{font-size:12.5px;font-weight:600;opacity:.65;}
+.plan-plus .star-loading-tt,.plan-plus .star-loading-sub{color:var(--g-on-color);}
+.plan-lab  .star-loading-tt,.plan-lab  .star-loading-sub{color:var(--m-on-color);}
+/* état ERREUR — fond sombre, message explicite + Réessayer */
+.star-overlay.error{pointer-events:auto;background:#211f1e;}
+.star-overlay.error .star-burst{display:none;}
+.star-error{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:30px;}
+.star-overlay.error .star-error{display:flex;}
+.star-error-ico{width:46px;height:46px;stroke:#E8C200;}
+.star-error-tt{font-family:var(--titre);font-size:22px;font-weight:800;color:#fff;}
+.star-error-msg{font-size:13px;color:rgba(255,255,255,.7);max-width:340px;line-height:1.5;}
+.star-error-btn{margin-top:8px;border:none;border-radius:14px;padding:13px 22px;font-family:var(--font-admin);font-size:13px;font-weight:700;cursor:pointer;}
+.plan-plus .star-error-btn{background:var(--g-color);color:var(--g-on-color);}
+.plan-lab  .star-error-btn{background:var(--m-color);color:var(--m-on-color);}
 @media (prefers-reduced-motion: reduce){
   .star-overlay.show .star-burst{animation:none;display:none;}
+  .star-pulse{animation:none;}
 }
 
 /* format pills */
@@ -823,7 +850,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 #login-gate{position:fixed;inset:0;z-index:300;background:var(--gris-bg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:32px;text-align:center;}
-#login-gate img{height:40px;margin-bottom:28px;}
+#login-gate img{height:80px;margin-bottom:32px;}
 #login-gate h1{font-size:26px;font-weight:800;margin-bottom:8px;}
 #login-gate p{font-size:14px;color:var(--gris-txt);margin-bottom:26px;max-width:300px;line-height:1.5;}
 .btn-login{background:var(--noir);color:#fff;border-radius:12px;padding:14px 28px;
@@ -1443,6 +1470,17 @@ body.authed #login-gate{display:none;}
         <!-- overlay étoile LeStud (publication) — couche visuelle, ne touche pas studioPublish -->
         <div class="star-overlay" id="starOverlay" aria-hidden="true">
           <svg class="star-burst" viewBox="0 0 100 100" aria-hidden="true"><path d="M50,0 L61.1,26 L85.1,14.9 L74,38.9 L100,50 L74,61.1 L85.1,85.1 L61.1,74 L50,100 L38.9,74 L14.9,85.1 L26,61.1 L0,50 L26,38.9 L14.9,14.9 L38.9,26 Z"/></svg>
+          <div class="star-loading">
+            <svg class="star-pulse" viewBox="0 0 100 100" aria-hidden="true"><path d="M50,0 L61.1,26 L85.1,14.9 L74,38.9 L100,50 L74,61.1 L85.1,85.1 L61.1,74 L50,100 L38.9,74 L14.9,85.1 L26,61.1 L0,50 L26,38.9 L14.9,14.9 L38.9,26 Z"/></svg>
+            <div class="star-loading-tt">Publication en cours…</div>
+            <div class="star-loading-sub">Ne quittez pas cette page</div>
+          </div>
+          <div class="star-error">
+            <svg class="star-error-ico" viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+            <div class="star-error-tt">La publication a échoué</div>
+            <div class="star-error-msg" id="starErrorMsg">Réessayez dans un instant.</div>
+            <button class="star-error-btn" onclick="hideStudioStar()">Réessayer</button>
+          </div>
           <div class="star-success">
             <svg class="star-success-ico" viewBox="0 0 100 100" aria-hidden="true"><path d="M50,0 L61.1,26 L85.1,14.9 L74,38.9 L100,50 L74,61.1 L85.1,85.1 L61.1,74 L50,100 L38.9,74 L14.9,85.1 L26,61.1 L0,50 L26,38.9 L14.9,14.9 L38.9,26 Z"/></svg>
             <div class="star-success-tt">Publié sur Instagram</div>
@@ -2439,20 +2477,44 @@ function studioStarReduce(){ return window.matchMedia && window.matchMedia('(pre
 function showStudioStar(){
   const ov = document.getElementById('starOverlay');
   if (!ov) return;
-  ov.classList.remove('success');
-  if (studioStarReduce()) return;            // pas de wipe animé en reduced-motion
-  ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');   // (re)joue le wipe
+  ov.classList.remove('success', 'error', 'loading', 'show');
+  if (studioStarReduce()){                   // pas de wipe → loader direct
+    ov.classList.add('show', 'loading');
+    return;
+  }
+  void ov.offsetWidth;                        // reset → rejoue le wipe
+  ov.classList.add('show');
+  const burst = ov.querySelector('.star-burst');
+  if (burst){
+    const onEnd = () => {
+      burst.removeEventListener('animationend', onEnd);
+      // course (a) : si déjà succès/erreur, ne pas afficher le loader par-dessus
+      if (!ov.classList.contains('success') && !ov.classList.contains('error')) ov.classList.add('loading');
+    };
+    burst.addEventListener('animationend', onEnd);
+  } else {
+    ov.classList.add('loading');
+  }
 }
 function studioStarSuccess(permalink){
   const ov = document.getElementById('starOverlay');
   if (!ov) return;
   const lk = document.getElementById('starPermalink');
   if (lk){ if (permalink){ lk.href = permalink; lk.style.display = ''; } else { lk.style.display = 'none'; } }
+  ov.classList.remove('loading', 'error');
   ov.classList.add('show', 'success');       // écran succès (étoile + permalink)
+}
+function studioStarError(message){
+  const ov = document.getElementById('starOverlay');
+  if (!ov) return;
+  const m = document.getElementById('starErrorMsg');
+  if (m) m.textContent = message || 'La publication a échoué. Réessayez.';
+  ov.classList.remove('loading', 'success');
+  ov.classList.add('show', 'error');         // état erreur dans l'overlay (+ toast en filet)
 }
 function hideStudioStar(){
   const ov = document.getElementById('starOverlay');
-  if (ov) ov.classList.remove('show', 'success');
+  if (ov) ov.classList.remove('show', 'success', 'loading', 'error');
 }
 
 let studioPublishing = false;
@@ -2535,8 +2597,8 @@ async function studioPublish(){
     setTimeout(resetStudioAfterPublish, 1500);
   } catch (e){
     console.error('publish:', e);
-    hideStudioStar();                        // erreur → on retire l'overlay étoile
-    showToast('⚠️ ' + mapPublishError(e && e.message));
+    studioStarError(mapPublishError(e && e.message));   // erreur → état erreur dans l'overlay (le client comprend)
+    showToast('⚠️ ' + mapPublishError(e && e.message)); // + toast en filet
     setPubBtn(btn, restore, false);
   } finally {
     studioPublishing = false;
