@@ -27,7 +27,186 @@
   --titre:'Bricolage Grotesque',sans-serif;
   --corps:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
   --r:14px;
+
+  /* ── Tokens LeStud (admin) ─────────────────────────────── */
+  /* Fond */
+  --bg:            #efebe7;
+
+  /* Ink */
+  --ink:           #1c1a19;
+  --ink-2:         rgba(28,26,25,.46);
+  --ink-3:         rgba(28,26,25,.22);
+
+  /* Cards */
+  --card-bg:       rgba(255,255,255,.60);
+  --card-shadow:   0 6px 28px rgba(28,26,25,.09), 0 1px 5px rgba(28,26,25,.05);
+  --card-radius:   16px;
+
+  /* LeLab+ */
+  --g-color:       #c6ff65;
+  --g-on-color:    #243f00;
+
+  /* LeLab */
+  --m-color:       #a855f7;
+  --m-on-color:    #ffffff;
+
+  /* Typographie */
+  --font-admin:    'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
 }
+
+/* ── ADMIN REDESIGN — MON SITE ROWS ── */
+
+.lelab-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--card-radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  border: none;
+  min-height: 72px;
+  cursor: pointer;
+  transition: box-shadow .18s ease;
+}
+.lelab-row:hover {
+  box-shadow: 0 10px 36px rgba(28,26,25,.13), 0 2px 6px rgba(28,26,25,.07);
+}
+
+/* Bloc icône gauche — oversized rogné */
+.lelab-row__ico {
+  width: 72px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.lelab-row__ico svg {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  stroke-width: 1.25;
+  fill: none;
+  bottom: -6px;
+  right: -6px;
+}
+
+/* Couleur selon plan */
+.plan-plus .lelab-row__ico { background: var(--g-color); }
+.plan-plus .lelab-row__ico svg { stroke: var(--g-on-color); }
+.plan-lab  .lelab-row__ico { background: var(--m-color); }
+.plan-lab  .lelab-row__ico svg { stroke: var(--m-on-color); }
+
+/* Corps texte */
+.lelab-row__body {
+  flex: 1;
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.lelab-row__label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 3px;
+}
+.lelab-row__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.15;
+}
+.lelab-row__sub {
+  font-size: 11px;
+  color: var(--ink-2);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+/* Droite : badge + chevron + toggle */
+.lelab-row__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 15px;
+  flex-shrink: 0;
+}
+.lelab-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2.5px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+  letter-spacing: .04em;
+}
+.plan-plus .lelab-badge { background: var(--g-color); color: var(--g-on-color); }
+.plan-lab  .lelab-badge { background: var(--m-color); color: var(--m-on-color); }
+
+.lelab-chev {
+  opacity: .22;
+  display: flex;
+  align-items: center;
+}
+.lelab-chev svg {
+  width: 14px; height: 14px;
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  fill: none;
+}
+
+/* Sections locked */
+.lelab-row.is-locked { opacity: .52; pointer-events: none; }
+
+/* Toggle */
+.lelab-toggle {
+  width: 38px; height: 22px;
+  border-radius: 11px;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: none;
+  transition: background .2s;
+}
+.lelab-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left .2s;
+}
+.lelab-toggle.is-on  { }
+.lelab-toggle.is-off { background: rgba(28,26,25,.15); }
+.lelab-toggle.is-off::after { left: 3px; }
+.plan-plus .lelab-toggle.is-on { background: var(--g-color); }
+.plan-plus .lelab-toggle.is-on::after { left: 19px; }
+.plan-lab  .lelab-toggle.is-on { background: var(--m-color); }
+.plan-lab  .lelab-toggle.is-on::after { left: 19px; }
+
+/* Bouton save */
+.lelab-save {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 13px;
+  font-family: var(--font-admin);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity .15s;
+}
+.lelab-save:hover { opacity: .88; }
+.plan-plus .lelab-save { background: var(--g-on-color); color: var(--g-color); }
+.plan-lab  .lelab-save { background: var(--m-color);    color: var(--m-on-color); }
+
 /* quand LeLab+ est actif, les accents passent au jaune */
 body.lelab-plus{
   --accent:var(--jaune);--accent-soft:var(--jaune-soft);
@@ -35,7 +214,24 @@ body.lelab-plus{
 }
 html{color-scheme:light only;background:var(--gris-bg);}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:var(--corps);background:var(--gris-bg);color:var(--noir);-webkit-font-smoothing:antialiased;}
+body{
+  background-color: var(--bg);
+  font-family: var(--font-admin);
+  position: relative;
+  color:var(--noir);
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px;
+  background-repeat: repeat;
+}
 h1,h2,h3{font-family:var(--titre);letter-spacing:-.4px;}
 button{font-family:var(--corps);cursor:pointer;border:none;background:none;}
 input,textarea,select{font-family:var(--corps);}
@@ -869,32 +1065,62 @@ body.authed #login-gate{display:none;}
         <div class="pg-head"><h1>Mon site</h1><p>Modifiez le contenu de votre site. Les changements sont en ligne en quelques secondes.</p></div>
 
         <div class="sections-list">
-          <div class="sec-item" onclick="openEdit('menu')">
-            <div class="sec-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg></div>
-            <div class="sec-info"><div class="sec-tt">La carte</div><div class="sec-dd">Entrées · Plats · Desserts · Vins</div></div>
-            <span class="sec-badge">Publiable sur Insta</span>
-            <span class="sec-arr">›</span>
+          <div class="lelab-row" onclick="openEdit('menu')">
+            <div class="lelab-row__ico"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1.5"/><path d="M9 12h6M9 16h4"/></svg></div>
+            <div class="lelab-row__body">
+              <div class="lelab-row__label">MENU</div>
+              <div class="lelab-row__title">La carte</div>
+              <div class="lelab-row__sub">Entrées · Plats · Desserts · Vins</div>
+            </div>
+            <div class="lelab-row__right">
+              <span class="lelab-badge">Insta</span>
+              <span class="lelab-chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
           </div>
-          <div class="sec-item" onclick="openEdit('photos')">
-            <div class="sec-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><rect x="3" y="3" width="18" height="14" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M3 15l4-3 4 2 3-2 6 4"/></svg></div>
-            <div class="sec-info"><div class="sec-tt">Photos</div><div class="sec-dd">Slider d'accueil · Galerie</div></div>
-            <span class="sec-arr">›</span>
+          <div class="lelab-row" onclick="openEdit('photos')">
+            <div class="lelab-row__ico"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-5-5L5 19"/></svg></div>
+            <div class="lelab-row__body">
+              <div class="lelab-row__label">GALERIE</div>
+              <div class="lelab-row__title">Photos</div>
+              <div class="lelab-row__sub">Slider d'accueil · Galerie</div>
+            </div>
+            <div class="lelab-row__right">
+              <span class="lelab-chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
           </div>
-          <div class="sec-item" onclick="openEdit('horaires')">
-            <div class="sec-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-            <div class="sec-info"><div class="sec-tt">Horaires</div><div class="sec-dd">Jours et heures d'ouverture</div></div>
-            <span class="sec-arr">›</span>
+          <div class="lelab-row" onclick="openEdit('horaires')">
+            <div class="lelab-row__ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+            <div class="lelab-row__body">
+              <div class="lelab-row__label">PRATIQUE</div>
+              <div class="lelab-row__title">Horaires</div>
+              <div class="lelab-row__sub">Jours et heures d'ouverture</div>
+            </div>
+            <div class="lelab-row__right">
+              <span class="lelab-chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
           </div>
-          <div class="sec-item" onclick="openEdit('contact')">
-            <div class="sec-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-1z"/></svg></div>
-            <div class="sec-info"><div class="sec-tt">Contact</div><div class="sec-dd">Téléphone, adresse, réseaux</div></div>
-            <span class="sec-arr">›</span>
+          <div class="lelab-row" onclick="openEdit('contact')">
+            <div class="lelab-row__ico"><svg viewBox="0 0 24 24"><path d="M12 21s-8-4.5-8-11a8 8 0 0 1 16 0c0 6.5-8 11-8 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+            <div class="lelab-row__body">
+              <div class="lelab-row__label">PRATIQUE</div>
+              <div class="lelab-row__title">Infos</div>
+              <div class="lelab-row__sub">Téléphone, adresse, réseaux</div>
+            </div>
+            <div class="lelab-row__right">
+              <span class="lelab-chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
           </div>
-          <div class="sec-item" onclick="openEdit('events')">
-            <div class="sec-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></div>
-            <div class="sec-info"><div class="sec-tt">Événements</div><div class="sec-dd">Soirées, concerts, menus spéciaux</div></div>
-            <span class="sec-badge">Publiable sur Insta</span>
-            <span class="sec-arr">›</span>
+          <div class="lelab-row" onclick="openEdit('events')">
+            <div class="lelab-row__ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
+            <div class="lelab-row__body">
+              <div class="lelab-row__label">AGENDA</div>
+              <div class="lelab-row__title">Événements</div>
+              <div class="lelab-row__sub">Soirées, concerts, menus spéciaux</div>
+            </div>
+            <div class="lelab-row__right">
+              <span class="lelab-badge">Insta</span>
+              <span class="lelab-chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
           </div>
 
           <!-- blocs interrupteurs -->
@@ -1432,6 +1658,13 @@ function applyPlan(plan){
   currentPlan = plan;
   const isPlus = plan === 'lelab_plus';
   document.body.classList.toggle('lelab-plus', isPlus);
+
+  // rows "Mon site" (Direction C) — couleur selon plan, même état que body.lelab-plus
+  const monSiteList = document.querySelector('#screen-monsite .sections-list');
+  if (monSiteList){
+    monSiteList.classList.toggle('plan-plus', isPlus);
+    monSiteList.classList.toggle('plan-lab', !isPlus);
+  }
 
   // sidebar plan switcher (visuel)
   document.querySelector('.plan-btn.lelab').classList.toggle('active', !isPlus);
