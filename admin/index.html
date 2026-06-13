@@ -100,6 +100,25 @@
 }
 .lelab-site-link:hover { color: var(--ink); }
 
+/* Zone d'action bas de Mon site : publier + indicateur */
+.lelab-actions { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.lelab-actions .lelab-site-link { margin: 0; }
+.lelab-dirty { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
+.lelab-dirty[hidden] { display: none; }
+.lelab-dirty-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.plan-plus .lelab-dirty-dot { background: var(--g-toggle); }
+.plan-lab  .lelab-dirty-dot { background: var(--m-toggle); }
+.lelab-publish {
+  width: 100%; padding: 15px; border: none; border-radius: 14px;
+  font-family: var(--font-admin); font-size: 13px; font-weight: 700; letter-spacing: .03em;
+  cursor: pointer; background: #211f1e;
+  transition: box-shadow .18s, transform .18s, opacity .15s;
+}
+.plan-plus .lelab-publish { color: var(--g-color); }
+.plan-lab  .lelab-publish { color: var(--m-color); }
+.lelab-publish:disabled { opacity: .6; cursor: default; }
+.lelab-publish.is-dirty { box-shadow: 0 8px 26px rgba(28,26,25,.20); transform: translateY(-1px); }
+
 /* Pastille icône sobre */
 .lelab-card__ico {
   width: 56px; height: 56px;
@@ -1045,7 +1064,11 @@ body.authed #login-gate{display:none;}
           </div>
 
         </div>
-        <a class="lelab-site-link" href="/" target="_blank" rel="noopener">Voir mon site en ligne →</a>
+        <div class="lelab-actions">
+          <div class="lelab-dirty" id="dirty-indicator" hidden><span class="lelab-dirty-dot"></span>Modifications non publiées</div>
+          <button class="lelab-publish" id="btn-publish-sections" onclick="saveBlocs()">Publier les modifications</button>
+          <a class="lelab-site-link" href="/" target="_blank" rel="noopener">Voir mon site en ligne →</a>
+        </div>
       </div>
     </div>
 
@@ -3147,39 +3170,64 @@ async function saveSection(){
 
 /* ════ BLOCS (sections activables — fusionnés dans la grille "Mon site") ════ */
 
-// Bascule le mini-toggle d'une section activable, sans déclencher l'ouverture de l'éditeur de la card.
+// ── Sections activables : publication + indicateur "modifications non publiées" ──
+let publishedBlocState = {};   // référence = dernier état PUBLIÉ { key: bool }
+
+// État courant des mini-toggles de la grille Mon site
+function currentBlocState(){
+  const st = {};
+  document.querySelectorAll('#screen-monsite .lelab-mini-toggle[data-bloc]').forEach(el => {
+    st[el.getAttribute('data-bloc')] = el.classList.contains('is-on');
+  });
+  return st;
+}
+
+// Compare l'état affiché à l'état publié → affiche/masque l'indicateur + met en avant le bouton
+function updateDirtyIndicator(){
+  const ind = document.getElementById('dirty-indicator');
+  const btn = document.getElementById('btn-publish-sections');
+  const cur = currentBlocState();
+  const dirty = Object.keys(cur).some(k => cur[k] !== publishedBlocState[k]);
+  if (ind) ind.hidden = !dirty;
+  if (btn) btn.classList.toggle('is-dirty', dirty);
+}
+
+// Bascule le mini-toggle (sans ouvrir l'éditeur de la card) + rafraîchit l'indicateur
 function toggleBloc(el, event){
   if (event) event.stopPropagation();
   el.classList.toggle('is-on');
+  updateDirtyIndicator();
 }
 
-// Applique l'état "actif" enregistré (config.blocs.optionnels[*].actif) aux mini-toggles de la grille.
+// Applique l'état "actif" enregistré aux mini-toggles + fixe la référence "publié"
 function renderBlocs(){
-  const saveBtn = document.getElementById('btn-save-blocs');
+  const btn = document.getElementById('btn-publish-sections');
   const config = sassyData.config;
   const toggles = document.querySelectorAll('#screen-monsite .lelab-mini-toggle[data-bloc]');
-  // Garde-fou : config illisible → on ne touche à rien et on masque l'enregistrement (rien à écraser)
+  // Garde-fou : config illisible → rien à publier
   if (!config || !config.blocs || !config.blocs.optionnels){
-    if (saveBtn) saveBtn.style.display = 'none';
+    if (btn) btn.disabled = true;
     return;
   }
-  if (saveBtn) saveBtn.style.display = '';
+  if (btn) btn.disabled = false;
   toggles.forEach(t => {
     const key = t.getAttribute('data-bloc');
     const b = config.blocs.optionnels[key];
     t.classList.toggle('is-on', b ? b.actif !== false : false);
   });
+  publishedBlocState = currentBlocState();   // référence = état enregistré au chargement
+  updateDirtyIndicator();
 }
 
 async function saveBlocs(){
-  const btn = document.getElementById('btn-save-blocs');
-  if (btn){ btn.textContent = '⏳ Enregistrement…'; btn.disabled = true; }
+  const btn = document.getElementById('btn-publish-sections');
+  if (btn){ btn.textContent = 'Publication…'; btn.disabled = true; btn.classList.remove('is-dirty'); }
   try {
     const token = await getToken();
     if (!token) throw new Error('Non connecté');
     // Garde-fou : ne jamais écraser un config qu'on n'a pas pu lire
     const base = sassyData.config;
-    if (!base || !base.blocs || !base.blocs.optionnels) throw new Error('Configuration indisponible — sauvegarde annulée');
+    if (!base || !base.blocs || !base.blocs.optionnels) throw new Error('Configuration indisponible — publication annulée');
     // Cloner le config COMPLET (commerce + plan + socle intacts) ; ne changer que optionnels.*.actif
     const next = JSON.parse(JSON.stringify(base));
     document.querySelectorAll('#screen-monsite .lelab-mini-toggle[data-bloc]').forEach(el => {
@@ -3190,12 +3238,16 @@ async function saveBlocs(){
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
     sassyData.config = next;
-    showToast('✅ Sections enregistrées !');
+    publishedBlocState = currentBlocState();   // nouvelle référence publiée
+    if (btn){ btn.textContent = '✓ Publié'; }
+    updateDirtyIndicator();                    // plus de diff → indicateur masqué
+    showToast('✅ Modifications publiées !');
+    setTimeout(() => { if (btn){ btn.textContent = 'Publier les modifications'; btn.disabled = false; } }, 1600);
   } catch (err){
-    console.error('Erreur save blocs:', err);
+    console.error('Erreur publication sections:', err);
     showToast('❌ Erreur : ' + err.message);
-  } finally {
-    if (btn){ btn.textContent = 'Enregistrer'; btn.disabled = false; }
+    if (btn){ btn.textContent = 'Publier les modifications'; btn.disabled = false; }
+    updateDirtyIndicator();                    // l'indicateur reste si toujours modifié
   }
 }
 
