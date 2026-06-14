@@ -62,5 +62,107 @@
         }
       }
     }
+  },
+  {
+    "id": "sassy-carte",
+    "nom": "La carte",
+    "type": "typo",
+    "formats": {
+      "carre": {
+        "habillage": "/_data/themes/sassy-carte-carre.png",
+        "zoneListe": {
+          "x": 0.12,
+          "y": 0.4,
+          "w": 0.76,
+          "h": 0.34
+        }
+      },
+      "portrait": {
+        "habillage": "/_data/themes/sassy-carte-portrait.png",
+        "zoneListe": {
+          "x": 0.12,
+          "y": 0.36,
+          "w": 0.76,
+          "h": 0.33
+        }
+      },
+      "story": {
+        "habillage": "/_data/themes/sassy-carte-story.png",
+        "zoneListe": {
+          "x": 0.12,
+          "y": 0.32,
+          "w": 0.76,
+          "h": 0.34
+        }
+      }
+    }
+  },
+  {
+    "id": "sassy-photo",
+    "nom": "Photo + cadre",
+    "type": "photo",
+    "formats": {
+      "carre": {
+        "habillage": "/_data/themes/sassy-photo-carre.png",
+        "zonePhoto": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "portrait": {
+        "habillage": "/_data/themes/sassy-photo-portrait.png",
+        "zonePhoto": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      },
+      "story": {
+        "habillage": "/_data/themes/sassy-photo-story.png",
+        "zonePhoto": {
+          "x": 0,
+          "y": 0,
+          "w": 1,
+          "h": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "sassy-infos",
+    "nom": "Infos pratiques",
+    "type": "infos",
+    "formats": {
+      "carre": {
+        "habillage": "/_data/themes/sassy-infos-carre.png",
+        "zoneTexte": {
+          "x": 0.12,
+          "y": 0.36,
+          "w": 0.76,
+          "h": 0.4
+        }
+      },
+      "portrait": {
+        "habillage": "/_data/themes/sassy-infos-portrait.png",
+        "zoneTexte": {
+          "x": 0.12,
+          "y": 0.32,
+          "w": 0.76,
+          "h": 0.46
+        }
+      },
+      "story": {
+        "habillage": "/_data/themes/sassy-infos-story.png",
+        "zoneTexte": {
+          "x": 0.12,
+          "y": 0.28,
+          "w": 0.76,
+          "h": 0.46
+        }
+      }
+    }
   }
 ]
