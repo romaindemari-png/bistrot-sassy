@@ -653,6 +653,12 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-img.story{aspect-ratio:9/16;}
 /* ── Thème CUSTOM : 3 couches (photo dans zonePhoto + habillage PNG + texte) ── */
 .ig-photo-inner{display:none;position:absolute;background-size:cover;background-position:center;background-color:#f0f0f0;z-index:1;}
+.ig-img.ph-draggable{touch-action:none;}
+.ig-img.ph-draggable .ig-photo-inner{cursor:grab;}
+.ig-img.ph-dragging .ig-photo-inner{cursor:grabbing;}
+.ig-drag-hint{display:none;position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;pointer-events:none;white-space:nowrap;}
+.ig-img.ph-draggable .ig-drag-hint{display:block;}
+.ig-img.ph-dragging .ig-drag-hint{display:none;}
 .ig-habillage{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:2;pointer-events:none;}
 .ig-text{display:none;position:absolute;z-index:4;align-items:center;overflow:hidden;pointer-events:none;}
 .ig-text span{display:block;width:100%;line-height:1.08;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;word-break:break-word;}
@@ -1444,7 +1450,7 @@ body.authed #login-gate{display:none;}
                 <div class="ig-name">bistrotsassy<span class="loc"><br>Marseille</span></div>
                 <div class="ig-more">···</div>
               </div>
-              <div class="ig-img" id="igPhoto" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80');display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div></div>
+              <div class="ig-img" id="igPhoto" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80');display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div><div class="ig-drag-hint" id="igDragHint">✥ Glissez pour cadrer</div></div>
               <div class="ig-typo" id="igTypo">
                 <div class="ty-h">Aujourd'hui</div>
                 <div class="ty-title" id="tyTitle">Menu du jour</div>
@@ -2194,13 +2200,22 @@ function composeCustomPreview(photoUrl){
   igPhoto.style.backgroundImage = 'none';   // le cadre ne porte pas la photo : elle passe par la couche interne
   igPhoto.style.opacity = '1';
 
-  // Couche 1 — photo dans zonePhoto
+  // Couche 1 — photo dans zonePhoto (repositionnable : image complète + background-position = focal)
   const inner = document.getElementById('igPhotoInner');
   const zp = fmtBlock.zonePhoto || { x:0, y:0, w:1, h:1 };
   inner.style.display = 'block';
   inner.style.left = (zp.x*100)+'%'; inner.style.top = (zp.y*100)+'%';
   inner.style.width = (zp.w*100)+'%'; inner.style.height = (zp.h*100)+'%';
-  inner.style.backgroundImage = photoUrl ? `url('${photoUrl}')` : 'none';
+  const pSel = studioPhotos[studioPhotoIdx];
+  if (pSel && pSel.url){
+    inner.style.backgroundImage = `url('${pSel.url}')`;
+    inner.style.backgroundPosition = (pSel.focal.x*100)+'% '+(pSel.focal.y*100)+'%';
+    igPhoto.classList.toggle('ph-draggable', photoHasSlack(pSel, inner));   // déplaçable seulement si la photo déborde
+  } else {
+    inner.style.backgroundImage = photoUrl ? `url('${photoUrl}')` : 'none';
+    inner.style.backgroundPosition = 'center';
+    igPhoto.classList.remove('ph-draggable');
+  }
 
   // Couche 2 — habillage PNG plein cadre
   const hab = document.getElementById('igHabillage');
@@ -2255,7 +2270,19 @@ function renderStudio(){
       composeCustomPreview(img);
     } else {
       hideCustomLayers();
-      if (img){
+      if (sel && sel.url){
+        // photo uploadée → couche interne plein cadre + point focal (glisser pour recadrer)
+        igPhoto.style.backgroundImage = 'none';
+        igPhoto.style.opacity = '1';
+        const inner = document.getElementById('igPhotoInner');
+        inner.style.display = 'block';
+        inner.style.left = '0'; inner.style.top = '0'; inner.style.width = '100%'; inner.style.height = '100%';
+        inner.style.backgroundImage = `url('${sel.url}')`;
+        inner.style.backgroundPosition = (sel.focal.x*100)+'% '+(sel.focal.y*100)+'%';
+        igPhoto.classList.toggle('ph-draggable', photoHasSlack(sel, inner));
+      } else if (img){
+        // aucune photo uploadée → image d'exemple en fond (pas de recadrage possible)
+        igPhoto.classList.remove('ph-draggable');
         igPhoto.style.backgroundImage = `url('${img}')`;
         if (img !== lastIgPhotoImg){            // nouvelle image → fondu opacity 0 → 1
           lastIgPhotoImg = img;
@@ -2542,14 +2569,14 @@ async function studioPublish(){
       if (carousel){
         for (let i = 0; i < studioPhotos.length; i++){
           setPubBtn(btn, PUB_SPIN + 'Génération ' + (i + 1) + '/' + studioPhotos.length + '…', true);
-          const dataUrl = await renderFinalCustom(currentCustomTheme, currentFmt, studioPhotos[i].bitmap, i === 0);
+          const dataUrl = await renderFinalCustom(currentCustomTheme, currentFmt, studioPhotos[i].bitmap, i === 0, studioPhotos[i].focal);
           setPubBtn(btn, PUB_SPIN + 'Envoi ' + (i + 1) + '/' + studioPhotos.length + '…', true);
           imageUrls.push(await uploadStudioImage(dataUrl, token));
         }
       } else {
         setPubBtn(btn, PUB_SPIN + 'Génération…', true);
         const p = studioPhotos[studioPhotoIdx] || studioPhotos[0];
-        const dataUrl = await renderFinalCustom(currentCustomTheme, currentFmt, p.bitmap, true);
+        const dataUrl = await renderFinalCustom(currentCustomTheme, currentFmt, p.bitmap, true, p.focal);
         setPubBtn(btn, PUB_SPIN + 'Envoi…', true);
         imageUrls = [ await uploadStudioImage(dataUrl, token) ];
       }
@@ -2561,13 +2588,13 @@ async function studioPublish(){
     } else if (carousel){
       for (let i = 0; i < studioPhotos.length; i++){
         setPubBtn(btn, PUB_SPIN + 'Envoi ' + (i + 1) + '/' + studioPhotos.length + '…', true);
-        const dataUrl = renderFinalPhoto(studioPhotos[i].bitmap, currentFmt);
+        const dataUrl = renderFinalPhoto(studioPhotos[i].bitmap, currentFmt, studioPhotos[i].focal);
         imageUrls.push(await uploadStudioImage(dataUrl, token));
       }
     } else {
       setPubBtn(btn, PUB_SPIN + 'Génération…', true);
       const p = studioPhotos[studioPhotoIdx] || studioPhotos[0];
-      const dataUrl = renderFinalPhoto(p.bitmap, currentFmt);
+      const dataUrl = renderFinalPhoto(p.bitmap, currentFmt, p.focal);
       setPubBtn(btn, PUB_SPIN + 'Envoi…', true);
       imageUrls = [ await uploadStudioImage(dataUrl, token) ];
     }
@@ -2670,20 +2697,38 @@ function restoreStudioDraft(draft){
 }
 
 /* ── Photos studio (en mémoire — upload Blobs différé à la publication) ── */
-let studioPhotos = [];      // [{ bitmap, cache:{fmt:dataURL} }]
+let studioPhotos = [];      // [{ bitmap, cache:{fmt:dataURL}, focal:{x,y}, url }]
 let studioPhotoIdx = 0;
 const STUDIO_MAX_PHOTOS = 10;
 const FMT_RATIO = { square:[1,1], portrait:[4,5], story:[9,16] };
 
+// Photo COMPLÈTE (non recadrée, downscalée) → dataURL pour l'aperçu CSS (cover + background-position = focal).
+function fullPhotoUrl(bitmap, maxEdge = 1280){
+  const s = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * s)), h = Math.max(1, Math.round(bitmap.height * s));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+// La photo déborde-t-elle du cadre (cover) ? → sinon rien à caler (pas de drag).
+function photoHasSlack(p, inner){
+  const Wf = inner.clientWidth, Hf = inner.clientHeight;
+  if (!Wf || !Hf || !p.bitmap) return false;
+  const s = Math.max(Wf / p.bitmap.width, Hf / p.bitmap.height);
+  return (p.bitmap.width * s - Wf > 2) || (p.bitmap.height * s - Hf > 2);
+}
+
 // Recadrage cover au ratio du format → dataURL JPEG (taille preview ; le 1080 final sera fait à la publication)
-function cropBitmap(bitmap, fmt, outW = 540, quality = 0.9){
+function cropBitmap(bitmap, fmt, outW = 540, quality = 0.9, focal){
   const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
   const tw = outW, th = Math.round(outW * rh / rw);
   const c = document.createElement('canvas'); c.width = tw; c.height = th;
   const ctx = c.getContext('2d');
   const scale = Math.max(tw / bitmap.width, th / bitmap.height);
   const dw = bitmap.width * scale, dh = bitmap.height * scale;
-  ctx.drawImage(bitmap, (tw - dw) / 2, (th - dh) / 2, dw, dh);
+  const fx = (focal && typeof focal.x === 'number') ? focal.x : 0.5;   // 0.5 = centré (comportement historique)
+  const fy = (focal && typeof focal.y === 'number') ? focal.y : 0.5;
+  ctx.drawImage(bitmap, (tw - dw) * fx, (th - dh) * fy, dw, dh);        // même cadrage que la preview CSS (background-position)
   return c.toDataURL('image/jpeg', quality);
 }
 
@@ -2691,8 +2736,8 @@ function cropBitmap(bitmap, fmt, outW = 540, quality = 0.9){
 // Étape B : thème photo en Post (1080×1080) / Portrait (1080×1350).
 // La photo est recadrée cover au format — identique à la preview (object-fit:cover).
 // Le titre/légende ne sont PAS brûlés dans l'image (ils partent comme légende Instagram).
-function renderFinalPhoto(bitmap, fmt){
-  return cropBitmap(bitmap, fmt, 1080, 0.92);   // -> 'data:image/jpeg;base64,...'
+function renderFinalPhoto(bitmap, fmt, focal){
+  return cropBitmap(bitmap, fmt, 1080, 0.92, focal);   // -> 'data:image/jpeg;base64,...'
 }
 
 // Charge une image (base64/URL) en HTMLImageElement.
@@ -2726,7 +2771,7 @@ function drawZoneText(ctx, text, zt, W, H){
 
 // Rendu FINAL d'un thème custom (1080, JPEG 0.92) : photo (zonePhoto) → habillage PNG → texte (zoneTexte).
 // withText : false pour les slides 2..N d'un carrousel (texte sur la 1ʳᵉ slide uniquement).
-async function renderFinalCustom(theme, fmt, bitmap, withText){
+async function renderFinalCustom(theme, fmt, bitmap, withText, focal){
   const blk = customThemeFormat(theme, fmt);
   if (!blk) throw new Error('Format indisponible pour ce thème');
   const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
@@ -2741,7 +2786,9 @@ async function renderFinalCustom(theme, fmt, bitmap, withText){
     const dx = zp.x*W, dy = zp.y*H, dw = zp.w*W, dh = zp.h*H;
     const scale = Math.max(dw / bitmap.width, dh / bitmap.height);
     const sw = dw / scale, sh = dh / scale;            // portion source prélevée (cover)
-    const sx = (bitmap.width - sw) / 2, sy = (bitmap.height - sh) / 2;
+    const fx = (focal && typeof focal.x === 'number') ? focal.x : 0.5;   // point focal (0.5 = centré)
+    const fy = (focal && typeof focal.y === 'number') ? focal.y : 0.5;
+    const sx = (bitmap.width - sw) * fx, sy = (bitmap.height - sh) * fy;  // même cadrage que la preview
     ctx.save();
     ctx.beginPath(); ctx.rect(dx, dy, dw, dh); ctx.clip();
     ctx.drawImage(bitmap, sx, sy, sw, sh, dx, dy, dw, dh);
@@ -2898,7 +2945,7 @@ async function onStudioPhotos(input){
       let bmp;
       try { bmp = await createImageBitmap(f); }
       catch { showToast('⚠️ Format non lu sur ce navigateur — réessaie depuis ton téléphone'); continue; }
-      studioPhotos.push({ bitmap: bmp, cache: {} });
+      studioPhotos.push({ bitmap: bmp, cache: {}, focal: { x:0.5, y:0.5 }, url: fullPhotoUrl(bmp) });
     }
     if (studioPhotos.length) studioPhotoIdx = studioPhotos.length - 1;
   } finally {
@@ -2939,11 +2986,50 @@ function initStudioSwipe(){
   let x0 = null;
   ig.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
   ig.addEventListener('touchend', e => {
+    if (_photoDragMoved){ _photoDragMoved = false; x0 = null; return; }   // un recadrage a eu lieu → pas de bascule carrousel
     if (x0 == null) return;
     const dx = e.changedTouches[0].clientX - x0;
     if (Math.abs(dx) > 40) studioSwipe(dx < 0 ? 1 : -1);
     x0 = null;
   }, { passive: true });
+}
+
+// Repositionnement de la photo dans le cadre (drag tactile/souris unifié via Pointer Events).
+let _photoDragMoved = false;
+function initPhotoDrag(){
+  const host = document.getElementById('igPhoto');
+  if (!host || host.dataset.drag) return;
+  host.dataset.drag = '1';
+  let dragging = false, sx = 0, sy = 0, f0 = null, ovx = 0, ovy = 0;
+  host.addEventListener('pointerdown', e => {
+    if (currentKind === 'typo') return;                      // pas de photo en typo
+    const p = studioPhotos[studioPhotoIdx];
+    const inner = document.getElementById('igPhotoInner');
+    if (!p || !p.url || !p.bitmap || !inner) return;         // pas de photo uploadée → rien à caler
+    const Wf = inner.clientWidth, Hf = inner.clientHeight;
+    const s = Math.max(Wf / p.bitmap.width, Hf / p.bitmap.height);
+    ovx = p.bitmap.width * s - Wf; ovy = p.bitmap.height * s - Hf;
+    if (ovx <= 2 && ovy <= 2) return;                        // photo au ratio du cadre → aucun jeu
+    dragging = true; _photoDragMoved = false;
+    sx = e.clientX; sy = e.clientY; f0 = { x: p.focal.x, y: p.focal.y };
+    try { host.setPointerCapture(e.pointerId); } catch (_){}
+    host.classList.add('ph-dragging');
+    e.preventDefault();
+  });
+  host.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const p = studioPhotos[studioPhotoIdx]; if (!p) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) + Math.abs(dy) > 2) _photoDragMoved = true;
+    if (ovx > 0) p.focal.x = Math.min(1, Math.max(0, f0.x - dx / ovx));
+    if (ovy > 0) p.focal.y = Math.min(1, Math.max(0, f0.y - dy / ovy));
+    const inner = document.getElementById('igPhotoInner');
+    if (inner) inner.style.backgroundPosition = (p.focal.x*100)+'% '+(p.focal.y*100)+'%';
+    e.preventDefault();
+  });
+  const end = () => { if (dragging){ dragging = false; host.classList.remove('ph-dragging'); } };
+  host.addEventListener('pointerup', end);
+  host.addEventListener('pointercancel', end);
 }
 function selectStudioPhoto(i){ studioPhotoIdx = i; renderStudioThumbs(); renderStudio(); }
 function removeStudioPhoto(i){
@@ -3653,6 +3739,7 @@ goStep(1);
 renderStudioThumbs();
 renderHashtagsRow();    // hashtags par défaut (éditables)
 initStudioSwipe();      // navigation tactile du carrousel dans la preview
+initPhotoDrag();        // repositionnement (drag) de la photo dans le cadre
 // Sélection initiale du thème par défaut → synchronise zones photo/typo, titre, formats, légende.
 // Placé AVANT restoreStudioDraft : un brouillon enregistré l'écrase juste après.
 const defaultThemeCard = document.querySelector('#studio-unlocked .lelab-card.is-selected');
