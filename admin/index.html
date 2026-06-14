@@ -1552,6 +1552,7 @@ body.authed #login-gate{display:none;}
   <a class="mn-item" onclick="showScreen('studio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Studio Insta</a>
 </nav>
 
+<script src="/sassy-tokens.js?v=1"></script>
 <script>
 // ── PLAN ──────────────────────────────────────────────────
 let currentPlan = 'lelab'; // 'lelab' | 'lelab_plus'
@@ -2918,6 +2919,161 @@ async function renderFinalTypo(fmt){
   });
 
   return c.toDataURL('image/jpeg', 0.92);
+}
+
+// ════ Templates V2 (typo-carte / infos) — portés de masamadre-lelab, tokens SASSY_TOKENS ════
+// (inertes en 4a : appelées par selectTheme/renderStudio/studioPublish à partir de 4c/4d)
+
+// Ratio intrinsèque d'un habillage (cache) → aspect-ratio CSS "W/H".
+const habRatioCache = {};
+function habillageRatio(url, cb){
+  if (habRatioCache[url]){ cb(habRatioCache[url]); return; }
+  const im = new Image();
+  im.onload = () => { habRatioCache[url] = im.naturalWidth + '/' + im.naturalHeight; cb(habRatioCache[url]); };
+  im.src = url;
+}
+// Cache des images d'habillage (repeindre la preview sans recharger).
+const habImgCache = {};
+function getHabImg(url, cb){
+  if (habImgCache[url]){ cb(habImgCache[url]); return; }
+  const im = new Image(); im.onload = () => { habImgCache[url] = im; cb(im); }; im.src = url;
+}
+// Charge les polices des templates AVANT le canvas (Bricolage + Inter, déjà servies).
+async function ensureCarteFonts(){
+  try { await Promise.all([
+    document.fonts.load("700 40px 'Bricolage Grotesque'"),
+    document.fonts.load("600 40px Inter"),
+    document.fonts.load("500 40px Inter")
+  ]); await document.fonts.ready; } catch (e){}
+}
+
+// ── Peinture PARTAGÉE carte typo (preview W=540 == export W=1080) : titre cuit dans le PNG, liste seule dessinée.
+function paintCarte(ctx, W, hab, zone){
+  const T = SASSY_TOKENS, S = T.semantic;
+  const col = k => T.primitives.color[k], fnt = k => T.primitives.font[k];
+  const H = Math.round(W * hab.naturalHeight / hab.naturalWidth);
+  ctx.canvas.width = W; ctx.canvas.height = H;
+  ctx.fillStyle = S.fond; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(hab, 0, 0, W, H);
+  const z = zone || T.render.zoneDefault;
+  const zx = z.x*W, zy = z.y*H, zw = z.w*W, zh = z.h*H;
+  const dishes = Array.from(document.querySelectorAll('#dishEdit .dish-row')).map(r => ({
+    n: (r.querySelector('.d-name').value || '').trim(),
+    p: (r.querySelector('.d-price').value || '').trim()
+  })).filter(d => d.n);
+  const fNom = fnt(S.nomProduit.font), fPrix = fnt(S.prix.font);
+  let dishSize = W * S.nomProduit.sizeRatio;
+  const blockH = () => dishes.length * dishSize * S.rowHeight;
+  if (blockH() > zh){
+    const f = Math.max(zh / blockH(), (W*S.nomProduit.sizeMin) / dishSize);
+    dishSize *= f;
+  }
+  const priceSize = dishSize * S.prix.sizeScale;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(zx, zy, zw, zh); ctx.clip();
+  let y = zy + Math.max(0, (zh - blockH()) * S.blockVAlign);
+  ctx.textBaseline = 'top';
+  const nameColor = col(S.nomProduit.color), priceColor = col(S.prix.color), sepColor = col(S.separateur.color);
+  const rowH = dishSize * S.rowHeight;
+  dishes.forEach((d, i) => {
+    const ty = y + dishSize*S.nomProduit.baselineOffset;
+    ctx.font = `${S.nomProduit.weight} ${dishSize}px ${fNom}`;
+    ctx.fillStyle = nameColor; ctx.globalAlpha = 1; ctx.textAlign = 'left';
+    ctx.letterSpacing = (dishSize * S.nomProduit.letterSpacing) + 'px';
+    ctx.fillText(S.nomProduit.uppercase ? d.n.toUpperCase() : d.n, zx, ty);
+    if (d.p){
+      const pty = ty + 0.70*(dishSize - priceSize);
+      ctx.font = `${S.prix.weight} ${priceSize}px ${fPrix}`;
+      ctx.fillStyle = priceColor; ctx.textAlign = S.prix.align;
+      ctx.letterSpacing = (priceSize * S.prix.letterSpacing) + 'px';
+      ctx.fillText(d.p, zx + zw, pty);
+    }
+    ctx.letterSpacing = '0px';
+    y += rowH;
+    if (i < dishes.length-1){ ctx.globalAlpha = S.separateur.alpha; ctx.fillStyle = sepColor; ctx.fillRect(zx, Math.round(y-1), zw, Math.max(1, Math.round(W*S.separateur.thicknessRatio))); ctx.globalAlpha = 1; }
+  });
+  ctx.restore();
+}
+
+// ── Peinture PARTAGÉE « Infos pratiques » : fond PNG + texte libre centré, scale-to-fit max 4 lignes.
+function paintInfos(ctx, W, hab, zone){
+  const T = SASSY_TOKENS, S = T.semantic, I = S.infos;
+  const H = Math.round(W * hab.naturalHeight / hab.naturalWidth);
+  ctx.canvas.width = W; ctx.canvas.height = H;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(hab, 0, 0, W, H);
+  const text = (document.getElementById('infosText').value || '').trim();
+  if (!text) return;
+  const z = zone || T.render.zoneDefault;
+  const zx = z.x*W, zy = z.y*H, zw = z.w*W, zh = z.h*H;
+  const fInfos = T.primitives.font[I.font];
+  let size = W * I.sizeRatio;
+  const floor = W * I.sizeMin;
+  let lines = [];
+  while (size >= floor){
+    ctx.font = `${I.weight} ${size}px ${fInfos}`;
+    lines = wrapText(ctx, text, zw);
+    if (lines.length <= I.maxLines && lines.length * size * I.lineHeight <= zh) break;
+    size -= 0.5;
+  }
+  if (lines.length > I.maxLines) lines = lines.slice(0, I.maxLines);
+  ctx.fillStyle = T.primitives.color[I.color];
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.letterSpacing = (size * I.letterSpacing) + 'px';
+  const blockH = lines.length * size * I.lineHeight;
+  let y = zy + Math.max(0, (zh - blockH) / 2);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(zx, zy, zw, zh); ctx.clip();
+  lines.forEach(l => { ctx.fillText(l, zx + zw/2, y); y += size * I.lineHeight; });
+  ctx.restore();
+  ctx.letterSpacing = '0px';
+}
+
+// Export FINAL (1080) — carte typo
+async function renderFinalCarte(theme, fmt){
+  const blk = customThemeFormat(theme, fmt);
+  if (!blk) throw new Error('Format indisponible pour ce thème');
+  await ensureCarteFonts();
+  const hab = await loadImage(blk.habillage);
+  const c = document.createElement('canvas');
+  paintCarte(c.getContext('2d'), SASSY_TOKENS.render.canvasW, hab, blk.zoneListe);
+  return c.toDataURL('image/jpeg', SASSY_TOKENS.render.jpegQuality);
+}
+// Export FINAL (1080) — infos
+async function renderFinalInfos(theme, fmt){
+  const blk = customThemeFormat(theme, fmt);
+  if (!blk) throw new Error('Format indisponible pour ce thème');
+  await ensureCarteFonts();
+  const hab = await loadImage(blk.habillage);
+  const c = document.createElement('canvas');
+  paintInfos(c.getContext('2d'), SASSY_TOKENS.render.canvasW, hab, blk.zoneTexte);
+  return c.toDataURL('image/jpeg', SASSY_TOKENS.render.jpegQuality);
+}
+// Preview LIVE carte = MÊME paintCarte que l'export
+function paintCartePreview(igTypo){
+  const blk = customThemeFormat(currentCustomTheme, currentFmt);
+  if (!blk) return;
+  let cv = document.getElementById('igCarteCv');
+  if (!cv){ cv = document.createElement('canvas'); cv.id = 'igCarteCv'; cv.style.cssText = 'width:100%;height:auto;display:block;'; }
+  if (cv.parentNode !== igTypo) igTypo.appendChild(cv);
+  cv.style.display = 'block';
+  getHabImg(blk.habillage, hab => {
+    igTypo.style.aspectRatio = hab.naturalWidth + '/' + hab.naturalHeight;
+    ensureCarteFonts().then(() => paintCarte(cv.getContext('2d'), 540, hab, blk.zoneListe));
+  });
+}
+// Preview LIVE infos = MÊME paintInfos que l'export
+function paintInfosPreview(igTypo){
+  const blk = customThemeFormat(currentCustomTheme, currentFmt);
+  if (!blk) return;
+  let cv = document.getElementById('igCarteCv');
+  if (!cv){ cv = document.createElement('canvas'); cv.id = 'igCarteCv'; cv.style.cssText = 'width:100%;height:auto;display:block;'; }
+  if (cv.parentNode !== igTypo) igTypo.appendChild(cv);
+  cv.style.display = 'block';
+  getHabImg(blk.habillage, hab => {
+    igTypo.style.aspectRatio = hab.naturalWidth + '/' + hab.naturalHeight;
+    ensureCarteFonts().then(() => paintInfos(cv.getContext('2d'), 540, hab, blk.zoneTexte));
+  });
 }
 function studioPreviewUrl(p, fmt){
   p.cache = p.cache || {};
