@@ -670,6 +670,10 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   justify-content:center;padding:24px 20px;
 }
 .ig-typo.portrait{aspect-ratio:4/5;}
+/* mode canvas (templates typo-carte / infos) : le PNG+texte sont peints dans #igCarteCv */
+.ig-typo.custom{background:none;padding:0;}
+.ig-typo.custom #tyDom{display:none;}
+.ig-typo #igCarteCv{width:100%;height:auto;display:block;}
 .ty-h{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2050E7;}
 .ty-title{font-family:var(--titre);font-size:22px;font-weight:800;color:#2050E7;line-height:1.05;margin:3px 0 12px;}
 .ty-dish{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid rgba(32,80,231,.15);}
@@ -1385,6 +1389,13 @@ body.authed #login-gate{display:none;}
                 <button class="add-dish" onclick="addDish()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Ajouter un plat</button>
               </div>
             </div>
+
+            <!-- INFOS zone (infos pratiques) -->
+            <div id="infosZone" style="display:none;">
+              <div class="field"><div class="field-lbl"><span>Votre texte</span></div>
+                <textarea class="inp" id="infosText" rows="4" maxlength="220" placeholder="Ex. Ouvert du mardi au dimanche, 12h–14h & 19h–22h. Fermé le lundi." oninput="renderStudio()" style="resize:none;line-height:1.4;"></textarea>
+              </div>
+            </div>
           </div>
 
           <!-- STEP 3 : LÉGENDE -->
@@ -1454,9 +1465,11 @@ body.authed #login-gate{display:none;}
               </div>
               <div class="ig-img" id="igPhoto" style="background-image:url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80');display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div><div class="ig-drag-hint" id="igDragHint">✥ Glissez pour cadrer</div></div>
               <div class="ig-typo" id="igTypo">
-                <div class="ty-h">Aujourd'hui</div>
-                <div class="ty-title" id="tyTitle">Menu du jour</div>
-                <div id="tyDishes"></div>
+                <div id="tyDom">
+                  <div class="ty-h">Aujourd'hui</div>
+                  <div class="ty-title" id="tyTitle">Menu du jour</div>
+                  <div id="tyDishes"></div>
+                </div>
               </div>
               <div class="ig-overlay" id="igOverlay"><span></span></div>
               <div class="ig-dots" id="igDots"></div>
@@ -1900,7 +1913,7 @@ function renderCustomThemes(){
   grid.querySelectorAll('.lelab-card[data-custom]').forEach(b => b.remove());   // évite les doublons
   (sassyData.themes || []).forEach(theme => {
     if (!theme || !theme.id || !theme.formats) return;
-    const kind = theme.type === 'typo' ? 'typo' : 'photo';
+    const kind = theme.type === 'typo' ? 'typo' : (theme.type === 'infos' ? 'infos' : 'photo');
     const card = document.createElement('div');
     card.className = 'lelab-card lelab-card--wide';   // thèmes sur-mesure en pleine largeur, en bas
     card.dataset.custom = '1';
@@ -1935,16 +1948,20 @@ function selectTheme(btn){
   currentTheme = btn.dataset.theme;
   currentKind  = btn.dataset.kind;
   const isTypo = currentKind === 'typo';
+  const isInfos = currentKind === 'infos';
+  const isPhoto = !isTypo && !isInfos;
   const name = btn.querySelector('.tt').textContent;
   const isCustom = currentTheme.indexOf('custom:') === 0;
   currentCustomTheme = isCustom ? getCustomTheme(currentTheme.slice(7)) : null;
   const t = THEMES[currentTheme] || {};
 
-  document.getElementById('photoZone').style.display    = isTypo ? 'none' : 'block';
+  document.getElementById('photoZone').style.display    = isPhoto ? 'block' : 'none';
   document.getElementById('typoZone').style.display     = isTypo ? 'block' : 'none';
-  document.getElementById('adaptiveNote').style.display = isTypo ? 'flex' : 'none';
-  document.getElementById('step2Title').textContent     = isTypo ? 'Vos plats & votre titre' : 'Votre photo & votre texte';
-  if (isTypo){
+  const infosZoneEl = document.getElementById('infosZone'); if (infosZoneEl) infosZoneEl.style.display = isInfos ? 'block' : 'none';
+  document.getElementById('adaptiveNote').style.display = (isTypo || isInfos) ? 'flex' : 'none';
+  const customNoText = !!currentCustomTheme && !customThemeFormats(currentCustomTheme).some(f => (customThemeFormat(currentCustomTheme, f) || {}).zoneTexte);
+  document.getElementById('step2Title').textContent     = isTypo ? 'Vos plats & votre titre' : isInfos ? 'Votre texte' : (customNoText ? 'Votre photo' : 'Votre photo & votre texte');
+  if (isTypo || isInfos){
     document.getElementById('adaptiveText').innerHTML =
       '<b>' + name + '</b> est un visuel typographique : pas de photo à charger, le rendu est généré dans votre charte.';
   } else {
@@ -2010,6 +2027,9 @@ function studioContentText(){
     let t = title ? ('Titre : ' + title) : '';
     if (dishes.length) t += (t ? '. ' : '') + 'Plats : ' + dishes.join(', ');
     return t;
+  }
+  if (currentKind === 'infos'){
+    return (document.getElementById('infosText') || {}).value || '';
   }
   return (document.getElementById('photoTitle') || {}).value || '';
 }
@@ -2251,18 +2271,28 @@ function renderStudio(){
   if (!igPhoto || !igTypo) return;
   const ratioClass = currentFmt === 'story' ? 'story' : (currentFmt === 'portrait' ? 'portrait' : '');
 
-  if (currentKind === 'typo'){
+  if (currentKind === 'typo' || currentKind === 'infos'){
     hideCustomLayers();
     igPhoto.style.display = 'none';
     igTypo.style.display = 'flex';
     igTypo.className = 'ig-typo ' + ratioClass;
-    document.getElementById('tyTitle').textContent = document.getElementById('menuTitle').value || 'Menu du jour';
-    let html = '';
-    document.querySelectorAll('#dishEdit .dish-row').forEach(r => {
-      const n = r.querySelector('.d-name').value, p = r.querySelector('.d-price').value;
-      if (n) html += `<div class="ty-dish"><span class="ty-n">${n}</span><span class="ty-p">${p}</span></div>`;
-    });
-    document.getElementById('tyDishes').innerHTML = html;
+    const cv = document.getElementById('igCarteCv');
+    if (currentKind === 'infos' && currentCustomTheme){
+      igTypo.classList.add('custom'); paintInfosPreview(igTypo);
+    } else if (currentKind === 'typo' && currentCustomTheme){
+      igTypo.classList.add('custom'); paintCartePreview(igTypo);
+    } else {
+      // typo générique (menu legacy) → rendu DOM
+      igTypo.classList.remove('custom'); igTypo.style.aspectRatio = '';
+      if (cv) cv.style.display = 'none';
+      document.getElementById('tyTitle').textContent = document.getElementById('menuTitle').value || 'Menu du jour';
+      let html = '';
+      document.querySelectorAll('#dishEdit .dish-row').forEach(r => {
+        const n = r.querySelector('.d-name').value, p = r.querySelector('.d-price').value;
+        if (n) html += `<div class="ty-dish"><span class="ty-n">${n}</span><span class="ty-p">${p}</span></div>`;
+      });
+      document.getElementById('tyDishes').innerHTML = html;
+    }
   } else {
     const sel = studioPhotos[studioPhotoIdx];
     const img = sel ? studioPreviewUrl(sel, currentFmt) : themeImage(currentTheme);
@@ -2296,16 +2326,17 @@ function renderStudio(){
       }
     }
   }
-  // Story : layout plein écran (classe sur l'écran) — uniquement pour les thèmes photo
-  const storyMode = currentKind !== 'typo' && currentFmt === 'story';
+  // Story : overlay-texte (photo only) vs plein cadre (toute story)
+  const storyMode = currentKind !== 'typo' && currentKind !== 'infos' && currentFmt === 'story';
   const screen = document.querySelector('#studio-unlocked .phone-screen');
-  if (screen) screen.classList.toggle('story', storyMode);
+  if (screen) screen.classList.toggle('story', currentFmt === 'story');   // plein cadre pour TOUT story (photo + carte/infos)
 
   // contenu adapté en story : overlay au lieu de légende du plat / hashtags
   const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
   const customMode = !!currentCustomTheme;
   show('overlayField', storyMode && !customMode);
-  show('photoTitleField', customMode);   // thème custom : champ "Texte sur l'habillage" → alimente zoneTexte
+  const hasZoneTexte = customMode && currentKind === 'photo' && !!(customThemeFormat(currentCustomTheme, currentFmt) || {}).zoneTexte;
+  show('photoTitleField', hasZoneTexte);   // champ "Texte sur l'habillage" seulement si le format a une zoneTexte (photo)
   show('captionField', true);       // toujours visible → le bouton ✦ reste accessible (y compris en story)
   show('captionBody', !storyMode);  // textarea + hashtags masqués en story
   show('captionStoryNote', storyMode);
@@ -2325,7 +2356,7 @@ function renderStudio(){
 
   // badge "Exemple" sur la photo placeholder (thème photo, aucune vraie photo uploadée)
   const igSample = document.getElementById('igSample');
-  if (igSample) igSample.style.display = (currentKind !== 'typo' && studioPhotos.length === 0) ? 'block' : 'none';
+  if (igSample) igSample.style.display = (currentKind === 'photo' && studioPhotos.length === 0) ? 'block' : 'none';
 
   // carrousel : 2+ photos en Post/Portrait (jamais en story ni typo)
   const isCarousel = isCarouselActive();
@@ -2471,7 +2502,8 @@ function nextStep(){
     const cap = capEl ? capEl.value : '';
     const hasDish = Array.from(document.querySelectorAll('#dishEdit .dish-row'))
       .some(r => ((r.querySelector('.d-name') || {}).value || '').trim());
-    const hasContent = currentKind === 'typo' ? hasDish : studioPhotos.length > 0;
+    const infosFilled = (((document.getElementById('infosText') || {}).value) || '').trim() !== '';
+    const hasContent = currentKind === 'typo' ? hasDish : currentKind === 'infos' ? infosFilled : studioPhotos.length > 0;
     if (!storyMode && hasContent && !captionAutoGenerated && (cap.trim() === '' || cap === lastAutoCaption)){
       generateCaption(null);
     }
@@ -2553,11 +2585,11 @@ async function studioPublish(){
   const btn = document.getElementById('studio-primary');
   if (!btn) return;
 
-  const isStory = currentKind !== 'typo' && currentFmt === 'story';
+  const isStory = currentFmt === 'story';   // story différée pour TOUS les types (point 5)
   if (isStory){ showToast('🎬 Story — bientôt disponible'); return; }
   // garde-fous
   if (!igStatus.connected){ showToast('⚠️ Connectez d\'abord votre compte Instagram'); return; }
-  if (currentKind !== 'typo' && studioPhotos.length === 0){ showToast('⚠️ Ajoutez une photo avant de publier'); return; }
+  if (currentKind !== 'typo' && currentKind !== 'infos' && studioPhotos.length === 0){ showToast('⚠️ Ajoutez une photo avant de publier'); return; }
 
   studioPublishing = true;
   showStudioStar();                          // overlay étoile déclenché au clic (couche visuelle)
@@ -2568,7 +2600,17 @@ async function studioPublish(){
     let imageUrls = [];
 
     // 1) génération de l'image / des images + upload
-    if (currentCustomTheme){
+    if (currentCustomTheme && currentKind === 'typo'){
+      setPubBtn(btn, PUB_SPIN + 'Génération…', true);
+      const dataUrl = await renderFinalCarte(currentCustomTheme, currentFmt);
+      setPubBtn(btn, PUB_SPIN + 'Envoi…', true);
+      imageUrls = [ await uploadStudioImage(dataUrl, token) ];
+    } else if (currentCustomTheme && currentKind === 'infos'){
+      setPubBtn(btn, PUB_SPIN + 'Génération…', true);
+      const dataUrl = await renderFinalInfos(currentCustomTheme, currentFmt);
+      setPubBtn(btn, PUB_SPIN + 'Envoi…', true);
+      imageUrls = [ await uploadStudioImage(dataUrl, token) ];
+    } else if (currentCustomTheme){
       if (carousel){
         for (let i = 0; i < studioPhotos.length; i++){
           setPubBtn(btn, PUB_SPIN + 'Génération ' + (i + 1) + '/' + studioPhotos.length + '…', true);
@@ -2664,6 +2706,7 @@ function saveStudioDraft(){
       menuTitle: (document.getElementById('menuTitle') || {}).value || '',
       photoTitle:(document.getElementById('photoTitle')|| {}).value || '',
       storyOverlay:(document.getElementById('storyOverlay')|| {}).value || '',
+      infosText:(document.getElementById('infosText')|| {}).value || '',
       hashtags: studioHashtags,
       dishes
     }));
@@ -2687,7 +2730,7 @@ function restoreStudioDraft(draft){
     ).join('');
   }
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
-  set('menuTitle', d.menuTitle); set('photoTitle', d.photoTitle); set('caption', d.caption); set('storyOverlay', d.storyOverlay);  // après selectTheme → écrase le prefill
+  set('menuTitle', d.menuTitle); set('photoTitle', d.photoTitle); set('caption', d.caption); set('storyOverlay', d.storyOverlay); set('infosText', d.infosText);  // après selectTheme → écrase le prefill
   if (Array.isArray(d.hashtags)){
     // purge des anciens tags Sassy/bistrot codés en dur dans d'anciens brouillons
     studioHashtags = d.hashtags.some(t => /sassy|bistrot/i.test(t)) ? [] : d.hashtags;
