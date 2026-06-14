@@ -1,0 +1,19 @@
+{
+  "manifest_version": "1.0",
+  "client": { "name": "Bistrot Sassy", "slug": "bistrotsassy" },
+  "repo": { "github": "romaindemari-png/bistrot-sassy", "default_branch": "main" },
+  "deploy": {
+    "provider": "netlify",
+    "site_name": "bistrot-sassy",
+    "url": "https://bistrot-sassy.netlify.app",
+    "publish_dir": "."
+  },
+  "offer": { "stage": "lelab+", "is_fork": true },
+  "template": {
+    "base_repo": "romaindemari-png/lestud-template-food",
+    "family": "food",
+    "version": "1.0"
+  },
+  "separation": null,
+  "instagram": { "instagram_app_id": "1300156898763730" }
+}
