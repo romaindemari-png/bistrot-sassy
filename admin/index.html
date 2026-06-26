@@ -591,6 +591,15 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-status.off svg{width:14px;height:14px;}
 .ig-disconnect{margin-left:10px;font-size:11.5px;font-weight:600;color:var(--gris-txt);background:none;border:none;text-decoration:underline;cursor:pointer;padding:4px;}
 .ig-disconnect:hover{color:#D92D20;}
+/* Carte compte connecté (démo App Review : avatar + @username + ID via API) */
+.ig-card{display:inline-flex;align-items:center;gap:12px;background:#E7F6EC;border:1px solid rgba(26,143,76,.22);border-radius:14px;padding:10px 14px;}
+.ig-avatar{position:relative;width:42px;height:42px;flex:0 0 42px;border-radius:50%;overflow:hidden;background:#1A8F4C;}
+.ig-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.ig-av-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px;text-transform:uppercase;}
+.ig-meta{display:flex;flex-direction:column;gap:2px;line-height:1.2;}
+.ig-uname{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:#1A8F4C;}
+.ig-uname .d{width:7px;height:7px;border-radius:50%;background:#1A8F4C;box-shadow:0 0 0 3px rgba(26,143,76,.18);}
+.ig-id{font-size:11px;color:var(--gris-txt);font-weight:500;letter-spacing:.01em;}
 .compose-foot{
   display:flex;align-items:center;gap:10px;
   position:sticky;bottom:0;z-index:20;
@@ -2033,14 +2042,28 @@ function removeHashtag(i){
 /* ── Statut connexion Instagram (badge studio + écran Publier) ── */
 const IG_OAUTH_URL = 'https://www.instagram.com/oauth/authorize?client_id=1300156898763730&redirect_uri=https%3A%2F%2Fbistrot-sassy.netlify.app%2F.netlify%2Ffunctions%2Fauth-callback&response_type=code&scope=instagram_business_basic%2Cinstagram_business_content_publish';
 
+function escAttr(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 function igStatusHTML(status){
   if (status && status.connected){
-    return `<span class="ig-status on"><span class="d"></span>Connecté${status.username ? ' @' + status.username : ''}</span><button class="ig-disconnect" onclick="disconnectInstagram()">Déconnecter</button>`;
+    const uname = status.username || '';
+    const initial = escAttr((uname || '?').charAt(0).toUpperCase());
+    const avatar = status.profile_picture_url
+      ? `<img src="${escAttr(status.profile_picture_url)}" alt="@${escAttr(uname)}" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><span class="ig-av-fallback" style="display:none">${initial}</span>`
+      : `<span class="ig-av-fallback">${initial}</span>`;
+    return `<div class="ig-card">`
+      + `<div class="ig-avatar">${avatar}</div>`
+      + `<div class="ig-meta">`
+      +   `<div class="ig-uname"><span class="d"></span>${uname ? '@' + escAttr(uname) : 'Connecté'}</div>`
+      +   (status.user_id ? `<div class="ig-id">ID : ${escAttr(status.user_id)}</div>` : '')
+      + `</div>`
+      + `<button class="ig-disconnect" onclick="disconnectInstagram()">Déconnecter</button>`
+      + `</div>`;
   }
   return `<a class="ig-status off" href="${IG_OAUTH_URL}" onclick="window.location.href=this.href;return false;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="pointer-events:none"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="#fff" stroke="none"/></svg>Connecter Instagram</a>`;
 }
 
-let igStatus = { connected: false, username: null };
+let igStatus = { connected: false, user_id: null, username: null, profile_picture_url: null };
 async function loadInstagramStatus(){
   let status = { connected: false, username: null };
   try {
