@@ -660,6 +660,18 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 /* Bascule 720px : desktop → vignette dans la sidebar, tête du studio repliée.
    Spécificité #studio-unlocked (1,1,0) pour gagner sur la règle de base .compose-head{display:flex} définie plus loin dans le source. */
 @media(min-width:721px){ #studio-unlocked .compose-head{display:none;} }
+/* Bandeau de reprise de brouillon (étape D) — se pose en haut du studio, le post reste visible dessous (non bloquant) */
+.resume-banner{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--card-bg);border:1px solid var(--bord);border-left:3px solid var(--ink);
+  border-radius:12px;padding:12px 14px;margin-bottom:16px;
+}
+.resume-txt{font-size:13px;font-weight:600;color:var(--ink);flex:1;min-width:0;}
+.resume-actions{display:flex;gap:8px;flex-shrink:0;}
+.resume-banner button{font-size:12.5px;font-weight:700;border-radius:8px;padding:7px 12px;cursor:pointer;border:none;}
+.resume-resume{background:var(--ink);color:#fff;}
+.resume-restart{background:transparent;border:1px solid var(--bord);color:var(--ink-2);}
+.resume-restart:hover{color:#D92D20;border-color:#D92D20;}
 /* Barre de navigation studio (3 slots) — contrat unique desktop+mobile ; habillage responsive détaillé en étape B */
 /* colonnes : latéraux = largeur des boutons (jamais compressés), centre = reste flexible et CLIPPABLE → le stepper ne déborde jamais sur le CTA */
 .studio-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin-bottom:20px;}
@@ -1349,6 +1361,13 @@ body.authed #login-gate{display:none;}
         </div>
 
         <div class="compose">
+          <div class="resume-banner" id="resumeBanner" style="display:none;">
+            <span class="resume-txt">Vous avez un post en cours (<span id="resumeStep">étape 1</span>).</span>
+            <div class="resume-actions">
+              <button class="resume-resume" onclick="dismissResumeBanner()">Reprendre</button>
+              <button class="resume-restart" onclick="studioReset();dismissResumeBanner()">Recommencer</button>
+            </div>
+          </div>
           <div class="compose-head">
             <div id="igStatusStudio"></div>
           </div>
@@ -1886,7 +1905,7 @@ function applyScreen(name) {
   const mnItems = document.querySelectorAll('.mn-item');
   if (mnItems[idx]) mnItems[idx].classList.add('active');
 
-  if (name === 'studio') adjustStepsHeight();   // recalcule la hauteur du stepper une fois l'écran visible
+  if (name === 'studio'){ adjustStepsHeight(); maybeShowResumeBanner(); }   // hauteur stepper + propose la reprise si brouillon en cours
 }
 
 let screenSwitching = false;
@@ -2835,6 +2854,55 @@ function studioReset(){
   clearStudioDraft();
 }
 window.studioReset = studioReset;   // exposé en global pour test console (la bannière l'appellera en étape D)
+
+// Bandeau de reprise : affiché à l'entrée du studio SI un brouillon existe ET représente un VRAI progrès.
+// « Vrai progrès » = step>1 OU un champ libre non vide (caption/storyOverlay/infosText) OU un champ prérempli
+// MODIFIÉ vs son état initial (menuTitle/photoTitle/dishes, cf. studioDefaults). Studio strictement vierge → rien.
+// Lecture seule : ne touche NI saveStudioDraft NI restoreStudioDraft.
+function maybeShowResumeBanner(){
+  const b = document.getElementById('resumeBanner');
+  if (!b) return;
+  let d = null;
+  try { d = JSON.parse(sessionStorage.getItem('lelab_studio_draft') || 'null'); } catch (e){}
+  // Champ prérempli MODIFIÉ par rapport au snapshot initial (menu/titre photo/plats) = vrai progrès.
+  const changedPrefill = !!d && !!studioDefaults && (
+    (d.menuTitle  || '') !== studioDefaults.menuTitle ||
+    (d.photoTitle || '') !== studioDefaults.photoTitle ||
+    JSON.stringify(Array.isArray(d.dishes) ? d.dishes : studioDefaults.dishes) !== JSON.stringify(studioDefaults.dishes)
+  );
+  const progress = !!d && (
+    (d.step > 1) ||
+    !!(d.caption && d.caption.trim()) ||
+    !!(d.storyOverlay && d.storyOverlay.trim()) ||
+    !!(d.infosText && d.infosText.trim()) ||
+    changedPrefill
+  );
+  if (progress){
+    const st = document.getElementById('resumeStep');
+    if (st) st.textContent = 'étape ' + Math.max(1, Math.min(4, d.step || 1));
+    b.style.display = '';
+  } else {
+    b.style.display = 'none';
+  }
+}
+function dismissResumeBanner(){
+  const b = document.getElementById('resumeBanner');
+  if (b) b.style.display = 'none';
+}
+
+// Snapshot des champs PRÉREMPLIS (menu/titre photo/plats) à l'état initial — capturé au bootstrap AVANT
+// restoreStudioDraft (donc jamais un brouillon restauré). Sert de baseline pour détecter un prérempli modifié.
+let studioDefaults = null;
+function captureStudioDefaults(){
+  const dishes = Array.from(document.querySelectorAll('#dishEdit .dish-row')).map(r => ({
+    n: (r.querySelector('.d-name') || {}).value || '', p: (r.querySelector('.d-price') || {}).value || ''
+  }));
+  return {
+    menuTitle:  (document.getElementById('menuTitle')  || {}).value || '',
+    photoTitle: (document.getElementById('photoTitle') || {}).value || '',
+    dishes
+  };
+}
 
 function restoreStudioDraft(draft){
   let d = draft || null;
@@ -3989,6 +4057,7 @@ initPhotoDrag();        // repositionnement (drag) de la photo dans le cadre
 // Placé AVANT restoreStudioDraft : un brouillon enregistré l'écrase juste après.
 const defaultThemeCard = document.querySelector('#studio-unlocked .lelab-card.is-selected');
 if (defaultThemeCard) selectTheme(defaultThemeCard);
+studioDefaults = captureStudioDefaults();   // baseline des champs préremplis AVANT toute restauration/interaction
 restoreStudioDraft();   // ré-applique le brouillon si présent (saves bloqués tant que studioReady=false)
 studioReady = true;     // à partir d'ici, chaque modif est persistée
 </script>
