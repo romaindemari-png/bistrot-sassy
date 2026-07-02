@@ -631,6 +631,34 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-uname{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:#1A8F4C;}
 .ig-uname .d{width:7px;height:7px;border-radius:50%;background:#1A8F4C;box-shadow:0 0 0 3px rgba(26,143,76,.18);}
 .ig-id{font-size:11px;color:var(--gris-txt);font-weight:500;letter-spacing:.01em;}
+/* ── Vignette IG COMPACTE : studio (mobile ≤720) + sidebar (desktop >720). On resserre UNIQUEMENT l'habillage
+   (padding/marges/hauteur/fond/bordure). Le TRIPLET Meta — avatar + @username + ID — reste intégralement
+   visible & lisible partout (aucun display:none / font-size:0 / ellipsis / troncature). Template innerHTML inchangé. ── */
+#igStatusStudio .ig-card,
+#igStatusSidebar .ig-card{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;
+  width:100%;padding:8px 10px;border-radius:10px;
+}
+#igStatusStudio .ig-avatar,
+#igStatusSidebar .ig-avatar{width:42px;height:42px;flex:0 0 42px;}   /* photo de profil pleine taille (conservateur Meta) */
+#igStatusStudio .ig-meta,
+#igStatusSidebar .ig-meta{flex:0 1 auto;min-width:0;}                /* pas d'overflow:hidden, pas d'ellipsis → rien n'est tronqué */
+#igStatusStudio .ig-uname,
+#igStatusSidebar .ig-uname{font-size:13px;}
+#igStatusStudio .ig-id,
+#igStatusSidebar .ig-id{font-size:11px;}                             /* ID numérique conservé et lisible */
+#igStatusStudio .ig-disconnect,
+#igStatusSidebar .ig-disconnect{margin-left:auto;}                   /* Déconnecter inline, toujours visible (jamais derrière un tap) */
+/* Sidebar (fond sombre #211f1e) : contraste pour garder le triplet lisible */
+#igStatusSidebar{margin-top:10px;}
+#igStatusSidebar .ig-card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);}
+#igStatusSidebar .ig-uname{color:#fff;}
+#igStatusSidebar .ig-id{color:rgba(255,255,255,.62);}
+#igStatusSidebar .ig-disconnect{color:rgba(255,255,255,.6);}
+#igStatusSidebar .ig-disconnect:hover{color:#ff6b6b;}
+#igStatusSidebar .ig-status.off{width:100%;justify-content:center;background:transparent;border:1px solid rgba(255,255,255,.28);color:#fff;}   /* état "Connecter" lisible sur sombre */
+/* Bascule 720px : desktop → vignette dans la sidebar, tête du studio repliée */
+@media(min-width:721px){ .compose-head{display:none;} }
 /* Barre de navigation studio (3 slots) — contrat unique desktop+mobile ; habillage responsive détaillé en étape B */
 /* colonnes : latéraux = largeur des boutons (jamais compressés), centre = reste flexible et CLIPPABLE → le stepper ne déborde jamais sur le CTA */
 .studio-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin-bottom:20px;}
@@ -1119,6 +1147,8 @@ body.authed #login-gate{display:none;}
         <div style="flex:1"><div class="user-name">Bistrot Sassy</div><div class="user-plan">@bistrotsassy</div></div>
         <button onclick="doLogout()" title="Déconnexion" style="margin-left:auto;background:var(--gris-card);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--gris-txt);font-size:14px;">⏻</button>
       </div>
+      <!-- Statut Instagram (desktop) — peuplé par loadInstagramStatus() via ID, même modèle que #igStatusStudio/#igStatusPublier -->
+      <div id="igStatusSidebar"></div>
     </div>
   </aside>
 
@@ -2172,6 +2202,8 @@ async function loadInstagramStatus(){
   if (s1) s1.innerHTML = igStatusHTML(status);
   const s2 = document.getElementById('igStatusPublier');
   if (s2) s2.innerHTML = igStatusHTML(status);
+  const s3 = document.getElementById('igStatusSidebar');
+  if (s3) s3.innerHTML = igStatusHTML(status);   // 3e mount (sidebar desktop) — même modèle gardé, même disconnectInstagram()
   const txt = document.getElementById('igStatusText');
   if (txt) txt.textContent = status.connected
     ? 'Votre compte Instagram est connecté. Vous pouvez publier directement depuis votre espace.'
