@@ -189,6 +189,19 @@
 .plan-lab .lelab-card__check svg { stroke: var(--m-on-color); }
 .lelab-card.is-selected .lelab-card__check { display: flex; }
 
+/* Studio étape 1 — card thème « miniature + label » (aperçu rendu par le moteur, cf. paintThemeMini) */
+.lelab-card--mini { padding: 14px 14px 16px; align-items: stretch; }
+.theme-mini {
+  position: relative; width: 100%; aspect-ratio: 4/5;
+  border-radius: 12px; overflow: hidden; margin-bottom: 12px;
+  background: #fff; box-shadow: inset 0 0 0 1px rgba(28,26,25,.08);
+}
+.theme-mini__img {
+  width: 100%; height: 100%; display: block; object-fit: cover;
+  opacity: 0; transition: opacity .35s ease;
+}
+.lelab-card--mini .lelab-card__title { text-align: center; }
+
 /* Bouton enregistrer */
 /* quand LeLab+ est actif, les accents passent au jaune */
 body.lelab-plus{
@@ -520,21 +533,24 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
   .star-pulse{animation:none;}
 }
 
-/* format pills */
-.fmt-row{display:flex;gap:9px;margin-top:14px;}
+/* format cards — aperçu à l'échelle réelle (Post 4:5 vs Story 9:16, story plus haute) + label */
+.fmt-row{display:flex;gap:14px;margin-top:14px;align-items:flex-end;}
 .fmt{
-  flex:1;border:1.5px solid var(--bord);border-radius:11px;padding:11px 9px;
-  display:flex;flex-direction:column;align-items:center;gap:6px;
+  flex:1;border:1.5px solid var(--bord);border-radius:14px;padding:12px 12px 11px;
+  display:flex;flex-direction:column;align-items:center;gap:9px;
   cursor:pointer;transition:all .15s;background:var(--blanc);
 }
 .fmt:hover{border-color:var(--jaune-bord);}
 .fmt.sel{border-color:var(--noir);background:var(--jaune);}
 .fmt.disabled{opacity:.3;pointer-events:none;}
-.fmt .f-shape{border:2px solid var(--noir);border-radius:4px;}
-.fmt .sq{width:22px;height:22px;}
-.fmt .pt{width:18px;height:24px;}
-.fmt .st{width:14px;height:24px;}
-.fmt .f-lbl{font-size:12px;font-weight:700;}
+.fmt .fmt-prev{
+  width:100%;display:block;border-radius:8px;overflow:hidden;
+  background:#fff;box-shadow:inset 0 0 0 1px rgba(28,26,25,.10);
+}
+.fmt .fmt-prev--post{aspect-ratio:4/5;}
+.fmt .fmt-prev--story{aspect-ratio:9/16;}
+.fmt .fmt-prev__img{width:100%;height:100%;display:block;object-fit:cover;opacity:0;transition:opacity .35s ease;}
+.fmt .f-lbl{font-size:13px;font-weight:700;}
 .fmt .f-sub{font-size:10px;color:var(--gris-txt);}
 
 /* content zone */
@@ -1259,7 +1275,7 @@ body.authed #login-gate{display:none;}
           <div class="mp-ig"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.1" fill="#fff" stroke="none"/></svg></div>
           <div class="mp-info">
             <div class="mp-info-title">Voir l'aperçu</div>
-            <div class="mp-info-sub"><span class="mp-dot"></span>en direct · <span id="mpSub">Post carré</span></div>
+            <div class="mp-info-sub"><span class="mp-dot"></span>en direct · <span id="mpSub">Post 4:5</span></div>
           </div>
           <button class="mp-arrow-btn" aria-label="Ouvrir l'aperçu">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
@@ -1309,9 +1325,8 @@ body.authed #login-gate{display:none;}
 
             <div class="field"><div class="field-lbl"><span>Format</span></div>
               <div class="fmt-row" id="fmtRow">
-                <button class="fmt sel" data-fmt="square" onclick="selectFmt(this)"><span class="f-shape sq"></span><span class="f-lbl">Post</span><span class="f-sub">carré</span></button>
-                <button class="fmt" data-fmt="portrait" onclick="selectFmt(this)"><span class="f-shape pt"></span><span class="f-lbl">Portrait</span><span class="f-sub">4:5</span></button>
-                <button class="fmt" data-fmt="story" onclick="selectFmt(this)"><span class="f-shape st"></span><span class="f-lbl">Story</span><span class="f-sub">9:16</span></button>
+                <button class="fmt sel" data-fmt="portrait" onclick="selectFmt(this)"><span class="fmt-prev fmt-prev--post"><img class="fmt-prev__img" alt="" loading="lazy"></span><span class="f-lbl">Post</span><span class="f-sub">4:5</span></button>
+                <button class="fmt" data-fmt="story" onclick="selectFmt(this)"><span class="fmt-prev fmt-prev--story"><img class="fmt-prev__img" alt="" loading="lazy"></span><span class="f-lbl">Story</span><span class="f-sub">9:16</span></button>
               </div>
             </div>
 
@@ -1397,7 +1412,7 @@ body.authed #login-gate{display:none;}
               </div>
               <div class="recap-row">
                 <span class="recap-ico">📐</span>
-                <div class="recap-txt"><span class="recap-k">Format</span><span class="recap-v" id="recap-format">Post (carré)</span></div>
+                <div class="recap-txt"><span class="recap-k">Format</span><span class="recap-v" id="recap-format">Post (4:5)</span></div>
               </div>
               <div class="recap-row">
                 <span class="recap-ico">✍️</span>
@@ -1826,7 +1841,7 @@ function handlePlusClick() {
 
 // ── STUDIO ────────────────────────────────────────────────
 let currentKind = 'photo';
-let currentFmt = 'square';
+let currentFmt = 'portrait';
 let currentTheme = '';   // auto-sélection du 1er thème data-driven dans renderCustomThemes
 let currentCustomTheme = null;   // objet thème custom sélectionné (null = thème générique)
 let pendingCustomDraft = null;   // brouillon en attente d'un bouton custom pas encore injecté (chargement async)
@@ -1835,7 +1850,7 @@ let captionAutoGenerated = false;   // one-shot : génération auto 2→3 une se
 
 // ── Thèmes CUSTOM (générateur d'habillages) — format export : voir LELAB.md ──
 // Mapping nom de format studio → clé du JSON générateur.
-const FMT_KEY_MAP = { square:'carre', portrait:'portrait', story:'story' };
+const FMT_KEY_MAP = { portrait:'portrait', story:'story' };
 // Retrouve un thème custom par id dans les données chargées.
 function getCustomTheme(id){
   return (sassyData.themes || []).find(t => t && t.id === id) || null;
@@ -1857,13 +1872,8 @@ function themeImage(theme){
   return (slider[0] && slider[0].image) || (galerie[0] && galerie[0].image) || '';   // photo d'exemple générique
 }
 
-// Métadonnées d'affichage par type de thème (picto + libellés) — grille compacte « comme les anciens »
-const KIND_META = {
-  photo: { label:'Photo', sub:'Photo mise en valeur',    ico:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-5-5L5 19"/>' },
-  typo:  { label:'Carte', sub:'Liste & prix, sans photo', ico:'<path d="M4 7h16M4 12h10M4 17h7"/>' },
-  infos: { label:'Infos', sub:'Texte pratique',           ico:'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>' }
-};
 // Injecte les cartes des thèmes (data-driven depuis themes.json), grille compacte adaptative (idempotent).
+// Chaque card = MINIATURE (aperçu rendu du template via le moteur existant) + LABEL (nom du thème).
 function renderCustomThemes(){
   const grid = document.getElementById('themeGrid');
   if (!grid) return;
@@ -1871,9 +1881,8 @@ function renderCustomThemes(){
   (sassyData.themes || []).forEach(theme => {
     if (!theme || !theme.id || !theme.formats) return;
     const kind = theme.type === 'typo' ? 'typo' : (theme.type === 'infos' ? 'infos' : 'photo');
-    const meta = KIND_META[kind] || KIND_META.photo;
     const card = document.createElement('div');
-    card.className = 'lelab-card';
+    card.className = 'lelab-card lelab-card--mini';
     card.dataset.custom = '1';
     card.dataset.theme = 'custom:' + theme.id;
     card.dataset.kind = kind;
@@ -1881,13 +1890,10 @@ function renderCustomThemes(){
     const nom = String(theme.nom || theme.id).replace(/</g, '&lt;');
     card.innerHTML =
       '<div class="lelab-card__check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>' +
-      '<div class="lelab-card__ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6">' + meta.ico + '</svg></div>' +
-      '<div class="lelab-card__body">' +
-        '<div class="lelab-card__label">' + meta.label + '</div>' +
-        '<div class="lelab-card__title tt">' + nom + '</div>' +
-        '<div class="lelab-card__sub">' + meta.sub + '</div>' +
-      '</div>';
+      '<div class="theme-mini"><img class="theme-mini__img" alt="" loading="lazy"></div>' +
+      '<div class="lelab-card__title tt">' + nom + '</div>';
     grid.appendChild(card);
+    paintThemeMini(card, theme, kind);   // miniature rendue en asynchrone (gabarit placeholder si pas de visuel — attendu)
   });
   // Grille compacte adaptative : total IMPAIR → la dernière card s'étire sur 2 colonnes (réutilise --wide)
   const cards = grid.querySelectorAll('.lelab-card[data-custom]');
@@ -1906,6 +1912,56 @@ function renderCustomThemes(){
     const def = document.querySelector('#studio-unlocked .lelab-card[data-custom]');
     if (def) selectTheme(def);
   }
+}
+
+// Peint la miniature d'une card thème en RÉUTILISANT le moteur de rendu FINAL (theme, fmt) — aucun nouvel asset.
+// Vignette = 1er format studio dispo du thème (portrait 4:5 par défaut). Gabarit placeholder affiché = attendu.
+// N'écrit QUE dans l'<img> de la card (canvas isolé) → aucun impact sur la preview principale.
+async function paintThemeMini(card, theme, kind){
+  const img = card && card.querySelector('.theme-mini__img');
+  if (!img) return;
+  const fmt = customThemeFormats(theme)[0] || 'portrait';
+  try {
+    let url;
+    if (kind === 'typo')       url = await renderFinalCarte(theme, fmt);
+    else if (kind === 'infos') url = await renderFinalInfos(theme, fmt);
+    else {
+      let bmp = null;
+      const src = themeImage();                        // photo d'exemple RÉELLE du site (pas un nouvel asset)
+      if (src){ try { bmp = await loadImage(src); } catch (_){ bmp = null; } }
+      url = await renderFinalCustom(theme, fmt, bmp, false, null);   // withText:false → gabarit + photo d'exemple
+    }
+    img.src = url;
+    img.style.opacity = '1';
+  } catch (e){
+    /* gabarit indisponible → cadre laissé vide, pas d'erreur bloquante */
+  }
+}
+
+// Peint les 2 cards format (Post 4:5 / Story 9:16) dans le STYLE du thème sélectionné à l'étape 1.
+// Même moteur FINAL (theme, fmt) que la miniature — aucun nouvel asset. Canvas isolés → la preview
+// principale n'est pas touchée. Rafraîchi à chaque changement de thème (appelé depuis selectTheme).
+function paintFmtPreviews(){
+  const theme = currentCustomTheme, kind = currentKind;
+  document.querySelectorAll('#fmtRow .fmt').forEach(btn => {
+    const img = btn.querySelector('.fmt-prev__img');
+    if (!img) return;
+    const fmt = btn.dataset.fmt;
+    if (!theme){ img.removeAttribute('src'); img.style.opacity = '0'; return; }   // thème générique → cadre vide
+    (async () => {
+      try {
+        let url;
+        if (kind === 'typo')       url = await renderFinalCarte(theme, fmt);
+        else if (kind === 'infos') url = await renderFinalInfos(theme, fmt);
+        else {
+          let bmp = null; const src = themeImage();
+          if (src){ try { bmp = await loadImage(src); } catch (_){ bmp = null; } }
+          url = await renderFinalCustom(theme, fmt, bmp, false, null);
+        }
+        img.src = url; img.style.opacity = '1';
+      } catch (e){ img.style.opacity = '0'; }   // format absent de l'export → cadre vide, pas d'erreur
+    })();
+  });
 }
 
 function selectTheme(btn){
@@ -1944,8 +2000,9 @@ function selectTheme(btn){
 
   // Formats dispo : thème custom → ceux de son export ; sinon règle générique (story off en typo)
   setFmtAvailability(currentCustomTheme ? customThemeFormats(currentCustomTheme)
-                                        : (isTypo ? ['square','portrait'] : ['square','portrait','story']));
+                                        : (isTypo ? ['portrait'] : ['portrait','story']));
   renderHashtagsRow();   // rafraîchit les tags fantômes selon le nouveau thème (si aucun vrai tag)
+  paintFmtPreviews();    // aperçus des 2 cards format (Post/Story) dans le style du thème choisi
   renderStudio();
 }
 
@@ -2361,7 +2418,7 @@ function renderStudio(){
   // bandeau aperçu : sous-titre = format courant (le "en direct ·" est statique dans le markup)
   const mpSub = document.getElementById('mpSub');
   if (mpSub) {
-    const fmtLabel = { square: 'Post carré', portrait: 'Portrait 4:5', story: 'Story 9:16' };
+    const fmtLabel = { portrait: 'Post 4:5', story: 'Story 9:16' };
     mpSub.textContent = isCarousel ? ('Carrousel · ' + studioPhotos.length + ' photos') : (fmtLabel[currentFmt] || 'Post');
   }
 
@@ -2377,7 +2434,7 @@ function updateRecap(){
   const rf = document.getElementById('recap-format');
   const rc = document.getElementById('recap-caption');
   if (rt){ const sel = document.querySelector('#studio-unlocked .lelab-card.is-selected .tt'); rt.textContent = sel ? sel.textContent : '—'; }
-  if (rf){ const m = { square:'Post (carré)', portrait:'Portrait (4:5)', story:'Story (9:16)' }; rf.textContent = isCarouselActive() ? ('Carrousel (' + studioPhotos.length + ' photos)') : (m[currentFmt] || currentFmt); }
+  if (rf){ const m = { portrait:'Post (4:5)', story:'Story (9:16)' }; rf.textContent = isCarouselActive() ? ('Carrousel (' + studioPhotos.length + ' photos)') : (m[currentFmt] || currentFmt); }
   if (rc){
     const storyMode = currentKind !== 'typo' && currentFmt === 'story';
     const txt = storyMode
@@ -2708,7 +2765,7 @@ function restoreStudioDraft(draft){
 let studioPhotos = [];      // [{ bitmap, cache:{fmt:dataURL}, focal:{x,y}, url }]
 let studioPhotoIdx = 0;
 const STUDIO_MAX_PHOTOS = 10;
-const FMT_RATIO = { square:[1,1], portrait:[4,5], story:[9,16] };
+const FMT_RATIO = { portrait:[4,5], story:[9,16] };
 
 // Photo COMPLÈTE (non recadrée, downscalée) → dataURL pour l'aperçu CSS (cover + background-position = focal).
 function fullPhotoUrl(bitmap, maxEdge = 1280){
@@ -2728,7 +2785,7 @@ function photoHasSlack(p, inner){
 
 // Recadrage cover au ratio du format → dataURL JPEG (taille preview ; le 1080 final sera fait à la publication)
 function cropBitmap(bitmap, fmt, outW = 540, quality = 0.9, focal){
-  const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
+  const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.portrait;
   const tw = outW, th = Math.round(outW * rh / rw);
   const c = document.createElement('canvas'); c.width = tw; c.height = th;
   const ctx = c.getContext('2d');
@@ -2778,7 +2835,7 @@ function drawZoneText(ctx, text, zt, W, H){
 async function renderFinalCustom(theme, fmt, bitmap, withText, focal){
   const blk = customThemeFormat(theme, fmt);
   if (!blk) throw new Error('Format indisponible pour ce thème');
-  const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.square;
+  const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.portrait;
   const W = 1080, H = Math.round(W * rh / rw);
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const ctx = c.getContext('2d');
@@ -3055,7 +3112,7 @@ function renderStudioThumbs(){
 }
 
 function isCarouselActive(){
-  return currentKind === 'photo' && studioPhotos.length >= 2 && (currentFmt === 'square' || currentFmt === 'portrait');
+  return currentKind === 'photo' && studioPhotos.length >= 2 && currentFmt === 'portrait';
 }
 function studioSwipe(dir){
   if (!isCarouselActive()) return;
@@ -3817,7 +3874,7 @@ async function savePhotos(){
   sassyData.photos = data;
 }
 
-setFmtAvailability(currentKind === 'typo' ? ['square','portrait'] : ['square','portrait','story']);
+setFmtAvailability(currentKind === 'typo' ? ['portrait'] : ['portrait','story']);
 lastAutoCaption = '';   // caption vide par défaut → garde-fou anti-écrasement actif dès le départ
 renderStudio();
 goStep(1);
