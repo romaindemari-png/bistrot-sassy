@@ -632,9 +632,11 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-uname .d{width:7px;height:7px;border-radius:50%;background:#1A8F4C;box-shadow:0 0 0 3px rgba(26,143,76,.18);}
 .ig-id{font-size:11px;color:var(--gris-txt);font-weight:500;letter-spacing:.01em;}
 /* Barre de navigation studio (3 slots) — contrat unique desktop+mobile ; habillage responsive détaillé en étape B */
-.studio-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:20px;}
+/* colonnes : latéraux = largeur des boutons (jamais compressés), centre = reste flexible et CLIPPABLE → le stepper ne déborde jamais sur le CTA */
+.studio-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin-bottom:20px;}
 .studio-bar .bar-left{justify-self:start;}
-.studio-bar .bar-center{justify-self:center;min-width:0;}
+.studio-bar .bar-center{justify-self:center;min-width:0;overflow:hidden;}
+.studio-bar .bar-center .stepper{max-width:100%;}
 .studio-bar .bar-right{justify-self:end;}
 .studio-bar #studio-cross{display:inline-flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--ink);padding:8px;border-radius:8px;}
 .studio-bar #studio-cross:hover{background:var(--gris-card);}
@@ -652,6 +654,11 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   .studio-bar .step-dot .lbl{display:none;}
   .studio-bar .step-dot.active .lbl{display:block;font-size:15px;font-weight:800;color:var(--ink);}
   .studio-bar #studio-back{font-size:0;}                      /* flèche seule (le SVG garde ses 15px) */
+}
+/* DESKTOP INTERMÉDIAIRE (961–1200px) : colonne compose serrée par la preview permanente → on masque les libellés inactifs (dots + libellé actif seul) pour ne jamais chevaucher le CTA */
+@media(min-width:961px) and (max-width:1200px){
+  .studio-bar .step-dot .lbl{display:none;}
+  .studio-bar .step-dot.active .lbl{display:inline-block;}
 }
 /* Récap étape 4 — Publier */
 .recap-card{background:var(--card-bg);border:1px solid var(--bord);border-radius:14px;overflow:hidden;margin-top:4px;}
@@ -814,7 +821,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
   .compose{max-width:none;padding:20px 16px 60px;}
   /* ── BANDEAU "CINÉMA" (jaune LeLab+) ── */
   .mini-preview{
-    position:sticky;top:53px;z-index:35;cursor:pointer;overflow:hidden;
+    position:sticky;top:0;z-index:35;cursor:pointer;overflow:hidden;   /* 721–960px : pas de topbar-m → colle en haut (top:53px réintroduit en ≤720) */
     background:#FFF28C;padding:11px 16px;
     display:flex;align-items:center;gap:12px;
     border-bottom:2px solid rgba(0,0,0,0.08);
@@ -875,6 +882,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 }
 @media(max-width:720px){
   .sidebar{display:none;}
+  .mini-preview{top:53px;}   /* la topbar-m (sticky, 53px) réapparaît ≤720 → on dégage le bandeau sous elle */
   .topbar-m{
     display:flex;align-items:center;justify-content:space-between;
     background:var(--blanc);border-bottom:1px solid var(--bord);
@@ -1321,9 +1329,9 @@ body.authed #login-gate{display:none;}
             </div>
             <div class="bar-center">
               <div class="stepper">
-                <div class="step-dot active" onclick="goStep(1)"><span class="num">1</span><span class="lbl">Style</span></div>
+                <div class="step-dot active" onclick="goStep(1)"><span class="num">1</span><span class="lbl">Type</span></div>
                 <div class="step-line"></div>
-                <div class="step-dot" onclick="goStep(2)"><span class="num">2</span><span class="lbl">Contenu</span></div>
+                <div class="step-dot" onclick="goStep(2)"><span class="num">2</span><span class="lbl">Détails</span></div>
                 <div class="step-line"></div>
                 <div class="step-dot" onclick="goStep(3)"><span class="num">3</span><span class="lbl">Légende</span></div>
                 <div class="step-line"></div>
