@@ -1988,8 +1988,7 @@ function selectTheme(btn){
   } else {
     const lbl = document.getElementById('photoFieldLbl');
     if (lbl) lbl.textContent = "Texte sur l'habillage";
-    const img = themeImage();
-    if (img) document.getElementById('photoThumb').style.backgroundImage = `url('${img}')`;
+    // NB : l'aperçu photo (photo d'exemple + gabarit) est peint par renderStudio()→composeCustomPreview() ci-dessous.
   }
 
   // Changement de thème → légende remise à zéro (la prochaine génération auto repart propre)
