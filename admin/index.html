@@ -657,8 +657,9 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.5;}
 #igStatusSidebar .ig-disconnect{color:rgba(255,255,255,.6);}
 #igStatusSidebar .ig-disconnect:hover{color:#ff6b6b;}
 #igStatusSidebar .ig-status.off{width:100%;justify-content:center;background:transparent;border:1px solid rgba(255,255,255,.28);color:#fff;}   /* état "Connecter" lisible sur sombre */
-/* Bascule 720px : desktop → vignette dans la sidebar, tête du studio repliée */
-@media(min-width:721px){ .compose-head{display:none;} }
+/* Bascule 720px : desktop → vignette dans la sidebar, tête du studio repliée.
+   Spécificité #studio-unlocked (1,1,0) pour gagner sur la règle de base .compose-head{display:flex} définie plus loin dans le source. */
+@media(min-width:721px){ #studio-unlocked .compose-head{display:none;} }
 /* Barre de navigation studio (3 slots) — contrat unique desktop+mobile ; habillage responsive détaillé en étape B */
 /* colonnes : latéraux = largeur des boutons (jamais compressés), centre = reste flexible et CLIPPABLE → le stepper ne déborde jamais sur le CTA */
 .studio-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;margin-bottom:20px;}
