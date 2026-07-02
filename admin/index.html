@@ -533,25 +533,37 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
   .star-pulse{animation:none;}
 }
 
-/* format cards — aperçu à l'échelle réelle (Post 4:5 vs Story 9:16, story plus haute) + label */
-.fmt-row{display:flex;gap:14px;margin-top:14px;align-items:flex-end;}
+/* format — DESKTOP (>960px, preview permanente à côté) : pastilles compactes schématiques */
+.fmt-row{display:flex;gap:9px;margin-top:14px;}
 .fmt{
-  flex:1;border:1.5px solid var(--bord);border-radius:14px;padding:12px 12px 11px;
-  display:flex;flex-direction:column;align-items:center;gap:9px;
+  flex:1;border:1.5px solid var(--bord);border-radius:11px;padding:11px 9px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
   cursor:pointer;transition:all .15s;background:var(--blanc);
 }
 .fmt:hover{border-color:var(--jaune-bord);}
 .fmt.sel{border-color:var(--noir);background:var(--jaune);}
 .fmt.disabled{opacity:.3;pointer-events:none;}
-.fmt .fmt-prev{
-  width:100%;display:block;border-radius:8px;overflow:hidden;
-  background:#fff;box-shadow:inset 0 0 0 1px rgba(28,26,25,.10);
-}
-.fmt .fmt-prev--post{aspect-ratio:4/5;}
-.fmt .fmt-prev--story{aspect-ratio:9/16;}
-.fmt .fmt-prev__img{width:100%;height:100%;display:block;object-fit:cover;opacity:0;transition:opacity .35s ease;}
-.fmt .f-lbl{font-size:13px;font-weight:700;}
+.fmt .f-shape{border:2px solid var(--noir);border-radius:4px;}
+.fmt .pt{width:18px;height:24px;}
+.fmt .st{width:14px;height:24px;}
+.fmt .f-lbl{font-size:12px;font-weight:700;}
 .fmt .f-sub{font-size:10px;color:var(--gris-txt);}
+.fmt .fmt-prev{display:none;}   /* aperçu grande card = MOBILE uniquement (cf. @media 960 ci-dessous) */
+
+/* format — MOBILE (≤960px, pas de preview permanente) : grosses cards à l'échelle réelle (Post 4:5 / Story 9:16) */
+@media(max-width:960px){
+  .fmt-row{gap:14px;align-items:flex-end;}
+  .fmt{border-radius:14px;padding:12px 12px 11px;gap:9px;}
+  .fmt .f-shape{display:none;}
+  .fmt .f-lbl{font-size:13px;}
+  .fmt .fmt-prev{
+    display:block;width:100%;border-radius:8px;overflow:hidden;
+    background:#fff;box-shadow:inset 0 0 0 1px rgba(28,26,25,.10);
+  }
+  .fmt .fmt-prev--post{aspect-ratio:4/5;}
+  .fmt .fmt-prev--story{aspect-ratio:9/16;}
+  .fmt .fmt-prev__img{width:100%;height:100%;display:block;object-fit:cover;opacity:0;transition:opacity .35s ease;}
+}
 
 /* content zone */
 .field{margin-top:14px;}
@@ -1325,8 +1337,8 @@ body.authed #login-gate{display:none;}
 
             <div class="field"><div class="field-lbl"><span>Format</span></div>
               <div class="fmt-row" id="fmtRow">
-                <button class="fmt sel" data-fmt="portrait" onclick="selectFmt(this)"><span class="fmt-prev fmt-prev--post"><img class="fmt-prev__img" alt="" loading="lazy"></span><span class="f-lbl">Post</span><span class="f-sub">4:5</span></button>
-                <button class="fmt" data-fmt="story" onclick="selectFmt(this)"><span class="fmt-prev fmt-prev--story"><img class="fmt-prev__img" alt="" loading="lazy"></span><span class="f-lbl">Story</span><span class="f-sub">9:16</span></button>
+                <button class="fmt sel" data-fmt="portrait" onclick="selectFmt(this)"><span class="f-shape pt"></span><span class="fmt-prev fmt-prev--post"><img class="fmt-prev__img" alt="" loading="lazy"></span><span class="f-lbl">Post</span><span class="f-sub">4:5</span></button>
+                <button class="fmt" data-fmt="story" onclick="selectFmt(this)"><span class="f-shape st"></span><span class="fmt-prev fmt-prev--story"><img class="fmt-prev__img" alt="" loading="lazy"></span><span class="f-lbl">Story</span><span class="f-sub">9:16</span></button>
               </div>
             </div>
 
