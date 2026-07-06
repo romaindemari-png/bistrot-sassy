@@ -1074,6 +1074,7 @@ body.authed #login-gate{display:none;}
 /* ════ STUDIO LeLab+ — compléments (montée de version lelab-studio) ════ */
 .compose-head{display:flex;justify-content:flex-end;margin-bottom:14px;min-height:8px;}
 .compose-head:empty{display:none;}
+.compose-head:has(#igStatusStudio:empty){display:none;}   /* tête vidée en desktop (cf. syncStudioIgMount) → 2e garde indépendante de la media-query */
 
 .adaptive-note{font-size:12px;color:var(--gris-txt);background:var(--gris-card);border-radius:10px;
   padding:10px 13px;margin-bottom:14px;display:flex;align-items:center;gap:9px;}
@@ -2218,8 +2219,7 @@ async function loadInstagramStatus(){
     if (res.ok) status = await res.json();
   } catch (e){ /* silencieux → affiché comme non connecté */ }
   igStatus = status;
-  const s1 = document.getElementById('igStatusStudio');
-  if (s1) s1.innerHTML = igStatusHTML(status);
+  syncStudioIgMount();   // tête studio (#igStatusStudio) : rempli en mobile (≤720), vidé en desktop → :empty le masque (double garde)
   const s2 = document.getElementById('igStatusPublier');
   if (s2) s2.innerHTML = igStatusHTML(status);
   const s3 = document.getElementById('igStatusSidebar');
@@ -2229,6 +2229,22 @@ async function loadInstagramStatus(){
     ? 'Votre compte Instagram est connecté. Vous pouvez publier directement depuis votre espace.'
     : 'Connectez votre compte Instagram professionnel pour publier directement depuis votre espace.';
 }
+
+// Tête studio (#igStatusStudio) = mount MOBILE de la vignette. En desktop (≥721), la vignette vit
+// dans la sidebar (#igStatusSidebar) : on laisse la tête VIDE → .compose-head:empty{display:none} la masque,
+// double garde avec @media(min-width:721px). Évite toute vignette en double / holder qui occupe l'espace.
+function syncStudioIgMount(){
+  const s1 = document.getElementById('igStatusStudio');
+  if (!s1) return;
+  const mobile = window.matchMedia('(max-width:720px)').matches;
+  s1.innerHTML = mobile ? igStatusHTML(igStatus) : '';   // desktop → vide → masqué par :empty
+}
+// Redimensionnement : réévalue le mount tête (sinon le double réapparaît en passant desktop↔mobile sans recharger).
+let _igMountResizeT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_igMountResizeT);
+  _igMountResizeT = setTimeout(syncStudioIgMount, 150);   // débounce léger
+});
 
 async function disconnectInstagram(){
   try {
