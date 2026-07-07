@@ -200,6 +200,12 @@
   width: 100%; height: 100%; display: block; object-fit: cover;
   opacity: 0; transition: opacity .35s ease;
 }
+/* DESKTOP (≥961px) : la preview permanente (.preview-pane) est affichée à droite →
+   la mini-vignette ferait doublon, on la masque. En mobile (≤960px) la preview passe
+   en tiroir → la mini reste visible. Rendu JS (paintThemeMini) inchangé. */
+@media(min-width:961px){
+  .theme-mini { display: none; }
+}
 .lelab-card--mini .lelab-card__title { text-align: center; }
 
 /* Bouton enregistrer */
