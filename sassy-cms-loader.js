@@ -44,17 +44,38 @@
     document.querySelectorAll('.' + className).forEach(el => { el.setAttribute(attr, value); });
   }
 
-  function renderPlats(items) {
-    if (!items || !items.length) return '';
-    return items.map(p => `
-      <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1)">
-        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px">
-          <span style="font-weight:600">${p.nom}</span>
-          <span style="opacity:0.7; white-space:nowrap">${p.prix}</span>
-        </div>
-        <p style="margin:2px 0 0; opacity:0.6; font-size:0.85em">${p.description}</p>
-      </div>
-    `).join('');
+  function renderCarte(carte) {
+    if (!carte) return '';
+    // Categories possibles, dans l'ordre d'affichage + libelles
+    var ORDER = [
+      ['entrees',  'Entrées'],
+      ['poissons', 'Poissons'],
+      ['viandes',  'Viandes'],
+      ['plats',    'Plats'],
+      ['legumes',  'Légumes'],
+      ['vins',     'Vins'],
+      ['desserts', 'Desserts']
+    ];
+    var out = ORDER.map(function (cat) {
+      var items = carte[cat[0]];
+      if (!items || !items.length) return '';   // categories reelles uniquement
+      var plats = items.map(function (p) {
+        var desc = p.description ? '<p class="plat-desc">' + p.description + '</p>' : '';
+        return '<div class="ardoise-plat">'
+             +   '<div class="plat-head">'
+             +     '<span class="plat-nom">' + (p.nom || '') + '</span>'
+             +     '<span class="plat-dots" aria-hidden="true"></span>'
+             +     '<span class="plat-prix">' + (p.prix || '') + '</span>'
+             +   '</div>'
+             +   desc
+             + '</div>';
+      }).join('');
+      return '<div class="ardoise-cat">'
+           +   '<h3 class="ardoise-cat-title">' + cat[1] + '</h3>'
+           +   plats
+           + '</div>';
+    }).join('');
+    return out || '<p class="ardoise-empty">La carte arrive très bientôt.</p>';
   }
 
   /* ══════════════════════════════════════════════════
@@ -160,11 +181,7 @@
      ══════════════════════════════════════════════════ */
   const carte = await loadJSON('/_data/carte.json');
   if (carte) {
-    setHTML('cms-entrees',  renderPlats(carte.entrees));
-    setHTML('cms-viandes',  renderPlats(carte.viandes));
-    setHTML('cms-vins',     renderPlats(carte.vins));
-    setHTML('cms-poissons', renderPlats(carte.poissons));
-    setHTML('cms-desserts', renderPlats(carte.desserts));
+    setHTML('cms-carte', renderCarte(carte));
   }
 
   /* ══════════════════════════════════════════════════
