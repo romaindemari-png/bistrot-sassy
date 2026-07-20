@@ -485,22 +485,16 @@ section.full-w {
   position: relative;
 }
 .carte-col { display: flex; flex-direction: column; gap: 2.5rem; }
-.carte-col > div { position: relative; }
-.carte-col .carte-item-name,
-.carte-col .carte-item-sub { position: relative; z-index: 1; }
 .carte-col.right { margin-top: 4rem; }
 
 .carte-item-num {
-  position: absolute;
-  top: 0;
-  right: 0;
+  display: block;
   font-family: 'Elms', sans-serif;
-  font-size: clamp(4rem, 8vw, 9rem);
-  line-height: 1;
-  color: var(--cream);
-  opacity: .06;
-  pointer-events: none;
-  z-index: 0;
+  font-size: .7rem;
+  letter-spacing: .15em;
+  color: var(--yellow);
+  opacity: .8;
+  margin-bottom: .3rem;
 }
 .carte-item-name {
   font-family: 'Canela', Georgia, serif;
@@ -933,14 +927,6 @@ footer {
 .events-empty { grid-column:1/-1; text-align:center; padding:60px 20px; color:#2050E7; opacity:0.4; font-family:'Canela',serif; font-size:1.4rem; }
 @media(max-width:700px){ #events{padding:60px 0 80px;} .events-header{flex-direction:column;gap:8px;padding:0 20px;margin-bottom:36px;} .events-grid{padding:0 20px;grid-template-columns:1fr;gap:16px;} }
 
-/* ── Marquee défilant (CSS pur, zéro JS) ── */
-.marquee { overflow: hidden; background: #2050E7; padding: .9rem 0; white-space: nowrap; }
-.marquee-track { display: inline-block; white-space: nowrap; animation: marquee 30s linear infinite; }
-.marquee:hover .marquee-track { animation-play-state: paused; }
-.marquee span { font-family: 'Canela', Georgia, serif; font-weight: 900; font-size: clamp(1.2rem, 2.5vw, 2rem); color: #FAF1E2; padding: 0 .4rem; }
-@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-33.333%); } }
-@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
-
 /* ── Bloc événements masqué (réactivable via config.json) ── */
 #events { display: none; }
 
@@ -1079,15 +1065,6 @@ html.lenis, html.lenis body { height: auto; }
     </div>
   </div>
 </section>
-
-<!-- ── Marquee ── -->
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <span>cuisine maison · ardoise du jour · camas · fait maison · bistronomique · marseille 5e · </span>
-    <span>cuisine maison · ardoise du jour · camas · fait maison · bistronomique · marseille 5e · </span>
-    <span>cuisine maison · ardoise du jour · camas · fait maison · bistronomique · marseille 5e · </span>
-  </div>
-</div>
 
 <!-- ============================
      CARTE
