@@ -1,12 +1,21 @@
 # BACKLOG — LeLab / Studio
 
 > Fichier de suivi. À terme il vit dans le master `lestud-template-food` (doc partagée).
-> Dernière mise à jour : session refonte studio Sassy.
+> Dernière mise à jour : session refonte front Sassy (scroll Lenis/GSAP + carte ardoise).
 
 ## Contexte repos (attention à la divergence)
-- **`lestud-template-food`** = MASTER / source canonique famille food. A l'overlay cinéma. N'a PAS la refonte studio de cette session.
-- **`bistrot-sassy`** = fork de TEST + démo Meta. A la refonte studio de cette session. N'a PAS l'overlay cinéma.
-- **`masamadre-lelab`** = fork CLIENT (Masa). A l'overlay cinéma. N'a PAS la refonte studio de cette session.
+- **`lestud-template-food`** = MASTER / source canonique famille food. A l'overlay cinéma. N'a PAS la refonte studio ni la refonte front de ces sessions.
+- **`bistrot-sassy`** = fork de TEST + démo Meta. A la refonte studio **et la refonte front** (scroll Lenis/GSAP, carte ardoise). N'a PAS l'overlay cinéma.
+- **`masamadre-lelab`** = fork CLIENT (Masa). A l'overlay cinéma. N'a PAS la refonte studio ni la refonte front de ces sessions.
+
+## Fait — session front (scroll + ardoise, en prod sur Sassy)
+- **Smooth scroll Lenis** — desktop uniquement (`innerWidth >= 768`), désactivé si `prefers-reduced-motion` ; couplé à `ScrollTrigger.update`.
+- **GSAP ScrollTrigger** branché : reveals au scroll (titres `.s-title`, labels `.s-label`), stagger photos (`#about`, `#galerie`), horaires (`.horaires-row`) + infos contact (`.ci-block`), révélation du bloc carte. **Hero reveal au load** (clip-path titre, pas de ScrollTrigger). Tout sous garde `!prefers-reduced-motion`.
+- **Section `#carte` refaite en ardoise littérale** : layout une colonne, leader dots (`.plat-dots`), tampon « cette semaine », auto-masquage des catégories vides. Rendu par `renderCarte()` dans `sassy-cms-loader.js` (injecté dans `#cms-carte`).
+- **Section `#events` masquée** (`display:none`), réactivable via `_data/config.json` (`blocs.optionnels`).
+- **Marquee supprimé.**
+- **Année footer dynamique** (`#yr`).
+- **`<meta name="color-scheme" content="light">`** ajoutée.
 
 ## Fait cette session (en prod sur Sassy)
 - Formats : carré supprimé → **Post 4:5 (1080×1350)** + **Story 9:16** uniquement.
