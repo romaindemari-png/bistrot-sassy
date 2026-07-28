@@ -63,7 +63,12 @@ exports.handler = async (event) => {
     }
 
     // 2. Encoder le nouveau contenu en base64
-    const newContent = JSON.stringify(data, null, 2);
+    /* ⚠️ LE SAUT DE LIGNE FINAL COMPTE. Sans lui, CHAQUE sauvegarde du client
+       produit un faux changement sur la derniere ligne (« \ No newline at end of
+       file ») : son historique git se remplit de diffs qui ne disent rien, et
+       toute comparaison octet a octet avec un fichier ecrit a la main echoue.
+       Constate sur la premiere ecriture reelle de l'admin de Georges. */
+    const newContent = JSON.stringify(data, null, 2) + '\n';
     const encoded = Buffer.from(newContent).toString('base64');
 
     // 3. Écrire le fichier dans GitHub via Git Gateway
