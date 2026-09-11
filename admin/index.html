@@ -3183,6 +3183,28 @@ function isAnnonceTheme(t){ return !!(t && t.type === 'annonce'); }
 // Mode IA de la zone texte : le bouton ✦ change de geste selon le thème sélectionné.
 function infosMode(){ return isAnnonceTheme(currentCustomTheme) ? 'annonce' : 'infos'; }
 
+/* ═══ « MODE STORY » — UNE SEULE DÉFINITION, ET ELLE EST POSITIVE ═══════════════════════════════
+   Le « mode story » ne veut PAS dire « le format story ». Il veut dire : le TEXTE DU POST SE PEINT
+   SUR L'IMAGE, donc il n'y a ni légende longue ni hashtags. C'est vrai du genre PHOTO, et de lui
+   seul : la carte, le plat du jour, les infos et l'annonce ont chacun leur propre machinerie de
+   texte — au format story comme au format portrait — et gardent une légende Instagram normale.
+
+   🔴 CETTE RÈGLE ÉTAIT ÉCRITE TROIS FOIS, DE TROIS FAÇONS QUI NE DISAIENT PAS LA MÊME CHOSE :
+        renderStudio         : kind ∉ {typo, infos} && story   → juste
+        generateCaption      : kind ≠ typo && story            → l'ANNONCE y tombait
+        generate-caption.mjs : format === 'story'              → l'annonce ET la carte y tombaient
+      D'où les deux symptômes : sur une annonce en story, l'IA écrivait dans #storyOverlay (un champ
+      MASQUÉ, que l'aperçu peint quand même sur le visuel → le DOUBLON) au lieu de la légende ; et
+      sur une carte en story, le serveur répondait une accroche de 10 mots, sans hashtags, en guise
+      de légende Instagram.
+   ⚠️ FORMULÉE EN POSITIF, PAS PAR EXCLUSIONS. « Tout sauf typo et infos » est une liste à tenir à
+      jour : le jour où un 4e genre apparaît, il tombe du mauvais côté en silence. « photo » dit ce
+      que la règle veut dire.
+   ⚠️ LE SERVEUR NE LA RECALCULE PLUS. Il la reçoit (`mode: 'story'`) : une règle, un endroit.
+   ⚠️ NON TOUCHÉ : le `const isStory = currentFmt === 'story'` de la PUBLICATION, qui parle du
+      media_type Instagram STORIES. Autre concept — c'est la confusion qu'on vient de défaire. */
+function studioStoryMode(){ return currentKind === 'photo' && currentFmt === 'story'; }
+
 /* ⚠️ KIND_META est SUPPRIMÉ. Il portait `label` et `sub` pour chaque kind — un DOUBLON des libellés
    de themes.json — et sa seule lecture (`const meta = KIND_META[…]`) n'était JAMAIS utilisée : le
    picto vient de STUDIO_CARD_PICTOS, le nom et le sous-titre viennent du thème. C'étaient des
@@ -3715,8 +3737,8 @@ async function generateCaption(btn, mode){
   if (btn){ btn.disabled = true; btn.classList.add('loading'); if (txtEl) txtEl.textContent = iaLoadingLabel(btn.dataset.iaKind); }
   // infos/annonce → texte du visuel #infosText ; story photo → #storyText ; story infos legacy → #storyOverlay ; sinon légende #caption
   const isInfos = mode === 'infos' || isAnnonce;   // même cible, même bornage — seul le prompt diffère
-  const isPhotoStory = currentKind === 'photo' && currentFmt === 'story' && !!(customThemeFormat(currentCustomTheme, currentFmt) || {}).zoneTexte;
-  const isStory = !isInfos && currentKind !== 'typo' && currentFmt === 'story';
+  const isPhotoStory = studioStoryMode() && !!(customThemeFormat(currentCustomTheme, currentFmt) || {}).zoneTexte;
+  const isStory = !isInfos && studioStoryMode();   // LA règle, partagée avec renderStudio (cf. studioStoryMode)
   const targetEl = document.getElementById(isInfos ? 'infosText' : (isPhotoStory ? 'storyText' : (isStory ? 'storyOverlay' : 'caption')));
   const prevPh = targetEl ? targetEl.placeholder : '';
   if (targetEl){ targetEl.disabled = true; targetEl.classList.add('loading'); targetEl.value = ''; targetEl.placeholder = '✦ Génération en cours…'; }
@@ -3765,7 +3787,11 @@ async function generateCaption(btn, mode){
     // Annonce : contexte = nom + adresse. PAS d'horaires — une annonce n'en parle pas forcément,
     // et les lui donner l'inciterait à les caser (« fermé jeudi, sinon ouvert de 12h à 22h » = bruit).
     if (annonceTheme) reqBody.adresse = gen.adresse || '';
+    /* LE GESTE EST DÉCLARÉ, PAS DEVINÉ. `mode` dit au serveur CE QU'ON LUI DEMANDE ; sans lui, il
+       le re-dérivait du format et se trompait sur l'annonce comme sur la carte (cf.
+       studioStoryMode). Absence de mode = légende Instagram normale. */
     if (isInfos) reqBody.mode = isAnnonce ? 'annonce' : 'infos';   // rédaction du texte du visuel (pas la légende)
+    else if (isStory) reqBody.mode = 'story';                      // accroche courte peinte SUR la photo
     const res = await fetch('/.netlify/functions/generate-caption', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -3852,7 +3878,7 @@ function hideCustomLayers(){
 // Texte affiché uniquement sur la 1ʳᵉ slide (idx 0) — cohérent avec la publication carrousel.
 // Texte overlay cuit dans la photo (zoneTexte) : story photo → #storyText (édité étape 3) ; sinon → #photoTitle (titre post étape 2).
 function studioOverlayText(){
-  if (currentKind === 'photo' && currentFmt === 'story'){
+  if (studioStoryMode()){
     return (document.getElementById('storyText') || {}).value || '';
   }
   return (document.getElementById('photoTitle') || {}).value || '';
@@ -4007,7 +4033,7 @@ function renderStudio(){
     }
   }
   // Story : overlay-texte (photo only) vs plein cadre (toute story)
-  const storyMode = currentKind !== 'typo' && currentKind !== 'infos' && currentFmt === 'story';
+  const storyMode = studioStoryMode();   // LA règle, partagée avec generateCaption (cf. studioStoryMode)
   const screen = document.querySelector('#studio-unlocked .phone-screen');
   if (screen) screen.classList.toggle('story', currentFmt === 'story');   // plein cadre pour TOUT story (photo + carte/infos)
 
@@ -4019,7 +4045,7 @@ function renderStudio(){
   show('photoTitleField', hasZoneTexte);   // "Texte sur l'habillage" (POST photo) : format à zoneTexte, JAMAIS en story (là le texte = #storyText à l'étape 3)
   show('captionField', true);       // toujours visible → le bouton ✦ reste accessible (y compris en story)
   show('captionBody', !storyMode);  // textarea + hashtags masqués en story
-  show('storyTextField', customMode && currentKind === 'photo' && currentFmt === 'story' && !!(customThemeFormat(currentCustomTheme, currentFmt) || {}).zoneTexte);   // #storyText : story photo AVEC zoneTexte uniquement (sinon champ trompeur, ex. thème photo sans zoneTexte story)
+  show('storyTextField', customMode && studioStoryMode() && !!(customThemeFormat(currentCustomTheme, currentFmt) || {}).zoneTexte);   // #storyText : story photo AVEC zoneTexte uniquement (sinon champ trompeur, ex. thème photo sans zoneTexte story)
   show('captionStoryNote', storyMode);
   const capLbl = document.getElementById('captionLbl');
   if (capLbl) capLbl.textContent = storyMode ? 'Texte de la story' : 'Légende';

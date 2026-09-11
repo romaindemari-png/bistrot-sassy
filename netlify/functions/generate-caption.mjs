@@ -72,7 +72,22 @@ export const handler = async (event) => {
 
   const isInfos = body.mode === 'infos';                            // rédaction du TEXTE DU VISUEL (infos)
   const isAnnonce = body.mode === 'annonce';                        // MISE EN FORME du texte du visuel (annonce)
-  const isStory = !isInfos && !isAnnonce && body.format === 'story';
+  /* 🔴 `isStory` SE DÉDUISAIT DU FORMAT, ET C'ÉTAIT FAUX :
+           const isStory = !isInfos && !isAnnonce && body.format === 'story';
+     « Format story » ne veut pas dire « texte peint sur l'image ». Seul le genre PHOTO est dans ce
+     cas ; la carte, le plat du jour, les infos et l'annonce ont leur propre machinerie de texte et
+     gardent une légende Instagram normale, story ou pas. Conséquences mesurées :
+       · ANNONCE en story → cette branche gagnait, `isAnnonceCaption` devenait MORT-NÉ, et le
+         modèle répondait une accroche de 10 mots au lieu de la légende de l'annonce ;
+       · CARTE en story → même branche, donc une légende de 10 mots et AUCUN hashtag.
+     ⚠️ ON NE LA RECALCULE PLUS ICI. Le client SAIT quel geste il demande — il le DÉCLARE, comme il
+        déclarait déjà 'infos' et 'annonce'. La règle vit en UN endroit (studioStoryMode, côté
+        client) au lieu de trois qui divergeaient. Le format reste dans le corps de la requête : il
+        sert au LIBELLÉ du prompt, plus à décider du geste.
+     ⚠️ CHANGEMENT DE CONTRAT : cette fonction et le client qui l'appelle doivent voyager ENSEMBLE.
+        Un serveur neuf avec un client ancien perdrait l'accroche des stories photo (aucun `mode`
+        envoyé → légende normale) ; l'inverse rétablirait les deux bugs. */
+  const isStory = body.mode === 'story';                            // accroche courte peinte SUR la photo
   const isAnnonceCaption = !isAnnonce && !isStory && kind === 'annonce';  // LÉGENDE d'une annonce
   const isInfosCaption = !isInfos && !isStory && kind === 'infos';  // LÉGENDE d'un post infos → sobre & utile
 
