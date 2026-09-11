@@ -137,6 +137,56 @@ Le site ne les connaît pas. Les retirer des tokens obligerait à repeindre le c
 — ce qui est souhaitable, mais c'est le **repli** qu'on toucherait, donc à faire avec les mêmes
 précautions que le reste.
 
+## 🔴 LE FORMAT `carre` EST DÉCLARÉ SUR LES SIX THÈMES ET INACCESSIBLE — décision reportée
+
+*(constaté le 11/09/2026, au bout v2-débordement. Tranché : on ne touche à rien avant le RDV.)*
+
+⚠️ **LE CONTRÔLE DU MOTEUR v2 RESTE ROUGE À CAUSE DE ÇA, ET CE ROUGE EST COMPRIS.** À ne pas
+confondre avec un garde-fou qu'on laisse pourrir :
+
+    5. débordement · carre   sassy-dujour   ROUGE   dépassement 203px — coupable « pied »
+    5. débordement · portrait                VERT
+    5. débordement · story                   VERT
+
+### Ce qui est mesuré
+
+**Le carré est structurellement INACCESSIBLE dans l'admin — deux barrières indépendantes :**
+
+    const FMT_KEY_MAP = { portrait:'portrait', story:'story' };   ← borne customThemeFormats()
+    #fmtRow : DEUX boutons écrits EN DUR (data-fmt="portrait" et "story")
+    « carre » dans admin/index.html : 0 occurrence sur 7 100 lignes
+
+Ce n'est donc **pas un défaut d'affichage** qui pourrait se corriger un jour et rouvrir le format :
+c'est un format **retiré du produit** (cf. plus haut, « Formats : carré supprimé → Post 4:5 +
+Story 9:16 uniquement »).
+
+**L'origine est ANTÉRIEURE au re-base**, et elle vient du master : `2a70a97` / `990e86a`, les
+commits qui ont créé les thèmes custom. Le `themes.json` du master la porte aussi. Le re-base n'a
+rien introduit — il a apporté deux thèmes de plus qui portent le même vestige.
+
+**Et ce n'est pas un cas `dujour` : LES SIX THÈMES sont concernés.**
+
+| thème | déclare | mort |
+|---|---|---|
+| `sassy-carte` · `dujour` · `photo` · `infos` · `annonce` · `event` | `carre`, `portrait`, `story` | **`carre`** |
+
+Soit **six formats morts et six habillages carrés** générés, versionnés et servis pour rien
+(~100 Ko).
+
+### Pourquoi on ne réduit PAS le rendu
+
+Le débordement de `dujour` en carré pourrait se « corriger » en réduisant le corps des cartes ou en
+limitant à 3 plats. **Ce serait abîmer le rendu pour un cas qui n'arrive jamais** — personne ne peut
+choisir ce format. Le vrai correctif est de retirer la déclaration ; supprimer un format que
+personne ne peut choisir est une **correction de cohérence**, pas un compromis de mise en page.
+
+### À faire, après le RDV
+
+- [ ] retirer `carre` des **six** déclarations de `themes.json`
+- [ ] décider du sort des **six `sassy-*-carre.png`** devenus orphelins — à grouper avec le redessin
+      des 12 gabarits
+- [ ] ⚠️ **et le remonter au master**, qui porte le même vestige sur ses six thèmes
+
 ## ⚠️ MOTIF — UNE SONDE QUI NE COUVRE QU'UN CAS MENT PAR OMISSION
 
 *(constaté le 11/09/2026, sonde 5 du contrôle v2)*
