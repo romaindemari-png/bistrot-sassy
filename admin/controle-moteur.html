@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contrôle du moteur v2 — Bistrot Sassy</title>
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+  CONTRÔLE DE NON-RÉGRESSION DU MOTEUR v2 — À PASSER AVANT TOUT COMMIT
+  qui touche `admin/moteur-v2.js` ou `client-tokens.js`.
+  ══════════════════════════════════════════════════════════════════════════
+
+  ⚠️ POURQUOI CETTE PAGE EXISTE. Le repli canvas rend toute panne du v2 MUETTE :
+     si la rasterisation échoue, `renderFinalCarte` retombe sur `paintCarte` et
+     publie une image parfaitement plausible — mais dans la typo du back-office
+     et AVEC le bandeau GABARIT. Chez Georges, le 31/07, deux lignes parasites
+     ont fait publier en canvas dégradé jusqu'à ce que le CLIENT le voie.
+
+  ⚠️ CE QUE CETTE PAGE FAIT DE DIFFÉRENT : elle appelle le rasteriseur
+     DIRECTEMENT, jamais `renderFinalCarte` — donc SANS REPLI. Une erreur
+     remonte au lieu d'être avalée.
+
+  ⚠️ ELLE NE DÉPEND D'AUCUN GLOBAL DE L'ADMIN. Elle lit `/_data` elle-même et
+     charge `client-tokens.js` + `moteur-v2.js`. On peut l'ouvrir seule, sans
+     être connecté — elle teste exactement ce qui casse en silence.
+
+  ⚠️ CHAQUE SONDE A ÉTÉ ÉPROUVÉE AU ROUGE AVANT D'ÊTRE CRUE AU VERT. Une sonde
+     qui n'a jamais rien trouvé est une sonde cassée. Le détail de chaque
+     épreuve est écrit au-dessus de la sonde concernée.
+
+  Ouvrir : /admin/controle-moteur.html
+  ══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+body{margin:0;background:#211f1e;color:#FAF1E2;padding:20px 18px 60px;
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif}
+h1{font-size:19px;margin:0 0 4px;color:#FFF08B}
+p.sub{margin:0 0 18px;font-size:13px;opacity:.75;max-width:76ch}
+#verdict{font-size:16px;font-weight:700;padding:14px 16px;border-radius:10px;margin-bottom:18px;background:#333130}
+#verdict.ok{background:#1e4620}#verdict.ko{background:#5a1f1a}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:22px}
+th,td{padding:9px 8px;border-bottom:1px solid rgba(250,241,226,.14);text-align:left;vertical-align:top}
+th{opacity:.6;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+b.ok{color:#a8d17a}b.ko{color:#ff9b8a}b.na{color:#c8bfae}
+code{background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px;font-size:12px}
+.vign{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:26px}
+.vign figure{margin:0;width:150px}
+.vign img{width:100%;display:block;border-radius:6px;background:#333}
+.vign figcaption{font-size:11px;opacity:.7;margin-top:5px}
+.note{font-size:12.5px;opacity:.8;max-width:80ch;margin:0 0 14px}
+</style></head><body>
+
+<h1>Contrôle du moteur v2 — Bistrot Sassy</h1>
+<p class="sub">Le rasteriseur est appelé <b>directement, sans repli</b> : une erreur remonte au lieu
+d'être avalée par le canvas. Chaque rendu est ensuite jugé sur des signatures qui ont toutes été
+<b>éprouvées au rouge</b>. À passer avant tout commit touchant <code>admin/moteur-v2.js</code> ou
+<code>client-tokens.js</code>.</p>
+
+<div id="verdict">Contrôle en cours…</div>
+<table id="res"><thead><tr><th>Sonde</th><th>Thème</th><th>Verdict</th><th>Mesure</th></tr></thead><tbody></tbody></table>
+<div class="vign" id="vign"></div>
+
+<script src="/client-tokens.js"></script>
+<script src="/admin/moteur-v2.js"></script>
+<script>
+const T = document.querySelector('#res tbody');
+const lignes = [];
+function dire(sonde, theme, ok, mesure){
+  lignes.push({ok});
+  const cls = ok === null ? 'na' : (ok ? 'ok' : 'ko');
+  const mot = ok === null ? 'N/A' : (ok ? 'VERT' : 'ROUGE');
+  T.insertAdjacentHTML('beforeend',
+    '<tr><td>'+sonde+'</td><td><code>'+(theme||'—')+'</code></td>'+
+    '<td><b class="'+cls+'">'+mot+'</b></td><td>'+mesure+'</td></tr>');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SONDE 1 — « Y A-T-IL SEULEMENT QUELQUE CHOSE À TESTER ? »
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ ZÉRO THÈME EN v2 ⇒ ROUGE, JAMAIS VERT. C'est le piège le plus bête et le
+      plus probable : un contrôle qui ne trouve rien à faire affiche « tout va
+      bien ». Il dirait vert le jour où un `template` disparaît de themes.json —
+      exactement l'accident qu'on veut voir.
+   ÉPROUVÉE AU ROUGE : c'est son état AUJOURD'HUI — aucun thème ne déclare
+   `template`, la page est rouge, et c'est le comportement attendu.
+   ══════════════════════════════════════════════════════════════════════════ */
+function sondeInventaire(themes){
+  const v2 = themes.filter(t => t.template);
+  dire('1. inventaire', null, v2.length > 0,
+    v2.length ? (v2.length + ' thème(s) en v2 : ' + v2.map(t=>t.id).join(', '))
+              : '<b class="ko">aucun thème ne déclare <code>template</code> — rien à tester</b>');
+  return v2;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SONDE 2 — LE BANDEAU « GABARIT » A-T-IL DISPARU ?
+   ══════════════════════════════════════════════════════════════════════════
+   C'est la sonde la plus directe de l'objectif : le template v2 peint son PROPRE
+   fond et n'utilise PAS le PNG d'habillage. Si le bandeau réapparaît, c'est que
+   le PNG a été dessiné — donc que le repli canvas a servi.
+
+   ⚠️ SIGNATURE = UNE EMPREINTE, PAS UN SEUIL CALIBRÉ À LA MAIN. Le calque
+      gabarit rend TOUJOURS la même dominante dans les 4,5 % du bas :
+      rgb(211,203,191), à 95-97 % de la bande — relevé sur les DOUZE fichiers
+      concernés, dans les trois formats. Et son texte est CENTRÉ (x de 0,36 à
+      0,64), là où un aplat de design occupe toute la largeur.
+
+   ⚠️ ÉPROUVÉE AU ROUGE, ET LA PREMIÈRE VERSION MENTAIT. Une version antérieure
+      jugeait sur « un écart de luminance entre le bas et la zone au-dessus » :
+      elle donnait 15/18 et déclarait GABARIT les trois `sassy-annonce`, dont le
+      bas est un aplat bleu plein cadre parfaitement légitime. Corrigée, testée
+      sur les DIX-HUIT habillages du dépôt : 18/18.
+        · 12 vrais gabarits (carte, infos, photo, event × 3 formats) → ROUGE
+        · 6 propres (dujour, annonce × 3 formats)                   → VERT
+   ══════════════════════════════════════════════════════════════════════════ */
+const GRIS_GABARIT = [211,203,191];
+function porteBandeauGabarit(ctx, W, H){
+  const y0 = Math.floor(H * 0.955);
+  const d = ctx.getImageData(0, y0, W, H - y0).data;
+  const compte = new Map(); let sombres = [];
+  for (let i = 0; i < d.length; i += 4){
+    const k = d[i] + ',' + d[i+1] + ',' + d[i+2];
+    compte.set(k, (compte.get(k) || 0) + 1);
+    if ((d[i] + d[i+1] + d[i+2]) / 3 < 150) sombres.push(((i / 4) % W) / W);
+  }
+  let dom = null, n = 0;
+  compte.forEach((v, k) => { if (v > n){ n = v; dom = k; } });
+  const rgb = dom.split(',').map(Number);
+  const proche = Math.max(...rgb.map((v, i) => Math.abs(v - GRIS_GABARIT[i]))) <= 6;
+  const part = n / (d.length / 4);
+  const centre = sombres.length > 0 && (Math.max(...sombres) - Math.min(...sombres)) < 0.5;
+  return { gabarit: proche && part > 0.5 && centre, dom: rgb, part, centre };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SONDE 3 — LES POLICES DE MARQUE SONT-ELLES RÉELLEMENT APPLIQUÉES ?
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ LE PIÈGE iOS N°1, ET IL EST MUET. Un SVG en `data:` URI est un document
+      isolé : sans les @font-face EMBARQUÉES, Safari rend en police système SANS
+      AUCUNE ERREUR. Le seul moyen de le prendre en flagrant délit est de
+      rasteriser DEUX FOIS — avec et sans le socle CSS — et de comparer l'encre.
+   ÉPROUVÉE : le même protocole a donné 12 962 px contre 15 521 px sur le rendu
+   du bout 1, soit 16,5 % d'écart. Identiques ⇒ la police n'a pas été prise.
+   ══════════════════════════════════════════════════════════════════════════ */
+function encre(ctx, W, H){
+  const d = ctx.getImageData(0, 0, W, H).data; let n = 0;
+  for (let i = 0; i < d.length; i += 4) if ((d[i] + d[i+1] + d[i+2]) / 3 < 160) n++;
+  return n;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SONDE 4 — LA SIGNATURE DE CONTENU : L'ENCRE BLEUE #2050E7
+   ══════════════════════════════════════════════════════════════════════════
+   Un rasteriseur peut RÉUSSIR et rendre FAUX. Il faut donc une signature de
+   contenu, et pour Sassy c'est le bleu de la charte : le peintre canvas compose
+   en `texte`/`encre`, jamais en `accent`. Si le repli se déclenche, le compteur
+   de bleu s'effondre.
+   ⚠️ MESURÉ, PAS SUPPOSÉ : l'habillage `sassy-carte-portrait.png` ne contient que
+      0,8 % de bleu (le titre cuit). Un rendu v2 à la charte doit faire nettement
+      plus — le seuil est posé AVEC le premier template, pas d'avance.
+   ══════════════════════════════════════════════════════════════════════════ */
+function encreBleue(ctx, W, H){
+  const d = ctx.getImageData(0, 0, W, H).data; let n = 0;
+  for (let i = 0; i < d.length; i += 4)
+    if (Math.abs(d[i]-0x20) < 40 && Math.abs(d[i+1]-0x50) < 40 && Math.abs(d[i+2]-0xE7) < 40) n++;
+  return n;
+}
+
+/* ── le harnais ──────────────────────────────────────────────────────────── */
+function versCanvas(dataUrl){
+  return new Promise((ok, ko) => {
+    const im = new Image();
+    im.onload = () => {
+      const cv = document.createElement('canvas');
+      cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      cv.getContext('2d').drawImage(im, 0, 0);
+      ok({ ctx: cv.getContext('2d'), W: cv.width, H: cv.height, src: dataUrl });
+    };
+    im.onerror = () => ko(new Error('image illisible'));
+    im.src = dataUrl;
+  });
+}
+const img = src => new Promise((ok, ko) => {
+  const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error(src)); i.src = src;
+});
+
+(async function(){
+  try {
+    const themes = await (await fetch('/_data/themes.json', { cache:'no-store' })).json();
+    const v2 = sondeInventaire(themes);
+
+    /* ⚠️ LA SONDE 2 EST ÉPROUVÉE MÊME SANS TEMPLATE — et c'est délibéré. Elle est
+       jugée sur les HABILLAGES du dépôt, qui sont de vraies images dont on connaît
+       le verdict attendu. Une sonde dont on n'a pas vu le rouge ne vaut rien, et on
+       ne va pas attendre le premier template pour le savoir. */
+    for (const [f, attendu] of [['sassy-carte-portrait.png', true], ['sassy-dujour-portrait.png', false]]){
+      const hab = await img('/_data/themes/' + f);
+      const cv = document.createElement('canvas');
+      cv.width = hab.naturalWidth; cv.height = hab.naturalHeight;
+      const c = cv.getContext('2d');
+      c.fillStyle = CLIENT_TOKENS.semantic.fond; c.fillRect(0, 0, cv.width, cv.height);
+      c.drawImage(hab, 0, 0);
+      const r = porteBandeauGabarit(c, cv.width, cv.height);
+      dire('2. bandeau gabarit <i>(auto-épreuve)</i>', f, r.gabarit === attendu,
+        'dominante rgb(' + r.dom.join(',') + ') à ' + Math.round(r.part*100) + '%, texte centré : ' + r.centre +
+        ' → ' + (r.gabarit ? 'GABARIT' : 'propre') + ', attendu ' + (attendu ? 'GABARIT' : 'propre'));
+    }
+
+    for (const t of v2){
+      const fmt = Object.keys(t.formats)[0];
+      const blk = t.formats[fmt];
+      const hab = await img(blk.habillage);
+      const ras = MOTEUR_V2.rasteriseur(t);
+      if (!ras){ dire('—', t.id, false, 'aucun rasteriseur alors que <code>template</code> est déclaré'); continue; }
+      const url = await ras(CLIENT_TOKENS.render.canvasW, hab, { dishes: [], label: '' }, fmt);
+      const r = await versCanvas(url);
+      const g = porteBandeauGabarit(r.ctx, r.W, r.H);
+      dire('2. bandeau gabarit', t.id, !g.gabarit,
+        g.gabarit ? 'le bandeau EST là → le PNG a été dessiné, donc le repli a servi' : 'absent');
+      dire('4. encre #2050E7', t.id, encreBleue(r.ctx, r.W, r.H) > 0,
+        encreBleue(r.ctx, r.W, r.H) + ' px de bleu');
+      document.getElementById('vign').insertAdjacentHTML('beforeend',
+        '<figure><img src="' + r.src + '"><figcaption>' + t.id + ' · ' + fmt + '</figcaption></figure>');
+    }
+  } catch (e){
+    dire('erreur', null, false, String(e && e.message || e));
+  }
+  const ko = lignes.filter(l => l.ok === false).length;
+  const v = document.getElementById('verdict');
+  v.className = ko ? 'ko' : 'ok';
+  v.textContent = ko ? ('❌ ' + ko + ' sonde(s) au ROUGE') : ('✅ ' + lignes.length + ' sonde(s) au vert');
+})();
+</script>
+</body></html>

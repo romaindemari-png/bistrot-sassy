@@ -105,6 +105,48 @@
   DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
   **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
 
+## ✅ EXEMPLE À GARDER — ON CORRIGE LA SONDE, PAS LE SEUIL
+
+*(11/09/2026, écriture de `admin/controle-moteur.html`, sonde « bandeau gabarit »)*
+
+**La première version de la sonde mentait, et elle aurait passé pour bonne.** Elle jugeait sur
+*« un écart de luminance entre les 4,5 % du bas et la zone juste au-dessus »*, avec un seuil de 12 :
+
+    15/18 verdicts corrects — et les TROIS `sassy-annonce` declares GABARIT a tort.
+
+Le bas de l'annonce est un **aplat bleu plein cadre**, parfaitement légitime : la sonde mesurait
+« il se passe quelque chose en bas » et appelait ça « il y a un bandeau ».
+
+⚠️ **DEUX FAÇONS DE LA FAIRE PASSER AU VERT, ET UNE SEULE EST HONNÊTE :**
+
+| | |
+|---|---|
+| ❌ monter le seuil de 12 à 140 | les 3 annonces passent… et les `event` (écart 23) deviennent invisibles. **On aurait maquillé la sonde et perdu 3 vrais gabarits.** |
+| ✅ changer **ce qu'elle mesure** | le calque gabarit rend TOUJOURS `rgb(211,203,191)` à 95-97 % de la bande, et son texte est **centré** (x 0,36→0,64) là où un aplat de design occupe toute la largeur |
+
+**Résultat : 18/18** — 12 vrais gabarits détectés, 6 propres épargnés, sur les trois formats.
+
+**→ LA LEÇON, ET ELLE EST CONCRÈTE : une sonde testée sur DEUX cas ne prouve rien.** Celle-ci n'a
+été prise en défaut que parce qu'elle a été jouée sur **les dix-huit** habillages du dépôt. Deux
+échantillons bien choisis lui auraient donné 2/2.
+
+⚠️ **Et la signature est une EMPREINTE, pas un seuil calibré à la main** — une valeur relevée sur
+douze fichiers, qui a un sens hors du projet (« la couleur du calque »), là où « écart > 12 » n'est
+qu'un nombre ajusté jusqu'à ce que ça passe. C'est la règle du `LELAB.md` : *« chercher une grandeur
+qui a un sens hors du projet plutôt qu'un nombre de pixels calibré à la main »*.
+
+⚠️ **La sonde s'auto-éprouve désormais à CHAQUE exécution** : la page rejoue les deux cas connus
+(`sassy-carte-portrait` → GABARIT, `sassy-dujour-portrait` → propre) avant de juger un rendu. Une
+sonde qui ne sait plus reconnaître un gabarit connu se signale elle-même.
+
+### ⏳ Reste à poser sur le contrôle
+
+- [ ] **Sonde 4 — le seuil d'encre `#2050E7`** : à MESURER sur le premier rendu v2 réel, **pas à
+  poser d'avance**. En poser un sur du vide serait refaire l'erreur ci-dessus.
+- [ ] **Sonde 5 — le repli BRUYANT** : ⚠️ **ce n'est PAS une sonde de cette page**, c'est un
+  comportement de l'admin (un bandeau « rendu de secours » dans l'aperçu, pas un `console.warn`).
+  Il arrive **avec les accroches** — à ne pas croire fait avant.
+
 ## 🔺 LE MOTEUR v2 DE SASSY EST EN AVANCE SUR CELUI DE GEORGES — c'est LUI la référence
 
 *(posé le 11/09/2026, au bout v2-1)*
