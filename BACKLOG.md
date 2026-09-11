@@ -53,6 +53,14 @@
   **→ Le correctif est dans `paintCarte`** (marge droite dans le clip, ou prix aligné à
   `zx + zw − marge`), pas dans les tokens ni dans la zone de `themes.json`.
 
+- [ ] **`gen-habillages.py` ne connaît que `dujour` et `annonce`** *(constaté le 11/09/2026, bout 5
+  du re-base)*. Le générateur rend les habillages en Chrome headless depuis du HTML/CSS, avec
+  `DA = dict(blue='#2050E7', cream='#FAF1E2', yellow='#FFF08B')` et les `@font-face` **Canela et
+  Elms extraites d'`index.html`**. C'est lui qui a produit les **6 habillages propres**. Son dict
+  `THEMES` ne couvre que ces deux-là ; `carte`, `infos`, `photo` et `event` n'y sont pas.
+  **→ C'est le CHEMIN DE SECOURS des 4 thèmes restants si le moteur v2 dérape.** À étendre
+  **seulement si on en a besoin** — pas par anticipation.
+
 ## Chantiers STUDIO (raffinement)
 - [ ] Vignette Insta mobile : dégraisser l'habillage encadré → **ligne fine** sous le bandeau (poids visuel).
 - [ ] Vignette Insta : **avatar + popup moderne** (pattern Buffer/Later). ⚠️ **SEULEMENT après validation Meta** — tant que la review n'est pas passée, le triplet avatar+@compte+ID doit rester visible SANS clic.

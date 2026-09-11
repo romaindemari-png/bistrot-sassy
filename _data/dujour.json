@@ -1,0 +1,26 @@
+[
+  {
+    "nom": "Épaule d'agneau confite",
+    "desc": "Sept heures au four, jus au thym, écrasé de pommes de terre",
+    "prix": "19 €",
+    "dispo": true
+  },
+  {
+    "nom": "Risotto d'asperges vertes",
+    "desc": "Parmesan 24 mois, zeste de citron, huile de noisette",
+    "prix": "16 €",
+    "dispo": true
+  },
+  {
+    "nom": "Pavé de thon rouge",
+    "desc": "Arrivage du matin, sauce vierge, légumes croquants",
+    "prix": "21 €",
+    "dispo": false
+  },
+  {
+    "nom": "Tarte fine aux pommes",
+    "desc": "Pâte feuilletée, caramel au beurre salé",
+    "prix": "7 €",
+    "dispo": true
+  }
+]

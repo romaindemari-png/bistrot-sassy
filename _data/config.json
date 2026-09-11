@@ -94,6 +94,27 @@
       }
     },
     "optionnels": {
+      "dujour": {
+        "label": "Le plat du jour",
+        "action": "Changer le plat du jour",
+        "actif": false,
+        "sections": [
+          "dujour"
+        ],
+        "type": "produits",
+        "admin": {
+          "edit": "dujour",
+          "fichier": "dujour",
+          "picto": "soleil",
+          "sub": "Disponible ou épuisé"
+        },
+        "textes": {
+          "intro": "Vos suggestions du moment (max 8). Basculez un produit sur « épuisé » : il reste affiché sur le site, barré.",
+          "titreGroupe": "Les suggestions du jour",
+          "unite": "Suggestion",
+          "ajouter": "+ Ajouter une suggestion"
+        }
+      },
       "events": {
         "label": "Événements",
         "action": "Gérer mes événements",
