@@ -454,6 +454,22 @@
         transparent, que le JPEG rend noir). ⚠️ Mais ça crée l'écran CRÈME : même
         défaut, visage différent. C'est la SONDE 6 qui le couvre, pas ce commentaire.
      ══════════════════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════════════════
+     LA MISE EN PAGE DU DÉCOR PHOTO — ÉCRITE UNE SEULE FOIS
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ ELLE EST LUE PAR DEUX CHEMINS : `PHOTO.css()` pour l'EXPORT, et
+        `habillerApercuPhoto()` pour l'APERÇU. C'est précisément le genre de valeur
+        qu'on recopie « juste une fois » et qui divergent ensuite — la faute que le
+        LELAB.md grave sous « aperçu == export ». Un ratio, un endroit.
+     Fractions de W (la largeur du cadre, 1080 à l'export). */
+  const MEP_PHOTO = {
+    voileH:   0.22,    // hauteur du dégradé, depuis le bas
+    voileA:   0.78,    // opacité du bleu au plus bas
+    signX:    0.06,    // ferrage gauche de la signature
+    signY:    0.055,   // hauteur depuis le bas
+    signTail: 0.026    // corps de la signature
+  };
+
   const PHOTO = {
     css: function (A, W, H, fmt, Z, slide) {
       const c = window.CLIENT_TOKENS.primitives.color;
@@ -518,10 +534,10 @@
               (Même raisonnement que le voile de l'annonce chez Georges, dosé pour le
               PIRE cas et non pour le cas moyen.)
            ⚠️ PAS DE `mix-blend-mode`, PAS DE GRAIN : Sassy n'a aucune texture. */
-        + '.voile{position:absolute;left:0;right:0;bottom:0;height:' + (W * 0.22).toFixed(2) + 'px'
-          + ';background:linear-gradient(to top,rgba(32,80,231,.78),rgba(32,80,231,0))}'
-        + ".sign{position:absolute;left:" + (W * 0.06).toFixed(2) + 'px;bottom:' + (W * 0.055).toFixed(2) + 'px'
-          + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + (W * 0.026).toFixed(2) + 'px'
+        + '.voile{position:absolute;left:0;right:0;bottom:0;height:' + (W * MEP_PHOTO.voileH).toFixed(2) + 'px'
+          + ';background:linear-gradient(to top,rgba(32,80,231,' + MEP_PHOTO.voileA + '),rgba(32,80,231,0))}'
+        + ".sign{position:absolute;left:" + (W * MEP_PHOTO.signX).toFixed(2) + 'px;bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px'
+          + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + (W * MEP_PHOTO.signTail).toFixed(2) + 'px'
           + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7}';
     },
     corps: function (A, W, H, fmt, Z, slide) {
@@ -582,7 +598,68 @@
      `admin/index.html` ne porte que des appels GARDÉS : il teste `window.MOTEUR_V2`
      avant tout, et `rasteriseur()` avant d'appeler. Dans un dépôt sans ce fichier,
      ou pour un thème sans `template`, rien ne s'exécute. */
+  /* ══════════════════════════════════════════════════════════════════════════
+     M4 — L'APERÇU EN CALQUES : L'EXCEPTION DOCUMENTÉE À « APERÇU == EXPORT »
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ LE THÈME PHOTO EST LE SEUL CAS OÙ L'APERÇU NE PEUT PAS ÊTRE LE MÊME
+        RASTERISEUR QUE L'EXPORT, ET CE N'EST PAS UN CONTOURNEMENT. L'aperçu du
+        thème photo est celui qu'on FAIT GLISSER pour déplacer le point focal
+        (`#igPhotoInner`, `background-position`, classe `ph-draggable`). Le
+        remplacer par une image rasterisée TUERAIT LE GESTE. La règle « aperçu ==
+        export » a donc ici une exception, écrite au LELAB.md du master, et la
+        forme qu'elle prend est : le décor est posé EN CALQUES CSS par-dessus la
+        photo déplaçable, avec les MÊMES tokens et les valeurs mises à l'échelle.
+
+     ⚠️ CE QUI SE VÉRIFIE ALORS N'EST PLUS « 0,00 par pixel », MAIS : les calques
+        EXISTENT, et leurs valeurs RENORMALISÉES À 1080 égalent celles de l'export.
+        C'est le contrôle ② de Georges appliqué à ce cas.
+
+     ⚠️ `pointer-events:none` SUR CHAQUE CALQUE. Sans ça, le décor intercepte le
+        glissement et le point focal devient immobile — une régression muette : rien
+        ne casse, le geste cesse simplement de fonctionner.
+
+     ⚠️ L'HABILLAGE PNG EST MASQUÉ. Le v2 peint son propre fond ; laisser
+        `#igHabillage` visible superposerait le gabarit au décor, et l'aperçu
+        montrerait un bandeau que l'export n'a pas.
+
+     ⚠️ ET L'ÉCHELLE EST LUE, PAS SUPPOSÉE : `hote.clientWidth / 1080`. L'aperçu
+        fait ~260 px de large, l'export 1080. Les longueurs absolues recopiées
+        telles quelles paraîtraient quatre fois trop grandes. */
+  function habillerApercuPhoto(hote, theme, fmt) {
+    if (!hote) return;
+    const tpl = theme && theme.template && TEMPLATES[theme.template];
+    const vieux = hote.querySelectorAll('.v2-voile,.v2-sign');
+    const hab = hote.querySelector('.ig-habillage');
+    if (!tpl || theme.type !== 'photo') {          // pas notre cas → on efface et on rend la main
+      vieux.forEach(function (e) { e.remove(); });
+      if (hab) hab.style.removeProperty('display');
+      return;
+    }
+    if (hab) hab.style.display = 'none';
+    const c = window.CLIENT_TOKENS.primitives.color;
+    const e = (hote.clientWidth || 260) / 1080;    // l'échelle, LUE
+    const M = MEP_PHOTO;
+    const px = function (r) { return (1080 * r * e).toFixed(2) + 'px'; };
+    const pose = function (cls, css) {
+      let el = hote.querySelector('.' + cls);
+      if (!el) { el = document.createElement('div'); el.className = cls; hote.appendChild(el); }
+      else hote.appendChild(el);                   // réinséré en dernier : le décor reste AU-DESSUS
+      el.style.cssText = 'position:absolute;pointer-events:none;' + css;
+      return el;
+    };
+    pose('v2-voile', 'left:0;right:0;bottom:0;height:' + px(M.voileH)
+      + ';background:linear-gradient(to top,rgba(32,80,231,' + M.voileA + '),rgba(32,80,231,0))');
+    pose('v2-sign', 'left:' + px(M.signX) + ';bottom:' + px(M.signY)
+      + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + px(M.signTail)
+      + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7'
+    ).textContent = 'bistrot sassy';
+  }
+
   window.MOTEUR_V2 = {
+    /** Pose le décor du thème photo EN CALQUES sur l'aperçu déplaçable, ou l'efface.
+        `(hote, theme, fmt)`. Ne touche rien si le thème n'est pas un photo en v2. */
+    habillerApercuPhoto: habillerApercuPhoto,
+
     /** Le rasteriseur d'un thème, ou null si le canvas garde la main.
         `(W, hab, slide, fmt) → Promise<dataURL>`. Un rejet fait retomber l'admin
         sur son peintre canvas : le filet reste tendu. */
@@ -602,7 +679,9 @@
       socleCSS: socleCSS,
       rasteriser: rasteriser,
       xml: xml,
-      ZONE_SURE: ZONE_SURE
+      ZONE_SURE: ZONE_SURE,
+      MEP_PHOTO: MEP_PHOTO,
+      habillerApercuPhoto: habillerApercuPhoto
     }
   };
 })();

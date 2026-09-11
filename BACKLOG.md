@@ -219,6 +219,60 @@ plus discret, sans rien pour le voir. **C'est exactement le couplage `D` ↔ `te
 constaté ce matin : ni Georges (le correctif sans la sonde) ni le master (ni l'un ni l'autre) ne
 peuvent voir le problème seuls.
 
+## ✅ « APERÇU == EXPORT » N'EST PLUS UNE DISCIPLINE, C'EST UNE IMPOSSIBILITÉ STRUCTURELLE
+
+*(posé le 11/09/2026, morceau M4 du pipeline photo. À REMONTER AU MASTER avec le moteur.)*
+
+### Le défaut de fond, chez Georges
+
+La règle *« aperçu == export »* était **écrite, datée, expliquée** dans le `LELAB.md` du master. Elle
+a été **violée deux fois de suite après sa rédaction** — sur le thème photo, puis sur le thème
+annonce — à chaque fois en détournant l'export sans détourner son aperçu. **Le client l'a vu, pas
+nous.** D'où le contrôle ②, qui pilote l'admin réel dans une iframe pour la vérifier.
+
+⚠️ **MAIS UN CONTRÔLE VÉRIFIE APRÈS COUP.** Il attrape la divergence, il ne l'empêche pas. Et la
+cause profonde n'était pas un oubli de vigilance : c'était que **les mêmes valeurs de mise en page
+étaient écrites à DEUX endroits** — une fois pour le rasteriseur, une fois pour l'aperçu.
+
+### Le correctif de fond, ici
+
+`admin/moteur-v2.js` déclare **`MEP_PHOTO`**, une seule table de ratios (fractions de W), lue par les
+**deux** chemins :
+
+    PHOTO.css()               -> l'EXPORT (dans le SVG)
+    habillerApercuPhoto()     -> l'APERÇU (en calques CSS, échelle clientWidth/1080)
+
+**Il n'y a plus deux valeurs à tenir d'accord : il y en a une.** La divergence cesse d'être une
+question de discipline pour devenir **structurellement impossible**.
+
+**Vérifié, valeurs renormalisées à 1080 :**
+
+| | aperçu (260 px) | renormalisé | export déclaré | écart |
+|---|---|---|---|---|
+| `voile` height | 57,19 | 237,55 | 237,60 | **0,052** |
+| `sign` left | 15,60 | 64,80 | 64,80 | **0,000** |
+| `sign` bottom | 14,30 | 59,40 | 59,40 | **0,000** |
+| `sign` font-size | 6,76 | 28,08 | 28,08 | **0,000** |
+
+**Rouge prouvé** : injection de `0.30` dans l'aperçu là où l'export déclare `0.22` → écart de
+**86,4 px** après renormalisation, contrôle rouge. Restauré depuis la copie hors arbre, md5
+identiques.
+
+⚠️ **LE CONTRÔLE RESTE UTILE POUR CE QUE LA SOURCE UNIQUE NE COUVRE PAS** : qu'on n'oublie pas de
+POSER un calque, et qu'on ne laisse pas l'habillage PNG visible sous le décor.
+
+### ⏳ Deux trous connus, à couvrir au bout des ACCROCHES
+
+- [ ] **`pointer-events:none` n'est testé par AUCUNE sonde.** Il est vérifié par
+  `getComputedStyle` dans le contrôle, mais s'il est retiré, **le glissement du point focal cesse
+  sans que rien ne casse** — une régression muette : pas d'erreur, pas de rendu faux, juste un geste
+  qui ne répond plus. Le tester vraiment demande un `pointerdown`/`pointermove` réel sur l'aperçu
+  de l'admin. **À faire au bout des accroches, pas avant** : il n'y a rien à piloter tant que la
+  fonction n'est pas branchée.
+- [ ] **`habillerApercuPhoto` est écrite et NON BRANCHÉE.** La garantie du point 23 tient :
+  `MOTEUR_V2` est à **0 occurrence** dans `admin/index.html`. La fonction existe, personne ne
+  l'appelle. ⚠️ À ne pas croire active avant le bout des accroches.
+
 ## ⚠️ MOTIF — UNE SONDE QUI NE COUVRE QU'UN CAS MENT PAR OMISSION
 
 *(constaté le 11/09/2026, sonde 5 du contrôle v2)*
