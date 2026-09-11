@@ -16,6 +16,7 @@
     "test-themes": "node scripts/test-themes.js",
     "test-atteignabilite": "node scripts/test-atteignabilite.js",
     "test-course-ecran": "node scripts/test-course-ecran.js",
-    "test-contenu-public": "node scripts/test-contenu-public.js"
+    "test-contenu-public": "node scripts/test-contenu-public.js",
+    "test-accroches-v2": "node scripts/test-accroches-v2.js"
   }
 }

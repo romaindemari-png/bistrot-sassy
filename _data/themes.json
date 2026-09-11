@@ -33,7 +33,8 @@
           "h": 0.34
         }
       }
-    }
+    },
+    "template": "carte"
   },
   {
     "id": "sassy-dujour",
@@ -69,7 +70,8 @@
           "h": 0.34
         }
       }
-    }
+    },
+    "template": "dujour"
   },
   {
     "id": "sassy-photo",
@@ -113,7 +115,8 @@
           "align": "center"
         }
       }
-    }
+    },
+    "template": "photo"
   },
   {
     "id": "sassy-infos",
@@ -149,7 +152,8 @@
           "h": 0.46
         }
       }
-    }
+    },
+    "template": "infos"
   },
   {
     "id": "sassy-annonce",
@@ -184,7 +188,8 @@
           "h": 0.24
         }
       }
-    }
+    },
+    "template": "annonce"
   },
   {
     "id": "sassy-event",
@@ -220,6 +225,7 @@
           "h": 1
         }
       }
-    }
+    },
+    "template": "event"
   }
 ]

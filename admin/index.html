@@ -1206,6 +1206,12 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
    reste un mockup. (La troncature « … plus » demeure : elle donne l'aperçu FIDÈLE d'Instagram ;
    le défilement, lui, garantit qu'on ne PERD rien.) */
 .phone-screen{position:relative;height:462px;background:#fff;border-radius:25px;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;}
+/* ⚠️ VISIBLE, PAS DISCRET. Le rôle de ce bandeau est d'être IMPOSSIBLE à ne pas voir :
+   il annonce que l'image affichée n'est PAS celle du moteur, donc qu'elle part avec le
+   gabarit et la typo du back-office. Un `console.warn` ne serait lu par personne. */
+.v2-repli{position:absolute;left:0;right:0;top:0;z-index:60;background:#b3261e;color:#fff;
+  font:600 11px/1.35 -apple-system,BlinkMacSystemFont,sans-serif;padding:7px 10px;
+  letter-spacing:.02em;text-align:center;}
 .phone-screen::-webkit-scrollbar{display:none;}
 /* transition douce quand la preview change de contenu (swap template) — desktop only */
 @keyframes previewSwap{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
@@ -2091,6 +2097,11 @@ body.dev-local::after{
                    Unsplash change ou tombe, c'est notre page qui pointe dans le vide. Fond neutre : le
                    background-color de .ig-img (#f0f0f0) suffit. -->
               <div class="ig-img" id="igPhoto" style="display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div><div class="ig-drag-hint" id="igDragHint">✥ Glissez pour cadrer</div></div>
+              <!-- ⚠️ LE REPLI BRUYANT. Un repli SILENCIEUX fait publier le canvas avec son
+                   bandeau GABARIT sans que personne le voie — c'est l'accident du 31/07 chez
+                   Georges, trouvé par le CLIENT après déploiement. Ce bandeau est la seule
+                   raison pour laquelle la coexistence des deux moteurs est acceptable. -->
+              <div class="v2-repli" id="v2Repli" hidden></div>
               <div class="ig-typo" id="igTypo">
                 <div id="tyDom">
                   <div class="ty-h">Aujourd'hui</div>
@@ -2187,6 +2198,7 @@ body.dev-local::after{
 <!-- Pied d'action studio (MOBILE) — CTA en zone du pouce ; affiché via body.in-studio (cf. @media 960) -->
 
 <script src="/client-tokens.js?v=1"></script>   <!-- ⚠️ nom NEUTRE : chaque fork a SON client-tokens.js, l'admin ne change pas -->
+<script src="/admin/moteur-v2.js?v=1"></script>   <!-- moteur v2 : un thème sans `template` n'en exécute AUCUNE ligne -->
 <script>
 // ── PLAN ──────────────────────────────────────────────────
 let currentPlan = 'lelab'; // 'lelab' | 'lelab_plus'
@@ -3977,6 +3989,16 @@ function composeCustomPreview(photoUrl){
   } else {
     txt.style.display = 'none';
   }
+
+  /* ACCROCHE v2 — LE SEUL CAS OÙ L'APERÇU NE PEUT PAS PASSER PAR LE RASTERISEUR.
+     L'aperçu photo est DÉPLAÇABLE : le client glisse pour cadrer, et une image
+     rasterisée à chaque `pointermove` est inutilisable. Le décor est donc posé EN
+     CALQUES DOM par-dessus la photo vivante — et la seule chose qui garantisse que ces
+     calques disent la vérité, c'est qu'ils lisent `MEP_PHOTO`, la MÊME table que le
+     template. Un chiffre changé là se voit des deux côtés ou d'aucun.
+     ⚠️ C'est `habillerApercuPhoto` qui décide de masquer `#igHabillage` — pas nous : le
+        décor v2 remplace le PNG de gabarit, mais seulement quand il y a un décor v2. */
+  if (window.MOTEUR_V2) MOTEUR_V2.habillerApercuPhoto(igPhoto, currentCustomTheme, currentFmt);
 }
 
 // « Recommencer » n'apparaît que s'il y a du TRAVAIL réel (studioHasWork), et seulement dans le studio.
@@ -5371,6 +5393,40 @@ async function renderFinalCustom(theme, fmt, bitmap, withText, focal){
   if (!blk) throw new Error('Format indisponible pour ce thème');
   const [rw, rh] = FMT_RATIO[fmt] || FMT_RATIO.portrait;
   const W = 1080, H = Math.round(W * rh / rw);
+
+  /* ACCROCHE v2 — LA PHOTO DOIT VIVRE **DANS** LE SVG, pas être peinte au canvas en
+     dessous : un SVG en `data:` URI est un document ISOLÉ. On l'encode donc en base64,
+     RAMENÉE À LA LARGEUR DU CADRE — une photo d'iPhone de 4032 px partirait avec des
+     pixels que le cadre ne montrera jamais (mesure : 1080 px → 265 Ko de base64,
+     810 px → 162 Ko, contre 153 Ko pour les seules polices).
+     ⚠️ BITMAP ABSENT ⇒ ON NE TENTE PAS LE v2, ET ON NE SIGNALE AUCUN REPLI : c'est le
+        cas normal d'un thème photo sans photo chargée, pas une panne. Signaler ici
+        ferait crier le bandeau à chaque ouverture du studio. */
+  const _rp = v2De(theme);
+  if (_rp && bitmap){
+    try {
+      const cw = Math.min(W, bitmap.width);
+      const cp = document.createElement('canvas');
+      cp.width = cw; cp.height = Math.round(bitmap.height * cw / bitmap.width);
+      cp.getContext('2d').drawImage(bitmap, 0, 0, cp.width, cp.height);
+      const hab0 = await loadImage(blk.habillage);
+      const u = await _rp(W, hab0, {
+        photo: cp.toDataURL('image/jpeg', 0.82),
+        focal: focal || { x:0.5, y:0.5 },
+        zonePhoto: blk.zonePhoto,
+        /* ⚠️ LE TEXTE D'OVERLAY EST OBLIGATOIRE ICI. `sassy-photo` en STORY déclare une
+           zoneTexte et l'admin offre `#storyText` : sans ces deux lignes, le v2 aurait
+           publié la photo NUE et jeté ce que le client a écrit. Mêmes gardes que le
+           canvas juste en dessous : `withText` (1ʳᵉ slide) et `.trim()`. */
+        texte: withText ? studioOverlayText().trim() : '',
+        zoneTexte: blk.zoneTexte,
+        event: withText ? slideEvenement() : null   // carrousel : l'événement n'est que sur la 1ʳᵉ slide
+      }, fmt);
+      if (u){ effacerRepli(); return u; }
+      signalerRepli(nomDuTheme(theme) + ' — le moteur n’a rien rendu');
+    } catch (e){ signalerRepli(nomDuTheme(theme) + ' — ' + (e && e.message || e)); }
+  }
+
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);   // fond si l'habillage est transparent par endroits
@@ -5560,11 +5616,123 @@ function paintInfos(ctx, W, hab, zone){
 }
 
 // Export FINAL (1080) — carte typo
+/* ══════════════════════════════════════════════════════════════════════════════
+   LES ACCROCHES DU MOTEUR v2 — ET LE REPLI QUI NE SE TAIT PAS
+   ══════════════════════════════════════════════════════════════════════════════
+   ⚠️ LA GARANTIE, INCHANGÉE : `MOTEUR_V2.rasteriseur(theme)` rend `null` pour un
+      thème sans `template`. Toutes les accroches ci-dessous testent d'abord
+      `window.MOTEUR_V2`, puis le rasteriseur. Dans un dépôt sans le module, ou pour
+      un thème sans `template`, AUCUNE ligne du v2 ne s'exécute.
+
+   ⚠️ POURQUOI LE REPLI DOIT ÊTRE BRUYANT, ET CE N'EST PAS UNE PRÉCAUTION DE STYLE.
+      Le 31/07/2026, deux lignes parasites dans un template de Georges ont fait
+      retomber la publication sur le peintre canvas. L'image produite était
+      « parfaitement plausible » — sans label, sans descriptifs, sans pictos. Personne
+      n'a rien vu. Le défaut a été trouvé par le CLIENT, après déploiement.
+      **Le filet a fait son travail : c'est ça, le problème.** Un repli rattrape la
+      panne ET la rend muette.
+      Chez Sassy c'est pire qu'ailleurs : le repli redessine l'habillage, donc le
+      bandeau « GABARIT — _data/themes/ » revient, et il compose dans la typo du
+      back-office. Un post part faux, en silence, chez un client.
+      → `signalerRepli()` pose un bandeau ROUGE dans l'aperçu. Pas un `console.warn`.
+   ══════════════════════════════════════════════════════════════════════════════ */
+let _v2Repli = null;              // la dernière raison, ou null si le v2 a tenu
+/* ⚠️ LE BANDEAU NOMME LE THÈME, PAS LE CHEMIN DE RENDU. La première version passait le
+   nom de la MACHINERIE (« carte », « infos ») : sur *Plat du jour*, le client lisait
+   « rendu de secours — carte », et sur *Annonce*, « — infos ». Deux noms de thèmes qui
+   existent dans SON écran et qui désignaient autre chose. `renderFinalCarte` sert carte
+   ET dujour ; `renderFinalInfos` sert infos ET annonce (cf. RENDER_KIND). Le nom du
+   thème est le seul repère que le client partage avec nous. */
+function nomDuTheme(t){
+  return (t && (t.nom || t.id)) || 'thème inconnu';
+}
+function signalerRepli(raison){
+  _v2Repli = raison || 'raison inconnue';
+  const el = document.getElementById('v2Repli');
+  if (el){
+    el.textContent = '⚠ rendu de secours — ' + _v2Repli;
+    el.hidden = false;
+  }
+  console.error('[moteur v2] REPLI CANVAS :', _v2Repli);   // en plus, jamais à la place
+}
+function effacerRepli(){
+  _v2Repli = null;
+  const el = document.getElementById('v2Repli');
+  if (el) el.hidden = true;
+}
+/** Le rasteriseur v2 d'un thème, ou null. Une seule porte pour toutes les accroches. */
+function slideEvenement(){
+  const ev = ((typeof sassyData !== 'undefined' && sassyData.events) || [])[0];
+  if (!ev) return null;
+  const d = ev.date ? new Date(ev.date) : null;
+  const MOIS = ['janv.','fevr.','mars','avr.','mai','juin','juil.','aout','sept.','oct.','nov.','dec.'];
+  return { jour: d ? String(d.getDate()) : '',
+           mois: d ? (MOIS[d.getMonth()] + ' ' + d.getFullYear()) : '',
+           heure: ev.heure || '', titre: ev.titre || '', desc: ev.description || '' };
+}
+function v2De(theme){
+  return (window.MOTEUR_V2 && MOTEUR_V2.rasteriseur(theme)) || null;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════════
+   L'APERÇU DES THÈMES TYPO PAR LE v2 — ET POURQUOI IL PEINT DANS LE MÊME CANVAS
+   ══════════════════════════════════════════════════════════════════════════════════════
+   Les aperçus carte/infos appelaient `paintCarte`/`paintInfos` — LITTÉRALEMENT le peintre
+   de l'export : « aperçu == export » était vrai par construction. En branchant le v2 sur
+   l'export SEUL, cette égalité se serait rompue en silence : le client aurait validé un
+   aperçu canvas et publié un visuel v2. D'où cette fonction.
+
+   Elle repeint `#igCarteCv` avec le BITMAP DE L'EXPORT lui-même (le dataURL rasterisé,
+   décodé puis `drawImage`) : l'aperçu n'est pas une imitation du rendu, c'est le rendu.
+
+   ⚠️ LE COMPTEUR DE GÉNÉRATION N'EST PAS UNE PRÉCAUTION DÉCORATIVE. L'aperçu se rappelle
+      À CHAQUE FRAPPE, et la rasterisation est asynchrone : sans lui, un rendu lancé sur
+      « Poul » et arrivé en retard repeindrait par-dessus le rendu de « Poulpe ». L'aperçu
+      afficherait un texte que le client vient de corriger.
+   ⚠️ ON RASTERISE À 540, pas à 1080 : c'est la largeur que le canvas d'aperçu employait
+      déjà. Le SVG embarque les polices en base64 (153 Ko) quelle que soit la taille — ce
+      qu'on économise, c'est le pixel, pas le transport.
+   ⚠️ `false` ⇒ L'APPELANT RETOMBE SUR SON PEINTRE CANVAS. Le repli est signalé par le
+      bandeau ; il n'est jamais muet. Seul le cas « un rendu plus récent a pris la main »
+      rend `true` sans peindre : il ne faut pas repeindre en canvas par-dessus lui. */
+let v2ApercuGen = 0;
+function apercuV2Canvas(theme, cv, hab, slide, fmt){
+  const r = v2De(theme);
+  if (!r) return Promise.resolve(false);
+  const gen = ++v2ApercuGen;
+  return r(540, hab, slide, fmt).then(u => {
+    if (!u){ signalerRepli(nomDuTheme(theme) + ' — le moteur n’a rien rendu (aperçu)'); return false; }
+    if (gen !== v2ApercuGen) return true;
+    return new Promise(res => {
+      const im = new Image();
+      im.onload = () => {
+        if (gen !== v2ApercuGen){ res(true); return; }
+        cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+        cv.getContext('2d').drawImage(im, 0, 0);
+        effacerRepli(); res(true);
+      };
+      im.onerror = () => { signalerRepli(nomDuTheme(theme) + ' — aperçu : image illisible'); res(false); };
+      im.src = u;
+    });
+  }).catch(e => { signalerRepli(nomDuTheme(theme) + ' — aperçu : ' + (e && e.message || e)); return false; });
+}
+
 async function renderFinalCarte(theme, fmt, slide){
   const blk = customThemeFormat(theme, fmt);
   if (!blk) throw new Error('Format indisponible pour ce thème');
   await ensureCarteFonts();
   const hab = await loadImage(blk.habillage);
+  /* ⚠️ EN CAS D'ÉCHEC ON RETOMBE SUR LE CANVAS, sans interrompre la publication — mais
+     le repli le DIT. `hab` ne sert au v2 qu'à donner le rapport du format : le template
+     peint son propre fond et n'utilise pas le PNG. */
+  const _r = v2De(theme);
+  if (_r){
+    try {
+      const u = await _r(CLIENT_TOKENS.render.canvasW, hab, slide, fmt);
+      if (u){ effacerRepli(); return u; }
+      signalerRepli(nomDuTheme(theme) + ' — le moteur n’a rien rendu');
+    } catch (e){ signalerRepli(nomDuTheme(theme) + ' — ' + (e && e.message || e)); }
+  }
   const c = document.createElement('canvas');
   paintCarte(c.getContext('2d'), CLIENT_TOKENS.render.canvasW, hab, blk.zoneListe, slide);
   return c.toDataURL('image/jpeg', CLIENT_TOKENS.render.jpegQuality);
@@ -5575,6 +5743,18 @@ async function renderFinalInfos(theme, fmt){
   if (!blk) throw new Error('Format indisponible pour ce thème');
   await ensureCarteFonts();
   const hab = await loadImage(blk.habillage);
+  /* ⚠️ LE TEXTE EST LU ICI ET PASSÉ EN ARGUMENT, pas dans le template : c'est ce qui
+     rend le rasteriseur éprouvable hors de l'admin (règle « la donnée entre par les
+     arguments, jamais par le document »). */
+  const _r = v2De(theme);
+  if (_r){
+    try {
+      const texte = (document.getElementById('infosText') || {}).value || '';
+      const u = await _r(CLIENT_TOKENS.render.canvasW, hab, { texte }, fmt);
+      if (u){ effacerRepli(); return u; }
+      signalerRepli(nomDuTheme(theme) + ' — le moteur n’a rien rendu');
+    } catch (e){ signalerRepli(nomDuTheme(theme) + ' — ' + (e && e.message || e)); }
+  }
   const c = document.createElement('canvas');
   paintInfos(c.getContext('2d'), CLIENT_TOKENS.render.canvasW, hab, blk.zoneTexte);
   return c.toDataURL('image/jpeg', CLIENT_TOKENS.render.jpegQuality);
@@ -5592,7 +5772,10 @@ function paintCartePreview(igTypo){
   const slide = slides[studioSlideIdx] || { label: '', dishes: [] };
   getHabImg(blk.habillage, hab => {
     igTypo.style.aspectRatio = hab.naturalWidth + '/' + hab.naturalHeight;
-    ensureCarteFonts().then(() => paintCarte(cv.getContext('2d'), 540, hab, blk.zoneListe, slide));
+    apercuV2Canvas(currentCustomTheme, cv, hab, slide, currentFmt).then(ok => {
+      if (ok) return;
+      ensureCarteFonts().then(() => paintCarte(cv.getContext('2d'), 540, hab, blk.zoneListe, slide));
+    });
   });
 }
 // Preview LIVE infos = MÊME paintInfos que l'export
@@ -5605,7 +5788,13 @@ function paintInfosPreview(igTypo){
   cv.style.display = 'block';
   getHabImg(blk.habillage, hab => {
     igTypo.style.aspectRatio = hab.naturalWidth + '/' + hab.naturalHeight;
-    ensureCarteFonts().then(() => paintInfos(cv.getContext('2d'), 540, hab, blk.zoneTexte));
+    /* Le texte est LU ICI et passé en argument — même règle que `renderFinalInfos`, et
+       c'est la même source (`#infosText`), donc le même contenu sur les deux chemins. */
+    const texte = (document.getElementById('infosText') || {}).value || '';
+    apercuV2Canvas(currentCustomTheme, cv, hab, { texte }, currentFmt).then(ok => {
+      if (ok) return;
+      ensureCarteFonts().then(() => paintInfos(cv.getContext('2d'), 540, hab, blk.zoneTexte));
+    });
   });
 }
 function studioPreviewUrl(p, fmt){
