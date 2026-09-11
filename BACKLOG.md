@@ -137,6 +137,35 @@ Le site ne les connaît pas. Les retirer des tokens obligerait à repeindre le c
 — ce qui est souhaitable, mais c'est le **repli** qu'on toucherait, donc à faire avec les mêmes
 précautions que le reste.
 
+## ⚠️ MOTIF — UNE SONDE QUI NE COUVRE QU'UN CAS MENT PAR OMISSION
+
+*(constaté le 11/09/2026, sonde 5 du contrôle v2)*
+
+Le détecteur de débordement ne testait que **`Object.keys(t.formats)[0]`** — le premier format
+déclaré, c'est-à-dire `carre`. Les thèmes en déclarent **trois**.
+
+**Il se trouve que le format fautif était justement celui-là.** `sassy-dujour` déborde de 203 px en
+carré et tient en portrait comme en story. La sonde a donc rendu un ROUGE juste — **par hasard**.
+
+⚠️ **L'INVERSE AURAIT DONNÉ UN VERT PARFAIT SUR UN DÉFAUT RÉEL.** Si le débordement avait été en
+story, la sonde aurait affiché « aucun — le contenu tient dans le cadre », et le post serait parti
+tronqué. **Un vert obtenu en ne regardant qu'un tiers du domaine n'est pas un vert : c'est une
+absence de mesure déguisée en résultat.**
+
+⚠️ **ET LE DÉFAUT EST INVISIBLE À LA RELECTURE.** Rien dans la sortie ne disait « je n'ai testé
+qu'un format sur trois ». C'est ce qui le rapproche des deux autres :
+
+| | La sonde disait | Ce qu'elle ne disait pas |
+|---|---|---|
+| `scan-da` (31/07) | « 204 mesurés » | que 5 éléments étaient sortis du décompte |
+| contrôle ② (03/08) | ROUGE sur le 1ᵉʳ thème | que le rouge suivait le RANG, pas le thème |
+| sonde 5 (11/09) | « aucun débordement » | qu'elle n'avait regardé qu'un format sur trois |
+
+**→ LA RÈGLE : une sonde doit COUVRIR SON DOMAINE, et le DIRE.** La sonde 5 affiche désormais une
+ligne par format (`débordement · carre`, `· portrait`, `· story`) : le domaine couvert se lit dans
+la sortie, il ne se suppose plus. C'est l'application directe de *« tout compteur affiché doit dire
+ce qu'il compte ET ce qu'il exclut »* (backlog master 30.4).
+
 ## ⚠️ MOTIF — UNE SONDE QUI NE PEUT RIEN CONCLURE DIT « N/A » AVEC SA RAISON, JAMAIS « VERT »
 
 *(posé le 11/09/2026 — quatrième refus de faux vert dans la même journée)*

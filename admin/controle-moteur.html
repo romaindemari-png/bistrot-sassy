@@ -205,6 +205,76 @@ function partPeintreCanvas(ctx, W, H){
   return partCouleur(ctx, W, H, c.texte) + partCouleur(ctx, W, H, c.encre);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   SONDE 5 — LE CONTENU DÉBORDE-T-IL DU CADRE ?
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ C'EST LE MODE D'ÉCHEC QUI COMPTE : un post qui part TRONQUÉ, en silence,
+      chez un client. Le `foreignObject` a une hauteur FIXE ; ce qui dépasse est
+      rogné sans un mot — ni erreur, ni avertissement, ni trace dans l'image.
+      Le prototype de Georges l'a rencontré : « le reflow tient jusqu'à 5 plats ;
+      à 6, la liste pousse le logo hors du cadre » (backlog 23).
+
+   ⚠️ RIEN N'EST RÉINVENTÉ. Le critère vient de `scripts/scan-troncature.js` du
+      master — `scrollHeight > clientHeight`, plus la recherche du COUPABLE parmi
+      les descendants (« le parent qui rogne ne dit rien, c'est l'enfant qui sort
+      du cadre »). On l'applique au DOM du template au lieu de celui de l'admin.
+
+   ⚠️ POURQUOI PAS LA SONDE EN PIXELS DE GEORGES. Son prototype teste la dernière
+      ligne de pixels de l'image. C'est une sonde PAR TEMPLATE — elle suppose de
+      savoir ce qui devrait s'y trouver (chez lui, le logo). Le critère DOM vaut
+      pour TOUS les templates sans rien savoir de leur dessin, et il NOMME
+      l'élément fautif au lieu de signaler une quantité.
+
+   ⚠️ ON MESURE LE MÊME DOM QUE CELUI QUI SERA RASTERISÉ : même corps, même CSS,
+      même largeur. Un conteneur de W×H, `overflow:hidden`, exactement comme le
+      `foreignObject`. Ce n'est pas une imitation du rendu, c'est le rendu.
+
+   ⚠️ AUCUNE RÈGLE DE RÉDUCTION N'EST POSÉE ICI, ET C'EST DÉLIBÉRÉ. Cette sonde
+      CONSTATE. Réduire un corps, tronquer une liste ou passer à la ligne sont des
+      décisions de mise en page — elles appartiennent à Romain, pas au détecteur.
+   ══════════════════════════════════════════════════════════════════════════ */
+async function deborde(tpl, W, H, fmt, slide){
+  const A = await MOTEUR_V2._interne.chargerAssets();
+  const Z = MOTEUR_V2._interne.ZONE_SURE[fmt] || MOTEUR_V2._interne.ZONE_SURE.portrait;
+  const hote = document.createElement('div');
+  /* ⚠️ PAS DE `contain:strict` : il force scrollHeight == clientHeight, donc la perte
+     du conteneur vaut TOUJOURS 0 et la sonde devient muette sur ce critère. Mesuré.
+     Le verdict repose donc sur le DÉPASSEMENT DES ENFANTS, qui est le vrai signal —
+     c'est déjà ce que `scan-troncature` appelle « le coupable ». */
+  hote.style.cssText = 'position:fixed;left:-99999px;top:0;width:' + W + 'px;height:' + H
+                     + 'px;overflow:hidden';
+  const st = document.createElement('style');
+  st.textContent = MOTEUR_V2._interne.socleCSS(A) + tpl.css(A, W, H, fmt, Z);
+  hote.innerHTML = tpl.corps(A, W, H, fmt, Z, slide).replace(/ xmlns="[^"]*"/, '');
+  document.body.appendChild(st); document.body.appendChild(hote);
+  await document.fonts.ready;
+  const r = hote.getBoundingClientRect();
+  let pire = 0, coupable = null;
+  hote.querySelectorAll('*').forEach(k => {
+    const kr = k.getBoundingClientRect();
+    const d = Math.max(kr.bottom - r.bottom, kr.right - r.right);
+    if (d > pire){ pire = d; coupable = k.className || k.tagName; }
+  });
+  /* le conteneur lui-même : ce que le foreignObject rognerait */
+  const perte = Math.max(0, hote.scrollHeight - hote.clientHeight);
+  hote.remove(); st.remove();
+  return { perte, debord: Math.round(pire), coupable };
+}
+
+/* Le contenu RÉEL du thème, pris dans /_data — jamais un contenu fabriqué pour
+   la circonstance. Un détecteur de débordement nourri d'un cas commode ne dit rien
+   du cas du client. `_donnees` est rempli une fois au démarrage. */
+let _donnees = {};
+function slidePour(t){
+  if (t.template === 'infos' || t.template === 'annonce')
+    return { texte: (_donnees.general && _donnees.general.description) || '' };
+  if (t.template === 'dujour')
+    return { dishes: (_donnees.dujour || []).map(x => ({ n: x.nom, p: x.prix, desc: x.desc, epuise: x.dispo === false })) };
+  const c = _donnees.carte || {};
+  const cat = Object.keys(c).find(k => (c[k] || []).length) || '';
+  return { label: cat, dishes: (c[cat] || []).map(x => ({ n: x.nom, p: x.prix, desc: x.description })) };
+}
+
 /* ── le harnais ──────────────────────────────────────────────────────────── */
 function versCanvas(dataUrl){
   return new Promise((ok, ko) => {
@@ -226,6 +296,8 @@ const img = src => new Promise((ok, ko) => {
 (async function(){
   try {
     const themes = await (await fetch('/_data/themes.json', { cache:'no-store' })).json();
+    for (const f of ['carte','dujour','general'])
+      _donnees[f] = await (await fetch('/_data/' + f + '.json', { cache:'no-store' })).json().catch(() => null);
     const v2 = sondeInventaire(themes);
 
     /* ⚠️ LA SONDE 2 EST ÉPROUVÉE MÊME SANS TEMPLATE — et c'est délibéré. Elle est
@@ -251,7 +323,7 @@ const img = src => new Promise((ok, ko) => {
       const hab = await img(blk.habillage);
       const ras = MOTEUR_V2.rasteriseur(t);
       if (!ras){ dire('—', t.id, false, 'aucun rasteriseur alors que <code>template</code> est déclaré'); continue; }
-      const url = await ras(CLIENT_TOKENS.render.canvasW, hab, { dishes: [], label: '' }, fmt);
+      const url = await ras(CLIENT_TOKENS.render.canvasW, hab, slidePour(t), fmt);
       const r = await versCanvas(url);
       const g = porteBandeauGabarit(r.ctx, r.W, r.H);
       dire('2. bandeau gabarit', t.id, !g.gabarit,
@@ -262,7 +334,7 @@ const img = src => new Promise((ok, ko) => {
          Safari l'aurait fait SANS lever d'erreur. */
       const nu = await versCanvas(await MOTEUR_V2._interne.rasteriser(
         MOTEUR_V2._interne.TEMPLATES[t.template], CLIENT_TOKENS.render.canvasW, hab,
-        { dishes: [], label: '' }, fmt, true));
+        slidePour(t), fmt, true));
       const avec = encre(r.ctx, r.W, r.H), sans = encre(nu.ctx, nu.W, nu.H);
       const ecart = Math.abs(avec - sans) / Math.max(avec, sans, 1);
       /* ⚠️ CETTE SONDE NE VAUT QUE SUR UNE MACHINE QUI N'A PAS LES POLICES INSTALLÉES,
@@ -285,6 +357,23 @@ const img = src => new Promise((ok, ko) => {
       const peintre = partPeintreCanvas(r.ctx, r.W, r.H);
       dire('4. qui a peint', t.id, peintre < 0.001,
         (peintre*100).toFixed(2) + ' % de couleurs du peintre canvas (texte/encre) — seuil 0,1 % ; repli mesuré à 0,58 %');
+
+      /* SONDE 5 — le débordement, sur le contenu RÉEL du thème. */
+      /* ⚠️ TOUS LES FORMATS, PAS SEULEMENT LE PREMIER. Un contenu qui tient en portrait
+         (1080×1350) peut déborder en carré (1080×1080) : 270 px de moins. Ne tester que
+         `Object.keys(t.formats)[0]` aurait laissé passer exactement ce cas — c'est comme
+         ça que le débordement de `dujour` en carré a failli n'être jamais vu. */
+      for (const f of Object.keys(t.formats)){
+        const habF = await img(t.formats[f].habillage);
+        const HF = Math.round(CLIENT_TOKENS.render.canvasW * habF.naturalHeight / habF.naturalWidth);
+        const d5 = await deborde(MOTEUR_V2._interne.TEMPLATES[t.template],
+                                 CLIENT_TOKENS.render.canvasW, HF, f, slidePour(t));
+        dire('5. débordement · ' + f, t.id, d5.debord <= 2,
+          d5.debord <= 2
+            ? 'aucun — le contenu tient dans ' + CLIENT_TOKENS.render.canvasW + '×' + HF
+            : '<b class="ko">TRONQUÉ</b> : dépassement ' + d5.debord + 'px dans '
+              + CLIENT_TOKENS.render.canvasW + '×' + HF + ' — coupable <code>' + d5.coupable + '</code>');
+      }
       document.getElementById('vign').insertAdjacentHTML('beforeend',
         '<figure><img src="' + r.src + '"><figcaption>' + t.id + ' · ' + fmt + '</figcaption></figure>');
     }
