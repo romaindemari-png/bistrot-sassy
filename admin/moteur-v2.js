@@ -430,7 +430,48 @@
     }
   };
 
-  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR, annonce: ANNONCE };
+  /* ══════════════════════════════════════════════════════════════════════════
+     TEMPLATE « photo » — M1 : LA PHOTO ENTRE DANS LE SVG, ET RIEN D'AUTRE
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ VOLONTAIREMENT NU. Pas de point focal (M2), pas de décor (M3). M1 ne prouve
+        qu'une chose, et c'est celle qui décide du chantier : le pipeline encaisse-t-il
+        une photo, et COMBIEN ÇA PÈSE.
+
+     ⚠️ LA PHOTO DOIT VIVRE **DANS** LE SVG, pas être peinte au canvas en dessous.
+        Un SVG en `data:` URI est un document isolé : il ne voit aucune ressource
+        externe. Elle arrive donc en base64 par `slide.photo`.
+
+     ⚠️ ET ELLE DOIT ÊTRE RAMENÉE À LA RÉSOLUTION DU CADRE AVANT D'ÊTRE ENCODÉE.
+        Une photo d'iPhone de 4032 px partirait en base64 avec des pixels que le
+        cadre ne montrera jamais. Mesuré sur la photo de démo :
+          1080 px → 265 Ko de base64 · 810 px → 162 Ko · 540 px → 87 Ko
+        À quoi s'ajoutent les 153 Ko des polices. Aucune des trois options ne passe
+        sous les 180 Ko de Georges — mais 180 Ko n'est pas un plafond MESURÉ, c'est
+        une configuration validée une fois. Le plafond réel se constate sur un iPhone.
+
+     ⚠️ LE FOND EST REPEINT EN CRÈME, comme pour les autres templates — c'est ce qui
+        neutralise l'écran NOIR (un foreignObject qui ne peint rien laisse du
+        transparent, que le JPEG rend noir). ⚠️ Mais ça crée l'écran CRÈME : même
+        défaut, visage différent. C'est la SONDE 6 qui le couvre, pas ce commentaire.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const PHOTO = {
+    css: function (A, W, H, fmt, Z) {
+      const c = window.CLIENT_TOKENS.primitives.color;
+      return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.creme + '}'
+        + '.ph{position:absolute;top:0;left:0;width:' + W + 'px;height:' + H
+          + 'px;object-fit:cover;display:block}';
+    },
+    corps: function (A, W, H, fmt, Z, slide) {
+      const src = (slide && slide.photo) || '';
+      /* ⚠️ BALISE AUTO-FERMÉE : on est en XML dans un foreignObject. Un `<img>` non
+         fermé fait REFUSER le SVG entier, sans message. */
+      return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+           +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
+           + '</div>';
+    }
+  };
+
+  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR, annonce: ANNONCE, photo: PHOTO };
 
   /* ── LE RASTERISEUR, UNIQUE ET PARAMÉTRÉ ────────────────────────────────────
      `hab` ne sert QU'À donner le rapport du format : le template peint son propre

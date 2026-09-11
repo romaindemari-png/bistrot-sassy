@@ -187,6 +187,38 @@ personne ne peut choisir est une **correction de cohérence**, pas un compromis 
       des 12 gabarits
 - [ ] ⚠️ **et le remonter au master**, qui porte le même vestige sur ses six thèmes
 
+## ⚠️ LE FOND REPEINT NEUTRALISE L'ÉCRAN NOIR — ET CRÉE L'ÉCRAN CRÈME
+
+*(posé le 11/09/2026, au morceau M1 du pipeline photo. À REMONTER AU MASTER avec le moteur.)*
+
+**Le défaut d'origine, chez Georges :** un `foreignObject` qui ne peint rien laisse du
+**transparent**, que le JPEG rend **NOIR**. Résultat mesuré à l'époque : une image 100 % noire de
+9 Ko, bien formée, **sans la moindre erreur**.
+
+**Le correctif, dans `rasteriser()` :** on repeint le fond de la charte AVANT `drawImage`. Au pire
+on publie un aplat crème, jamais un rectangle noir.
+
+⚠️ **MAIS LE DÉFAUT N'A PAS DISPARU — IL A CHANGÉ DE VISAGE.** Une photo qui ne s'encode pas ne
+donne plus un écran noir : elle donne un **écran CRÈME**. Plus discret, donc **plus dangereux** :
+un aplat noir se remarque, un aplat crème ressemble à un post minimaliste.
+
+**→ C'EST LA SONDE 6 QUI LE COUVRE, PAS LE CORRECTIF.** Signature : *« une photographie n'est pas
+faite des trois couleurs d'une charte »*. Elle compte les pixels qui ne sont d'AUCUNE couleur de la
+charte. Éprouvée au rouge le 11/09 :
+
+| | hors charte |
+|---|---|
+| rendu **avec** photo | **96,8 %** |
+| rendu **sans** photo (l'écran crème) | **0,0 %** |
+
+Ce n'est pas un seuil ajusté : c'est une propriété de ce qu'est une photographie.
+
+⚠️ **LE CORRECTIF ET SA SONDE VOYAGENT ENSEMBLE À LA REMONTÉE AU MASTER.** Remonter le fond repeint
+sans la sonde 6, c'est remonter un correctif qui déplace un mode d'échec silencieux vers un autre,
+plus discret, sans rien pour le voir. **C'est exactement le couplage `D` ↔ `test-atteignabilite`**
+constaté ce matin : ni Georges (le correctif sans la sonde) ni le master (ni l'un ni l'autre) ne
+peuvent voir le problème seuls.
+
 ## ⚠️ MOTIF — UNE SONDE QUI NE COUVRE QU'UN CAS MENT PAR OMISSION
 
 *(constaté le 11/09/2026, sonde 5 du contrôle v2)*
