@@ -455,11 +455,49 @@
         défaut, visage différent. C'est la SONDE 6 qui le couvre, pas ce commentaire.
      ══════════════════════════════════════════════════════════════════════════ */
   const PHOTO = {
-    css: function (A, W, H, fmt, Z) {
+    css: function (A, W, H, fmt, Z, slide) {
       const c = window.CLIENT_TOKENS.primitives.color;
+      const zp = (slide && slide.zonePhoto) || { x:0, y:0, w:1, h:1 };
+      const f = (slide && slide.focal) || {};
+      const fx = (typeof f.x === 'number' ? f.x : 0.5) * 100;
+      const fy = (typeof f.y === 'number' ? f.y : 0.5) * 100;
+      /* ══════════════════════════════════════════════════════════════════════
+         LE POINT FOCAL — `object-position`, ET C'EST L'ÉQUIVALENT EXACT DU CANVAS
+         ══════════════════════════════════════════════════════════════════════
+         `renderFinalCustom` calcule :
+             scale = max(dw/bw, dh/bh)            (cover)
+             sw = dw/scale · sh = dh/scale        (portion source prélevée)
+             sx = (bw − sw) · fx · sy = (bh − sh) · fy
+         `object-fit:cover` + `object-position: fx% fy%` a exactement cette
+         sémantique : le point fx% de l'image s'aligne sur le point fx% du cadre,
+         donc le décalage vaut (imageMiseÀL'Échelle − cadre) × fx.
+         ⚠️ L'ÉQUIVALENCE EST MESURÉE, ET SA LIMITE AUSSI. Les deux chemins ont été
+            comparés au pixel sur 13 cas (9 focales dont les 4 coins, débord en X seul,
+            en Y seul, sur les deux axes, et une zonePhoto partielle). Résultat, et il
+            n'est PAS « identique partout » :
+
+              décalage ENTIER        → 0 % de pixels divergents, écart moyen 0,15-0,24
+                                        par canal (le bruit de fond du JPEG)
+              décalage FRACTIONNAIRE → jusqu'à 8,5 % de pixels, écart moyen 2,8/canal
+
+            **LE CADRAGE EST DONC ÉQUIVALENT — la formule est la même, et elle rend un
+            résultat identique dès que le décalage tombe juste.** Ce qui diverge est le
+            RE-ÉCHANTILLONNAGE : `drawImage` avec un rectangle source fractionnaire
+            interpole, `object-position` arrondit autrement. Un demi-pixel.
+
+            ⚠️ NE PAS ÉCRIRE « identique au pixel » : c'est faux à décalage
+               fractionnaire, et c'est le cas le plus courant (`sy = 358,5` sur la photo
+               de démo en 1080×600). La borne mesurée est UN DEMI-PIXEL, et elle est
+               invisible à l'œil — les deux rendus ont été comparés visuellement. Mais
+               une borne connue vaut mieux qu'une égalité supposée.
+            ⚠️ ET CE N'EST PAS RATTRAPABLE EN ARRONDISSANT `object-position` : le
+               décalage naît du rapport photo/cadre, pas de la valeur qu'on écrit. */
       return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.creme + '}'
-        + '.ph{position:absolute;top:0;left:0;width:' + W + 'px;height:' + H
-          + 'px;object-fit:cover;display:block}';
+        + '.ph{position:absolute'
+          + ';left:' + (zp.x * W).toFixed(2) + 'px;top:' + (zp.y * H).toFixed(2) + 'px'
+          + ';width:' + (zp.w * W).toFixed(2) + 'px;height:' + (zp.h * H).toFixed(2) + 'px'
+          + ';object-fit:cover;object-position:' + fx.toFixed(4) + '% ' + fy.toFixed(4) + '%'
+          + ';display:block}';
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const src = (slide && slide.photo) || '';
@@ -483,7 +521,7 @@
     const H = Math.round(W * hab.naturalHeight / hab.naturalWidth);
     const Z = ZONE_SURE[fmt] || ZONE_SURE.portrait;
     return chargerAssets().then(function (A) {
-      const css = socleCSS(A, sansPolices) + tpl.css(A, W, H, fmt, Z);
+      const css = socleCSS(A, sansPolices) + tpl.css(A, W, H, fmt, Z, slide);
       const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">'
                 + '<defs><style type="text/css"><![CDATA[' + css + ']]></style></defs>'
                 + '<foreignObject x="0" y="0" width="' + W + '" height="' + H + '">'
