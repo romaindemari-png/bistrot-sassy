@@ -1,21 +1,15 @@
+/* ⚠️ SITE_URL et le jeton des Blobs étaient ÉCRITS EN DUR ici — et pas pareil selon le fork.
+   Ils vivent désormais dans netlify/lib/site.mjs : UNE seule vérité, et le fichier redevient
+   IDENTIQUE d'un fork à l'autre. (Le repli du master pointait sur « gorgeous-heliotrope », un
+   domaine qui n'est même pas le sien ; et un `cp` vers Masa aurait cassé ses Blobs.) */
+import { SITE_URL, verifyIdentity, storeOpts } from '../lib/site.mjs';
 // netlify/functions/disconnect-instagram.mjs
 // Déconnecte le compte Instagram : supprime la connexion stockée dans Blobs.
 // POST protégé par le JWT Netlify Identity.
 import { getStore } from '@netlify/blobs';
 
-const SITE_URL = process.env.IDENTITY_URL || 'https://gorgeous-heliotrope-e2e59d.netlify.app';
 
-async function verifyIdentity(token) {
-  if (!token) return false;
-  try {
-    const res = await fetch(`${SITE_URL}/.netlify/identity/user`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
+
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -29,7 +23,7 @@ export const handler = async (event) => {
   }
 
   try {
-    const store = getStore({ name: 'instagram', siteID: process.env.SITE_ID, token: process.env.NETLIFY_API_TOKEN });
+    const store = getStore(storeOpts('instagram'));
     await store.delete('connection');
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (err) {

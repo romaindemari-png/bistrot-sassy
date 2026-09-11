@@ -23,15 +23,41 @@ exports.handler = async (event) => {
 
   const { section, data } = body;
 
-  // Mapping section → fichier JSON
-  const fileMap = {
+  /* ⚠️ LA CORRESPONDANCE section → fichier ÉTAIT ÉCRITE EN DUR — dont « dujour ». Chez Masa il
+     fallait écrire « cematin » : sans cette ligne, la sauvegarde échouait EN SILENCE (« Section
+     inconnue »). Elle est désormais DÉRIVÉE de config.json, qui déclare `admin.edit` (l'id de
+     l'écran) et `admin.fichier` (le JSON visé) pour chaque card.
+
+     ⚠️ ELLE RESTE UNE LISTE BLANCHE. On ne construit JAMAIS un chemin depuis la requête : une
+     section inconnue est REFUSÉE. Dériver n'est pas ouvrir.
+     ⚠️ REPLI EN DUR SUR LE SOCLE : si config.json est injoignable (hoquet réseau, CDN froid), la
+     sauvegarde des sections du socle continue de fonctionner. On ne laisse pas un aléa couper le
+     client de ses données. */
+  const SOCLE = {
     contact:  '_data/general.json',
     horaires: '_data/horaires.json',
     menu:     '_data/carte.json',
     photos:   '_data/photos.json',
     config:   '_data/config.json',
-    events:   '_data/events.json'
   };
+
+  const fileMap = { ...SOCLE };
+  try {
+    const cfg = await fetch(`${process.env.URL}/_data/config.json`).then(r => r.ok ? r.json() : null);
+    const b = (cfg && cfg.blocs) || {};
+    for (const groupe of [b.socle, b.optionnels]) {
+      for (const [cle, bloc] of Object.entries(groupe || {})) {
+        const cartes = Array.isArray(bloc.admin) ? bloc.admin : [bloc.admin || {}];
+        for (const c of cartes) {
+          const edit = c.edit;                       // pas d'`edit` ⇒ card sans éditeur ⇒ rien à écrire
+          if (!edit) continue;
+          fileMap[edit] = '_data/' + (c.fichier || cle) + '.json';
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[save-data] config.json illisible → repli sur le socle :', e.message);
+  }
 
   const filePath = fileMap[section];
   if (!filePath) {

@@ -1,4 +1,5 @@
 import { getStore } from '@netlify/blobs';
+import { storeOpts } from '../lib/site.mjs';
 
 // Sert publiquement une image stockée dans Netlify Blobs.
 // GET /.netlify/functions/serve-image?key=photos/...
@@ -14,11 +15,7 @@ export const handler = async (event) => {
   }
 
   try {
-    const store = getStore({
-      name: 'photos',
-      siteID: process.env.SITE_ID,
-      token: process.env.NETLIFY_API_TOKEN
-    });
+    const store = getStore(storeOpts('photos'));
     const result = await store.getWithMetadata(key, { type: 'arrayBuffer' });
     if (!result || !result.data) {
       return { statusCode: 404, body: 'Image introuvable' };

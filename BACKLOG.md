@@ -61,8 +61,36 @@
 - [ ] Stepper : **pictos + mots** (polish DA). Jamais pictos seuls (cible 40+).
 - [ ] Décider du sort du **grisé desktop des étapes** (garder / remplacer par points) — à juger sur pièce.
 
+## ⚠️ MOTIF — UNE SONDE QUI CONTREDIT LE SYSTÈME DOIT ÊTRE VÉRIFIÉE AVANT D'ÊTRE CRUE
+
+**Deux occurrences font un motif, et il faut le nommer** *(le second cas constaté le 11/09/2026)*.
+
+| Date | La sonde disait | La vérité | Ce qui l'a faussée |
+|---|---|---|---|
+| 03/08/2026 | contrôle ② **ROUGE** sur le 1ᵉʳ thème | le parcours client était **sain** (3/3) | le singleton `#igCarteCv` — le verdict dépendait du **temps de parse** du fichier |
+| 11/09/2026 | token Instagram **MORT** (`OAuthException` 190) | le token était **valide** | la sonde interrogeait **`graph.facebook.com`** ; un token Instagram-Login n'y est pas parsable. Le code, lui, n'appelle **que** `graph.instagram.com` |
+
+**Le 190 ne disait pas « expiré », il disait « mauvaise API ».** Et le message (« Cannot parse
+access token ») le disait déjà — il a été lu comme une confirmation au lieu d'un signal.
+
+⚠️ **LE COÛT N'EST PAS THÉORIQUE.** Le diagnostic a conduit à déconnecter et reconnecter le compte
+Instagram de production pour rien. Et il a détruit la pièce à conviction : l'ancien token n'ayant
+jamais été testé sur le bon hôte, **on ne saura jamais s'il était mort**.
+
+**→ LA RÈGLE : quand une sonde contredit le système, on vérifie LA SONDE en premier.**
+Concrètement : est-ce qu'elle interroge **le même hôte / le même chemin / le même état** que le code
+de production ? Ici, un seul `grep IG_GRAPH` avant de conclure aurait suffi.
+
+⚠️ **Elle existe déjà sous une autre forme au `LELAB.md`** — *« quand l'usage réel contredit le
+harnais, c'est le HARNAIS qui ment »*, et *« une sonde doit mesurer ce qui compte, pas un proxy
+commode »*. Ce qui manquait n'était pas la règle : c'était de l'appliquer **dans les deux sens**.
+Elle avait été appliquée le matin même (vérifier qu'on regardait le bon commit avant de conclure
+sur l'admin) et oubliée l'après-midi.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
+- **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
+  Instagram-Login ne sont pas parsables par l'API Facebook, qui répond un `190` trompeur.
 - Netlify : Identity KO en deploy preview → tests finaux sur prod main. Admin non testable en local (Identity).
 - Meta : triplet visible sans clic tant que review non validée (cause des rejets Policy 1.6 passés).
 

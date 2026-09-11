@@ -1,4 +1,4 @@
-import { getStore } from '@netlify/blobs';
+import { igStore } from '../lib/ig-token.mjs';
 
 const IG_OAUTH = 'https://api.instagram.com/oauth/access_token';
 const IG_GRAPH = 'https://graph.instagram.com';
@@ -42,22 +42,53 @@ export const handler = async (event) => {
     const long = await (await fetch(`${IG_GRAPH}/access_token?` + new URLSearchParams({
       grant_type: 'ig_exchange_token', client_secret: IG_APP_SECRET, access_token: short.access_token
     }))).json();
-    const token = long.access_token || short.access_token;
+    /* ⚠️ PAS DE REPLI SUR LE TOKEN COURT. C'était `long.access_token || short.access_token` : quand
+       l'échange échouait, on enregistrait un token de ~1 h en le DATANT de 60 jours (le repli de
+       durée juste en dessous), avec state:'connected' — et on affichait « Instagram connecté ✅ ».
+       Un token court n'est même pas rafraîchissable : ig_refresh_token EXIGE un token long. La
+       connexion était donc condamnée à la seconde où elle était écrite, et le client ne l'apprenait
+       qu'à sa prochaine ouverture de l'admin. Une connexion à moitié faite n'est pas une connexion :
+       on n'écrit RIEN, et on le dit. Réessayer coûte trois secondes ; découvrir la panne au moment
+       de publier coûte le travail déjà fait. */
+    if (!long.access_token) {
+      console.error('auth-callback: ig_exchange_token sans token long —',
+        (long.error && long.error.message) || JSON.stringify(long));
+      return page(502, 'Connexion incomplète',
+        'Instagram a bien autorisé l’accès, mais n’a pas délivré de session longue durée. '
+        + 'Rien n’a été enregistré — réessayez la connexion dans un instant.');
+    }
+    const token = long.access_token;
 
     // 3) infos compte (username) — best effort
     const me = await (await fetch(`${IG_GRAPH}/me?` + new URLSearchParams({
       fields: 'user_id,username', access_token: token
     }))).json();
     console.log('ig me:', JSON.stringify(me));
-    const igUserId = me.user_id || String(short.user_id);
+    /* ⚠️ C'était `String(short.user_id)` : si /me échoue ET que l'échange n'a pas rendu de user_id,
+       String(undefined) vaut la chaîne "undefined" — TRUTHY. On écrivait donc une connexion avec
+       igUserId:"undefined", et publish, qui ne teste que la présence, partait publier dessus.
+       Tant que le repli env existait, ce cas restait masqué ; il ne l'est plus. */
+    const igUserId = me.user_id || (short.user_id != null ? String(short.user_id) : null);
+    if (!igUserId) {
+      console.error('auth-callback: aucun igUserId — /me:', JSON.stringify(me));
+      return page(502, 'Connexion incomplète',
+        'Impossible d’identifier le compte Instagram. Rien n’a été enregistré — réessayez la connexion.');
+    }
 
     // 4) stocker la connexion (Blobs privé, par site = par client)
-    const store = getStore({ name: 'instagram', siteID: process.env.SITE_ID, token: process.env.NETLIFY_API_TOKEN });
+    // ⚠️ Meta renvoie `expires_in` (~60 j) à chaque échange — ON LE JETAIT. Sans lui, impossible de
+    //    savoir quand le token meurt, donc impossible de prévenir le client. On l'inscrit.
+    const maintenant = Date.now();
+    const dureeVie = Number(long.expires_in) || 60 * 24 * 3600;   // secondes
+    const store = igStore();
     await store.setJSON('connection', {
       igUserId,
       accessToken: token,
       username: me.username || null,
-      connectedAt: new Date().toISOString()
+      connectedAt: new Date(maintenant).toISOString(),
+      expiresAt: new Date(maintenant + dureeVie * 1000).toISOString(),
+      lastRefreshAt: new Date(maintenant).toISOString(),   // repère du cron : « pas avant 24 h »
+      state: 'connected'
     });
 
     return page(200, 'Instagram connecté ✅',
