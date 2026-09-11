@@ -17,6 +17,30 @@
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+     L'ÉCHAPPEMENT — TOUTE donnée client qui entre dans un innerHTML passe ici.
+     ══════════════════════════════════════════════════════════════════════
+     ⚠️ CE FICHIER CONSTRUISAIT SON HTML PAR CONCATÉNATION, SANS ÉCHAPPER.
+        Mesuré le 11/09/2026 avec un plat nommé `Steak <maison> "du chef"` et
+        un descriptif `<img src=x onerror="…"> & compagnie` :
+          · le nom rendu perdait « <maison> » — lu comme une BALISE, pas du texte ;
+          · et une vraie balise <img> porteuse d'un attribut `onerror` entrait
+            dans le DOM de la page publique.
+        La donnée vient de l'admin : c'est le CLIENT qui la tape.
+
+     ⚠️ DEUX ÉCHAPPEURS, PAS UN — le contexte décide.
+        · `eTxt`  pour du CONTENU (entre deux balises) : & < > suffisent.
+        · `eAttr` pour une VALEUR D'ATTRIBUT (src="…", alt="…") : il faut EN PLUS
+          " et ', sinon la valeur se referme et on écrit un attribut voisin.
+        Employer `eTxt` dans un attribut laisserait passer `" onerror="…`.
+
+     ⚠️ `setText` / `setTextAll` n'en ont PAS besoin : `textContent` ne parse pas.
+        `setAttr` / `setAttrAll` non plus : `setAttribute` ne parse pas.
+        Seul `innerHTML` parse — c'est lui, et lui seul, qu'on protège. */
+  const eTxt  = v => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const eAttr = v => eTxt(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
   function setText(id, value) {
     const el = document.getElementById(id);
     if (el && value !== undefined) el.textContent = value;
@@ -60,12 +84,12 @@
       var items = carte[cat[0]];
       if (!items || !items.length) return '';   // categories reelles uniquement
       var plats = items.map(function (p) {
-        var desc = p.description ? '<p class="plat-desc">' + p.description + '</p>' : '';
+        var desc = p.description ? '<p class="plat-desc">' + eTxt(p.description) + '</p>' : '';
         return '<div class="ardoise-plat">'
              +   '<div class="plat-head">'
-             +     '<span class="plat-nom">' + (p.nom || '') + '</span>'
+             +     '<span class="plat-nom">' + eTxt(p.nom) + '</span>'
              +     '<span class="plat-dots" aria-hidden="true"></span>'
-             +     '<span class="plat-prix">' + (p.prix || '') + '</span>'
+             +     '<span class="plat-prix">' + eTxt(p.prix) + '</span>'
              +   '</div>'
              +   desc
              + '</div>';
@@ -156,9 +180,9 @@
         const label = g.days.length > 1
           ? `${abbr(g.days[0])} – ${abbr(g.days[g.days.length - 1])}`
           : g.days[0].toLowerCase();
-        const val = g.ouvert ? `<span>${g.heures}</span>`
+        const val = g.ouvert ? `<span>${eTxt(g.heures)}</span>`
                              : `<span class="closed">fermé</span>`;
-        return `<div class="horaires-row"><strong>${label}</strong>${val}</div>`;
+        return `<div class="horaires-row"><strong>${eTxt(label)}</strong>${val}</div>`;
       }).join('');
     }
 
@@ -169,7 +193,7 @@
         const label = g.days.length > 1
           ? `${abbr(g.days[0])}–${abbr(g.days[g.days.length - 1])}`
           : abbr(g.days[0]);
-        return `${label}&nbsp;: ${g.ouvert ? g.heures : 'fermé'}`;
+        return `${eTxt(label)}&nbsp;: ${g.ouvert ? eTxt(g.heures) : 'fermé'}`;
       }).join('<br/>');
     }
 
@@ -210,7 +234,7 @@
       if (grid) {
         grid.innerHTML = photos.galerie.map(item => `
           <div class="galerie-cell">
-            <img src="${item.image}" alt="${item.legende || 'Bistrot Sassy'}">
+            <img src="${eAttr(item.image)}" alt="${eAttr(item.legende || 'Bistrot Sassy')}">
           </div>
         `).join('');
 
