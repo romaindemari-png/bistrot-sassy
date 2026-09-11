@@ -105,6 +105,62 @@
   DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
   **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
 
+## 🔴 `test-atteignabilite` EST ROUGE, ET ON SAIT POURQUOI — à réécrire après le test iPhone
+
+*(constaté le 11/09/2026, au cherry-pick de D)*
+
+⚠️ **CE ROUGE N'EST PAS UN ROUGE IGNORÉ.** Il est constaté, compris, daté, et sa réparation est
+planifiée après une mesure qui n'existe pas encore. À ne pas confondre avec un garde-fou qu'on
+laisse pourrir — c'est précisément ce que `scan-da` est devenu depuis le 16/07, et qu'on refuse.
+
+    ❌ ATTEIGNABILITÉ — 2 échec(s)
+       A/ HORS CLAVIER, le pied BOUGE de 56px quand les barres se replient (775 → 719)
+       A/ après fermeture du clavier, le pied n'est pas revenu à sa place (écart 300px)
+
+### Ce qui s'est passé
+
+`scripts/test-atteignabilite.js` appelle `studioFootKeyboard()` et `studioClavierOuvert`
+(lignes 153 et 181) — **deux symboles que D a supprimés**. Le scan levait donc un
+`ReferenceError` avant de rien juger.
+
+⚠️ **ET LE RENOMMAGE NE SUFFIT PAS — mesuré, pas supposé.** Remplacer par `studioFootSettle()`
+fait passer le scan du `ReferenceError` au **rouge de fond** ci-dessus : son assertion A affirme
+*« Le CSS (fixed + safe-area) suffit ; seul le clavier justifie une compensation »* — **c'est la
+doctrine d'avant D, et D la renverse.** Le verdir en baissant un seuil serait la faute gravée trois
+fois au `LELAB.md`.
+
+### 🔗 LE COUPLAGE : `D` ↔ `test-atteignabilite.js` — ils voyagent ENSEMBLE
+
+**Ni Georges ni le master ne pouvaient voir ce défaut :**
+
+| Dépôt | a D ? | a les garde-fous ? | pouvait le voir ? |
+|---|---|---|---|
+| `georges-site` | ✅ | ❌ aucun | non |
+| `lestud-template-food` | ❌ | ✅ les 9 | non |
+| **`bistrot-sassy`** | ✅ | ✅ | **OUI — premier dépôt à avoir les deux** |
+
+**→ À ne pas oublier quand D remontera au master** (backlog master, point 31) : le correctif et la
+réécriture du garde-fou partent ensemble, sinon le master hérite d'un scan qui lève.
+
+### La réécriture — la prescription existe depuis le 16/07, et elle est juste
+
+Le commit qui a CRÉÉ ce garde-fou (`5abfbb9`, master, 16/07/2026) l'avait écrit d'avance :
+
+> *« LE CSS PUR N'EST PAS FAIT, ET C'EST DÉLIBÉRÉ : `studioFootKeyboard` compense un comportement
+> d'iOS Safari que le harnais (Chrome headless) NE SAIT PAS reproduire. Le supprimer serait un pari
+> qu'aucun test local ne peut arbitrer — décision après un vrai passage iPhone. **Et si on y va, le
+> garde-fou A devra être RÉÉCRIT : il mesure « translateY vaut 0 » (le mécanisme), pas « le pied est
+> visible et cliquable » (le résultat).** »*
+
+**→ A doit mesurer LE RÉSULTAT — « le pied est visible et cliquable dans la zone visible » — et non
+LE MÉCANISME — « translateY vaut 0 ».** Une assertion sur le résultat reste vraie avant D, après D,
+et après le prochain changement de mécanique. C'est la règle *« une sonde doit mesurer ce qui
+compte, pas un proxy commode »*, appliquée à une sonde qu'on savait provisoire.
+
+⚠️ **ORDRE ARRÊTÉ : on réécrit APRÈS le test iPhone**, pas avant. Le comportement que l'assertion
+doit juger n'est arbitrable que sur un vrai appareil ; écrire l'assertion d'abord reviendrait à
+figer une intention au lieu de constater un résultat. Voir la section « BOUT 9 » ci-dessous.
+
 ## 🚪 BOUT 9 — CE QUI DOIT PASSER PAR L'iPHONE RÉEL (à faire APRÈS fusion sur `main`)
 
 *(posé le 11/09/2026, au cherry-pick de D)*
