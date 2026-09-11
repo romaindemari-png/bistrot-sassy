@@ -105,6 +105,55 @@
   DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
   **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
 
+## ⚠️ MOTIF — UNE SONDE QUI NE PEUT RIEN CONCLURE DIT « N/A » AVEC SA RAISON, JAMAIS « VERT »
+
+*(posé le 11/09/2026 — quatrième refus de faux vert dans la même journée)*
+
+### Le cas qui l'a fait écrire : la sonde 3 du contrôle v2
+
+La sonde « les polices de marque sont-elles réellement embarquées ? » rasterise **deux fois**, avec
+et sans les `@font-face`, et compare l'encre. Identiques ⇒ la police n'a pas été prise. C'est le
+seul moyen d'attraper le **piège iOS n°1**, qui est muet.
+
+**Elle est structurellement AVEUGLE sur le Mac de Romain — mesuré :**
+
+    ~/Library/Fonts : Canela (38 variantes) + ElmsSans (2 variantes)
+
+`font-family:'Canela'` s'y résout donc **par le NOM**, `@font-face` ou pas. Les deux rasterisations
+sont identiques (écart 0,5 %), et la sonde ne peut RIEN conclure.
+
+⚠️ **DEUX FAÇONS DE LA FAIRE PASSER, ET AUCUNE N'EST VERTE :**
+
+| | |
+|---|---|
+| ❌ baisser le seuil sous 0,5 % | elle dirait **« les polices sont embarquées »** alors qu'on n'en sait rien. Un vert obtenu ainsi est pire qu'un rouge : il éteint la question |
+| ✅ **rendre `N/A` et dire pourquoi** | l'écran porte *« les polices sont INSTALLÉES sur cette machine, la sonde est aveugle — à juger sur iPhone »* |
+
+**→ Le verdict qui compte est celui de l'iPhone du client, qui n'a NI Canela NI Elms.** C'est là, et
+nulle part ailleurs, que l'absence de base64 se verrait. Inscrit à la liste du **BOUT 9**.
+
+### La règle générale
+
+**UNE SONDE QUI NE PEUT STRUCTURELLEMENT RIEN CONCLURE DANS SON ENVIRONNEMENT DOIT DIRE « N/A »
+AVEC SA RAISON. Jamais vert.** Un vert dit *« j'ai vérifié et c'est bon »* ; N/A dit *« je n'ai pas
+pu vérifier, et voici pourquoi »*. Les deux sont honnêtes ; seul le premier est un mensonge quand
+la vérification n'a pas eu lieu.
+
+⚠️ C'est le pendant exact de la règle déjà gravée au `LELAB.md` — *« un scan qui ne découvre rien
+est un scan cassé »*. Ici : **un scan qui ne PEUT rien découvrir doit le dire.**
+
+### Le motif : QUATRE refus de faux vert dans la même journée
+
+| | La facilité qui aurait verdi | Ce qui a été fait |
+|---|---|---|
+| `scan-da` / `scan-troncature` | traiter le rouge intermittent comme un vrai défaut, ou l'ignorer | **rejoué 3×**, verdict déclaré instable, backlog daté |
+| `test-atteignabilite` | le renommage en 2 lignes demandé | **refusé** : il transformait un `ReferenceError` en rouge de fond, et le verdir aurait exigé de trafiquer l'assertion |
+| sonde 2 (bandeau) | monter le seuil de 12 à 140 | **changé ce qu'elle mesure** — une empreinte, pas un seuil. 15/18 → 18/18 |
+| sonde 3 (polices) | baisser le seuil sous 0,5 % | **N/A avec sa raison** |
+
+**→ Le point commun n'est pas la sonde, c'est le geste : à chaque fois, le chemin court était de
+toucher le SEUIL, et le bon était de toucher CE QU'ON MESURE — ou d'admettre qu'on ne mesure rien.**
+
 ## ✅ EXEMPLE À GARDER — ON CORRIGE LA SONDE, PAS LE SEUIL
 
 *(11/09/2026, écriture de `admin/controle-moteur.html`, sonde « bandeau gabarit »)*

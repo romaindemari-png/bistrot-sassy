@@ -122,9 +122,14 @@
      les cinq `css*()` : c'est ce qui a permis à un `str.replace` de frapper deux
      templates au lieu d'un, le 31/07, et de publier en canvas dégradé pendant deux
      jours. Un template n'écrit plus que CE QUI LUI EST PROPRE. */
-  function socleCSS(A) {
+  /* ⚠️ `sansPolices` N'EST PAS UNE OPTION DE PRODUCTION : elle n'existe que pour la
+     SONDE 3 du contrôle, qui rasterise deux fois — avec et sans les @font-face — et
+     compare la quantité d'encre. C'est le seul moyen de prendre Safari en flagrant
+     délit quand il rend en police système SANS lever d'erreur (piège iOS n°1).
+     Aucun chemin de l'admin ne la passe. */
+  function socleCSS(A, sansPolices) {
     const T = window.CLIENT_TOKENS;
-    return (T.fontFaces || []).map(function (f) {
+    return (sansPolices ? [] : (T.fontFaces || [])).map(function (f) {
       const cle = 'font:' + f.family;
       if (!A[cle]) return '';
       return "@font-face{font-family:'" + f.family + "';src:url('" + A[cle] + "') format('woff2')"
@@ -147,7 +152,98 @@
         donc `rasteriseur()` rend null pour tous, donc aucune ligne de v2 ne
         s'exécute. Le contrôle doit dire « RIEN À TESTER » et virer au ROUGE —
         jamais au vert. */
-  const TEMPLATES = {};
+  /* ══════════════════════════════════════════════════════════════════════════
+     TEMPLATE « carte » — DÉRIVÉ DE LA SECTION #carte DU SITE, PAS RÉINVENTÉ
+     ══════════════════════════════════════════════════════════════════════════
+     Chaque valeur ci-dessous est relevée dans le CSS d'`index.html`. Les rapports
+     sont convertis en fraction de W pour que le rendu suive le format ; les
+     couleurs viennent des tokens, jamais d'un hex écrit ici.
+
+       #carte            background --blue, color --cream
+       .carte-inner      max-width 760 sur 1366 ≈ 0,556 W, padding 2,5rem
+       .s-label          Elms 500, .2em, uppercase, --blue à 55 %  → ici CRÈME à 55 %
+       .s-title          Canela 900, bas de casse, line-height 1,05 → ici CRÈME
+       .carte-stamp      Elms 500, .18em, uppercase, --blue sur --yellow, rotate(-4deg)
+       .ardoise          flex colonne, gap 2,6rem
+       .ardoise-cat-title Elms 500, .22em, uppercase, --yellow, filet crème 18 %
+       .plat-nom         Canela 900, cream
+       .plat-dots        pointillé crème 35 %, translateY(-.28em)
+       .plat-prix        Elms, cream
+       .plat-desc        Elms, cream 60 %, line-height 1,5
+
+     ⚠️ LE FOND EST BLEU, ET C'EST LE SITE QUI LE DIT. `#carte { background: var(--blue) }` —
+        la section entière est bleue, texte crème. Un post « à la charte » n'est donc pas
+        crème sur blanc : c'est l'inverse. C'est aussi ce qui donne à la sonde 4 son sens,
+        le bleu étant massivement présent.
+
+     ⚠️ AUCUNE TEXTURE. `grep grain|texture|noise|mix-blend-mode|filter` sur index.html → 0.
+        Marges, grille, typo. On ne transporte pas le grain de Georges.
+
+     ⚠️ LE TITRE EST EN BAS DE CASSE, comme `.s-title` du site (« la carte »). Pas de
+        `text-transform` : c'est la règle de DA de Sassy, à l'inverse de Georges.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const CARTE = {
+    css: function (A, W, H, fmt, Z) {
+      const c = window.CLIENT_TOKENS.primitives.color;
+      const u = function (r) { return (W * r).toFixed(2) + 'px'; };   // fraction de W → px
+      return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.accent + ';color:' + c.creme + '}'
+        + '.col{position:absolute;top:' + (Z.haut + W * 0.085) + 'px;left:' + u(0.085)
+          + ';right:' + u(0.085) + ';bottom:' + (Z.bas + W * 0.085) + 'px;display:flex;flex-direction:column}'
+        + '.tete{display:flex;align-items:flex-start;justify-content:space-between;gap:' + u(0.03) + '}'
+        + ".lbl{font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.026)
+          + ';letter-spacing:.2em;text-transform:uppercase;opacity:.55;display:block;margin-bottom:' + u(0.02) + '}'
+        + ".titre{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.105)
+          + ';line-height:1.05}'
+        + ".tampon{font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.024)
+          + ';letter-spacing:.18em;text-transform:uppercase;color:' + c.accent + ';background:' + c.jaune
+          + ';padding:' + u(0.016) + ' ' + u(0.024) + ';transform:rotate(-4deg);white-space:nowrap}'
+        + '.liste{display:flex;flex-direction:column;gap:' + u(0.062) + ';margin-top:' + u(0.07) + '}'
+        + '.cat{display:flex;flex-direction:column;gap:' + u(0.026) + '}'
+        + ".cat-t{font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.026)
+          + ';letter-spacing:.22em;text-transform:uppercase;color:' + c.jaune
+          + ';padding-bottom:' + u(0.017) + ';border-bottom:1px solid rgba(250,241,226,.18)}'
+        + '.plat{display:flex;flex-direction:column}'
+        + '.ligne{display:flex;align-items:baseline}'
+        + ".nom{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.040) + ';line-height:1.1}'
+        /* ⚠️ LES LEADER DOTS : impossibles au canvas, une règle CSS ici. `flex:1` mange
+           l'espace, le pointillé le remplit, et le `translateY` les aligne sur la ligne de
+           base — les trois valeurs viennent de `.plat-dots`. */
+        + '.dots{flex:1;margin:0 ' + u(0.014) + ';border-bottom:1px dotted ' + c.creme
+          + ';opacity:.35;transform:translateY(-.28em)}'
+        + ".prix{font-family:'Elms',sans-serif;font-size:" + u(0.030) + ';white-space:nowrap}'
+        + ".desc{font-family:'Elms',sans-serif;font-size:" + u(0.025)
+          + ';line-height:1.5;opacity:.6;margin-top:' + u(0.008) + '}'
+        + '.pied{margin-top:auto;font-family:\'Elms\',sans-serif;font-size:' + u(0.023)
+          + ';letter-spacing:.18em;text-transform:uppercase;opacity:.45}';
+    },
+    corps: function (A, W, H, fmt, Z, slide) {
+      const plats = ((slide && slide.dishes) || []).filter(function (d) { return d.n; });
+      const label = (slide && slide.label) || '';
+      const rangees = plats.map(function (d) {
+        const desc = d.desc ? '<p class="desc">' + xml(d.desc) + '</p>' : '';
+        return '<div class="plat"><div class="ligne">'
+             + '<span class="nom">' + xml(d.n) + '</span>'
+             + '<span class="dots"></span>'
+             + '<span class="prix">' + xml(d.p) + '</span>'
+             + '</div>' + desc + '</div>';
+      }).join('');
+      return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+           +   '<div class="col">'
+           +     '<div class="tete"><div>'
+           +       '<span class="lbl">l\u2019ardoise</span>'
+           +       '<div class="titre">la carte</div>'
+           +     '</div><span class="tampon">cette semaine</span></div>'
+           +     '<div class="liste"><div class="cat">'
+           +       (label ? '<div class="cat-t">' + xml(label) + '</div>' : '')
+           +       rangees
+           +     '</div></div>'
+           +     '<div class="pied">bistrot sassy</div>'
+           +   '</div>'
+           + '</div>';
+    }
+  };
+
+  const TEMPLATES = { carte: CARTE };
 
   /* ── LE RASTERISEUR, UNIQUE ET PARAMÉTRÉ ────────────────────────────────────
      `hab` ne sert QU'À donner le rapport du format : le template peint son propre
@@ -155,11 +251,11 @@
      bandeau « GABARIT » par construction, sans redessiner un seul PNG.
      On lit quand même `hab` plutôt que de recopier une table de ratios — une
      connaissance du master en moins à tenir synchronisée. */
-  function rasteriser(tpl, W, hab, slide, fmt) {
+  function rasteriser(tpl, W, hab, slide, fmt, sansPolices) {
     const H = Math.round(W * hab.naturalHeight / hab.naturalWidth);
     const Z = ZONE_SURE[fmt] || ZONE_SURE.portrait;
     return chargerAssets().then(function (A) {
-      const css = socleCSS(A) + tpl.css(A, W, H, fmt, Z);
+      const css = socleCSS(A, sansPolices) + tpl.css(A, W, H, fmt, Z);
       const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">'
                 + '<defs><style type="text/css"><![CDATA[' + css + ']]></style></defs>'
                 + '<foreignObject x="0" y="0" width="' + W + '" height="' + H + '">'
