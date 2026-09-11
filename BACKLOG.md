@@ -105,6 +105,32 @@
   DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
   **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
 
+## 🔺 LE MOTEUR v2 DE SASSY EST EN AVANCE SUR CELUI DE GEORGES — c'est LUI la référence
+
+*(posé le 11/09/2026, au bout v2-1)*
+
+`admin/moteur-v2.js` de Sassy n'est pas un `cp` de `admin/editeurs-georges.js` : il est écrit
+**déjà corrigé** sur deux bouts du plan de remontée (backlog master, point 23) que Georges n'a pas.
+
+| | `georges-site` | `bistrot-sassy` |
+|---|---|---|
+| **Bout 2** — pipeline unique | ❌ le squelette de rasteriseur est recopié **5 fois** (~27 l. chacune) | ✅ **UN** rasteriseur paramétré ; un template ne fournit que son CSS et son corps |
+| **Bout 3** — registre déclaratif | ❌ les `theme.id` sont **en dur** dans `rasteriseur()` | ✅ un thème déclare `"template": "…"` dans `themes.json` ; **aucun `theme.id` dans le moteur** |
+| Socle CSS | ❌ recopié dans les 5 `css*()` | ✅ `socleCSS()`, écrit une fois |
+
+⚠️ **CE N'EST PAS DE LA COQUETTERIE : c'est la duplication du bout 2 qui a coûté deux jours à
+Georges.** Le 31/07, un `str.replace` visant la règle `.col{…}` a frappé `cssArdoise` ET `cssCarte`
+— identiques parce que recopiées — et l'ardoise a publié en canvas dégradé jusqu'à ce que le client
+le voie.
+
+**→ QUAND LA REMONTÉE AU MASTER SE FERA, LA RÉFÉRENCE EST LA VERSION DE SASSY, PAS CELLE DE
+GEORGES.** Remonter Georges obligerait à refaire les bouts 2 et 3 au master ; remonter Sassy les
+apporte déjà faits. Et les templates de Georges se réécrivent alors contre le rasteriseur unique —
+c'est le travail que le point 23 planifiait de toute façon.
+
+⚠️ Reste chez Georges et pas ici : les cinq templates écrits, le peintre canvas dédié de l'ardoise,
+et `controle-moteur.html` (réarmé sur les signatures de Sassy, pas recopié).
+
 ## 🔴 `test-atteignabilite` EST ROUGE, ET ON SAIT POURQUOI — à réécrire après le test iPhone
 
 *(constaté le 11/09/2026, au cherry-pick de D)*
