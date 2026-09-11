@@ -302,7 +302,75 @@
     }
   };
 
-  const TEMPLATES = { carte: CARTE, infos: INFOS };
+  /* ══════════════════════════════════════════════════════════════════════════
+     TEMPLATE « dujour » — DÉRIVÉ DE LA SECTION #dujour DU MASTER
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ SASSY N'A PAS CETTE SECTION SUR SON SITE. Le bloc `dujour` est optionnel et
+        `actif:false` — `index.html` ne le porte pas. La source de vérité est donc
+        le `#dujour` de `lestud-template-food`, écrit dans la MÊME charte et les
+        MÊMES polices, plus l'habillage propre (`sassy-dujour-*.png`) qui fixe les
+        mots. Ce n'est pas une invention : c'est la seule dérivation disponible.
+
+       #dujour        background --yellow          → le TROISIÈME fond de la charte
+       .dujour-card   #fff, border 2px solid --blue
+       .dujour-dispo  Elms .18em uppercase         → la pastille « aujourd'hui »
+       .dujour-nom    Canela 900, BAS DE CASSE, --blue
+       .dujour-desc   Elms, --blue à 70 %, lh 1,55
+       .dujour-prix   margin-top:auto, Canela 900, --blue
+
+     ⚠️ LE JAUNE EN FOND, ET C'EST VOULU. `carte` est bleu, `infos` est crème,
+        `dujour` est jaune : les trois couleurs de la charte, une par thème. C'est
+        le site qui alterne ainsi ses sections, pas une décoration.
+     ⚠️ `dispo:false` ⇒ la carte s'efface (opacité) plutôt que de disparaître. Un plat
+        épuisé est une information ; le retirer la supprimerait.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const DUJOUR = {
+    css: function (A, W, H, fmt, Z) {
+      const c = window.CLIENT_TOKENS.primitives.color;
+      const u = function (r) { return (W * r).toFixed(2) + 'px'; };
+      return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.jaune + ';color:' + c.accent + '}'
+        + '.col{position:absolute;top:' + (Z.haut + W * 0.085) + 'px;left:' + u(0.085)
+          + ';right:' + u(0.085) + ';bottom:' + (Z.bas + W * 0.085) + 'px;display:flex;flex-direction:column}'
+        + ".pastille{align-self:flex-start;font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.024)
+          + ';letter-spacing:.18em;text-transform:uppercase;background:' + c.accent + ';color:' + c.jaune
+          + ';padding:' + u(0.014) + ' ' + u(0.022) + ';margin-bottom:' + u(0.028) + '}'
+        + ".titre{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.105)
+          + ';line-height:1.05;text-transform:lowercase}'
+        + '.cartes{flex:1;display:flex;flex-direction:column;justify-content:center;gap:' + u(0.028) + '}'
+        + '.c{background:' + c.blanc + ';border:' + u(0.0035) + ' solid ' + c.accent
+          + ';padding:' + u(0.034) + ' ' + u(0.032) + '}'
+        + '.c.epuise{opacity:.45}'
+        + '.tete{display:flex;align-items:baseline;gap:' + u(0.02) + '}'
+        + ".nom{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.042)
+          + ';line-height:1.15;text-transform:lowercase;flex:1}'
+        + ".prix{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.034) + ';white-space:nowrap}'
+        + ".desc{font-family:'Elms',sans-serif;font-size:" + u(0.025)
+          + ';line-height:1.55;opacity:.7;margin-top:' + u(0.012) + '}'
+        + ".pied{font-family:'Elms',sans-serif;font-size:" + u(0.023)
+          + ';letter-spacing:.18em;text-transform:uppercase;opacity:.45;margin-top:' + u(0.03) + '}';
+    },
+    corps: function (A, W, H, fmt, Z, slide) {
+      const plats = ((slide && slide.dishes) || []).filter(function (d) { return d.n; });
+      const cartes = plats.map(function (d) {
+        const desc = d.desc ? '<div class="desc">' + xml(d.desc) + '</div>' : '';
+        return '<div class="c' + (d.epuise ? ' epuise' : '') + '">'
+             +   '<div class="tete"><span class="nom">' + xml(d.n) + '</span>'
+             +   '<span class="prix">' + xml(d.p) + '</span></div>'
+             +   desc
+             + '</div>';
+      }).join('');
+      return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+           +   '<div class="col">'
+           +     '<span class="pastille">aujourd\u2019hui</span>'
+           +     '<div class="titre">le plat du jour</div>'
+           +     '<div class="cartes">' + cartes + '</div>'
+           +     '<div class="pied">bistrot sassy</div>'
+           +   '</div>'
+           + '</div>';
+    }
+  };
+
+  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR };
 
   /* ── LE RASTERISEUR, UNIQUE ET PARAMÉTRÉ ────────────────────────────────────
      `hab` ne sert QU'À donner le rapport du format : le template peint son propre
