@@ -105,6 +105,38 @@
   DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
   **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
 
+## ⚠️ `semantic.texte` ET `semantic.encre` SONT DES RELIQUATS — ET LA SONDE 4 EN DÉPEND
+
+*(posé le 11/09/2026, au template `infos`)*
+
+`primitives.color.texte` (#3a3a3a) et `texteDoux` (#6b6b6b) viennent des **anciens tokens**, ceux
+de l'époque Bricolage/Inter — quand les posts étaient composés dans la typo du back-office. **Ils
+ne figurent nulle part dans le `:root` du site**, qui ne déclare que `--blue`, `--cream`, `--yellow`.
+
+Aujourd'hui ils ne servent plus qu'à **UN seul consommateur : le peintre canvas**
+(`semantic.nomProduit.color = 'texte'`, `semantic.prix.color = 'encre'`).
+
+**C'est exactement ce qui fait marcher la sonde 4 du contrôle v2.** Mesuré sur trois rendus réels :
+
+| source | part de `texte` #3a3a3a |
+|---|---|
+| v2 `carte` | **0,00 %** |
+| v2 `infos` | **0,00 %** |
+| repli CANVAS | **0,58 %** |
+
+Les templates v2 peignent en `creme` et `accent` ; le canvas peint en `texte`/`encre`. La sonde
+compte les pixels **des couleurs du peintre** : zéro ⇒ c'est bien le v2 qui a peint.
+
+⚠️ **LE JOUR OÙ UN TEMPLATE v2 VOUDRA `texte` OU `encre`, LA SONDE 4 DOIT ÊTRE ROUVERTE
+CONSCIEMMENT — pas contournée.** Elle deviendrait un faux positif, et le réflexe serait de monter
+son seuil : ce serait maquiller la sonde, la faute qu'on a déjà refusée quatre fois aujourd'hui.
+Le bon geste sera alors de changer **ce qu'elle mesure**, comme pour la sonde 2.
+
+⚠️ **Et la question de fond restera ouverte : ces deux couleurs devraient-elles encore exister ?**
+Le site ne les connaît pas. Les retirer des tokens obligerait à repeindre le canvas dans la charte
+— ce qui est souhaitable, mais c'est le **repli** qu'on toucherait, donc à faire avec les mêmes
+précautions que le reste.
+
 ## ⚠️ MOTIF — UNE SONDE QUI NE PEUT RIEN CONCLURE DIT « N/A » AVEC SA RAISON, JAMAIS « VERT »
 
 *(posé le 11/09/2026 — quatrième refus de faux vert dans la même journée)*

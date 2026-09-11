@@ -243,7 +243,66 @@
     }
   };
 
-  const TEMPLATES = { carte: CARTE };
+  /* ══════════════════════════════════════════════════════════════════════════
+     TEMPLATE « infos » — DÉRIVÉ DE LA SECTION #horaires DU SITE
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ C'EST L'INVERSE EXACT DE « carte », ET C'EST LE SITE QUI LE DIT.
+        `#carte { background: var(--blue) }` · `#horaires { background: var(--cream) }`
+        Les deux sections alternent. Le post `infos` est donc BLEU SUR CRÈME, là où
+        la carte est crème sur bleu. Ce n'est pas un choix, c'est une transposition.
+
+       #horaires        background --cream, texte --blue
+       .s-label         « informations »  (Elms .2em uppercase, blue 55 %)
+       .s-title         « nous trouver »  (Canela 900, BAS DE CASSE, blue)
+       .horaires-row    filet rgba(32,80,231,.12) — le bleu à 12 %
+       .horaires-addr   Elms, blue à 70 %, line-height 1,7
+
+     ⚠️ LE CONTENU EST UN TEXTE LIBRE, écrit par le client (220 car. max, cf.
+        `#infosText` du master). Il arrive par `slide.texte` — PAR ARGUMENT, jamais
+        lu dans le DOM : c'est ce qui rend le template testable hors de l'admin.
+
+     ⚠️ MÊME SOCLE, MÊME RASTERISEUR. Ce template ne redéclare ni @font-face ni
+        reset : `socleCSS()` s'en charge. C'est tout l'objet du bout 2 du point 23 —
+        et la raison pour laquelle un `str.replace` ne peut plus frapper deux
+        templates à la fois.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const INFOS = {
+    css: function (A, W, H, fmt, Z) {
+      const c = window.CLIENT_TOKENS.primitives.color;
+      const u = function (r) { return (W * r).toFixed(2) + 'px'; };
+      return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.creme + ';color:' + c.accent + '}'
+        + '.col{position:absolute;top:' + (Z.haut + W * 0.085) + 'px;left:' + u(0.085)
+          + ';right:' + u(0.085) + ';bottom:' + (Z.bas + W * 0.085) + 'px;display:flex;flex-direction:column}'
+        + ".lbl{font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.026)
+          + ';letter-spacing:.2em;text-transform:uppercase;opacity:.55;display:block;margin-bottom:' + u(0.02) + '}'
+        + ".titre{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.105) + ';line-height:1.05}'
+        /* le filet de `.horaires-row` : le bleu à 12 %, converti en rgba */
+        + '.filet{height:1px;background:rgba(32,80,231,.12);margin:' + u(0.062) + ' 0 ' + u(0.055) + '}'
+        /* ⚠️ CENTRÉ VERTICALEMENT, et c'est le SEUL écart au site — assumé. `#horaires`
+           est en `align-items:start` parce qu'il vit dans une grille à côté d'une carte,
+           avec une hauteur libre. Le post est un CADRE FIXE, et le texte y est borné à
+           220 caractères par le master (`#infosText maxlength`) : il sera TOUJOURS court.
+           Calé en haut, il laisserait toujours une moitié morte. `flex:1` + `center`. */
+        + ".texte{flex:1;display:flex;align-items:center;font-family:'Elms',sans-serif;font-size:" + u(0.046)
+          + ';line-height:1.7;opacity:.85}'
+        + ".pied{margin-top:auto;font-family:'Elms',sans-serif;font-size:" + u(0.023)
+          + ';letter-spacing:.18em;text-transform:uppercase;opacity:.45}';
+    },
+    corps: function (A, W, H, fmt, Z, slide) {
+      const texte = (slide && slide.texte) || '';
+      return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+           +   '<div class="col">'
+           +     '<span class="lbl">informations</span>'
+           +     '<div class="titre">nous trouver</div>'
+           +     '<div class="filet"></div>'
+           +     '<div class="texte">' + xml(texte) + '</div>'
+           +     '<div class="pied">bistrot sassy</div>'
+           +   '</div>'
+           + '</div>';
+    }
+  };
+
+  const TEMPLATES = { carte: CARTE, infos: INFOS };
 
   /* ── LE RASTERISEUR, UNIQUE ET PARAMÉTRÉ ────────────────────────────────────
      `hab` ne sert QU'À donner le rapport du format : le template peint son propre
