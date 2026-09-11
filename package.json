@@ -1,8 +1,21 @@
 {
-  "name": "bistrot-sassy-functions",
+  "name": "lelab-functions",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
     "@netlify/blobs": "^8.1.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.0.0"
+  },
+  "scripts": {
+    "scan-da": "node scripts/scan-da.js",
+    "test-listes": "node scripts/test-listes.js",
+    "scan-troncature": "node scripts/scan-troncature.js",
+    "test-allerretour": "node scripts/test-allerretour.js",
+    "test-themes": "node scripts/test-themes.js",
+    "test-atteignabilite": "node scripts/test-atteignabilite.js",
+    "test-course-ecran": "node scripts/test-course-ecran.js",
+    "test-contenu-public": "node scripts/test-contenu-public.js"
   }
 }

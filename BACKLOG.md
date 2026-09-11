@@ -61,6 +61,50 @@
   **→ C'est le CHEMIN DE SECOURS des 4 thèmes restants si le moteur v2 dérape.** À étendre
   **seulement si on en a besoin** — pas par anticipation.
 
+- [ ] **🟡 `scan-da` ET `scan-troncature` RENDENT UN VERDICT INTERMITTENT** *(constaté le 11/09/2026,
+  bout 6 du re-base — à rattacher au point 32 du backlog master)*.
+  **Mesuré, même code et même donnée :**
+
+  | | passe 1 | passe 2 | passe 3 |
+  |---|---|---|---|
+  | `scan-da` sur Sassy | **14 écarts** (13 × « CONTRASTE 1:1 ») | **0** | **0** |
+  | `scan-troncature` sur Sassy | **1 bloc, −442px** | **0 bloc** | — |
+  | `scan-da` sur le master (témoin) | **7 écarts**, tous « 1:1 », mais sur un **autre écran** | — | — |
+
+  Un contraste de **1:1** = texte et fond identiques : la sonde lit avant que l'écran ait peint.
+  `scan-troncature` a donné **−414px** puis **−442px** puis **0** sur la même cible.
+
+  ⚠️ **LE MOTIF, ET IL EST PLUS UTILE QUE LES CAS : UNE SONDE QUI MESURE TROP TÔT MENT TOUJOURS
+  DANS LE MÊME SENS — elle invente un défaut, jamais elle n'en cache un.** Un contraste pas encore
+  peint sort à 1:1 (donc « échec »), une hauteur pas encore stable sort trop grande (donc
+  « tronqué »). **Le faux POSITIF est le mode d'échec par défaut d'une sonde prématurée**, ce qui
+  la rend coûteuse en attention mais jamais dangereuse pour le client.
+  **→ Corollaire : un rouge de ces deux scans se REJOUE avant d'être cru.** Trois passes vertes
+  valent un vert ; une passe rouge ne vaut rien.
+
+  ⚠️ **TROISIÈME SONDE MENTEUSE DE LA SEMAINE** — après le faux rouge du contrôle ② (03/08, le
+  singleton `#igCarteCv`) et le `190` sur la mauvaise API (11/09). Voir le motif *« une sonde qui
+  contredit le système doit être vérifiée avant d'être crue »* plus bas.
+
+- [ ] **🟡 `test-contenu-public` — 6 constats sur 7 sont un DÉCALAGE D'ATTENTE, pas un défaut**
+  *(constaté le 11/09/2026)*. Le scan cherche les sélecteurs du **master** (`carte-grid`,
+  sous-titres pilotés par `config.textes.categories`) ; **l'ardoise littérale de Sassy ne les rend
+  pas**. Vérifié sur la page rendue, pas déduit : 2 catégories affichées, 6 plats, 6 descriptifs,
+  intitulés présents — `plats` étant vide, elle est auto-masquée, ce qui est le comportement voulu.
+  Le master passe le même scan (`exit=0`).
+  **→ À EXEMPTER EXPLICITEMENT, AVEC LA RAISON ÉCRITE** — même discipline que la table `VERDICTS`
+  de `scan-da`. **Pas à adapter à l'aveugle** : un scan qu'on aligne sur ce qu'il trouve cesse de
+  constater quoi que ce soit.
+
+- [ ] **🟡 LES SOUS-TITRES DE CATÉGORIE SONT DÉCLARÉS ET JAMAIS RENDUS** *(introduit le 11/09/2026
+  par le bout 2 du re-base)*. `config.json` de Sassy ne portait **aucune clé `textes`** avant ; il
+  déclare maintenant `blocs.socle.carte.textes.categories` avec « tartares, verrines, crudités » et
+  « maison, de saison ». **`renderCarte()` ne les lit pas.** L'admin s'en sert pour ses libellés
+  d'éditeur, donc c'est inoffensif — mais **c'est une déclaration sans effet sur le site**, la
+  famille exacte de ce qu'on traque depuis le début (« tout affichage d'état doit dériver des
+  DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
+  **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
+
 ## Chantiers STUDIO (raffinement)
 - [ ] Vignette Insta mobile : dégraisser l'habillage encadré → **ligne fine** sous le bandeau (poids visuel).
 - [ ] Vignette Insta : **avatar + popup moderne** (pattern Buffer/Later). ⚠️ **SEULEMENT après validation Meta** — tant que la review n'est pas passée, le triplet avatar+@compte+ID doit rester visible SANS clic.
