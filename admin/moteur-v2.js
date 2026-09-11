@@ -370,7 +370,67 @@
     }
   };
 
-  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR };
+  /* ══════════════════════════════════════════════════════════════════════════
+     TEMPLATE « annonce » — DÉRIVÉ DE L'HABILLAGE PROPRE sassy-annonce-*.png
+     ══════════════════════════════════════════════════════════════════════════
+     ⚠️ SOURCE DIFFÉRENTE DES TROIS AUTRES, ET C'EST ASSUMÉ. `carte` et `infos`
+        viennent de sections du site ; `dujour` du `#dujour` du master. L'annonce
+        n'existe nulle part sur un site : c'est un message ponctuel. Sa seule
+        référence est l'habillage que `gen-habillages.py` a produit — relevé au
+        pixel plutôt que décrit de mémoire :
+
+          fond      #2050E7 (20,3 % de l'image)  → le CADRE
+          carte     #FAF1E2 (79,5 %)             → encartée, marges ~5 %
+          trait     #FFF08B (0,1 %)              → petite barre centrée
+          « ANNONCE »  Elms, capitales espacées, bleu, CENTRÉ
+          pied      « BISTROT SASSY », centré
+
+     ⚠️ LE CADRE EST LA FORME, ET ELLE PORTE LE SENS : une affiche épinglée. C'est
+        ce qui distingue l'annonce des trois autres thèmes, qui sont des aplats.
+
+     ⚠️ LE MESSAGE EST EN CANELA, pas en Elms. C'est la voix de l'annonce — l'idiome
+        `.s-title` du site (Canela 900, bas de casse). Un texte de fermeture ou de
+        congés doit se lire d'un coup d'œil dans un fil ; le sans-serif fin le
+        dilue. Écart assumé au texte libre d'`infos`, qui est de l'information
+        pratique et non une déclaration.
+
+     ⚠️ TOUT EST CENTRÉ, comme l'habillage. Les trois autres templates sont ferrés
+        à gauche : c'est ce qui fait qu'une annonce ne ressemble pas à une carte.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const ANNONCE = {
+    css: function (A, W, H, fmt, Z) {
+      const c = window.CLIENT_TOKENS.primitives.color;
+      const u = function (r) { return (W * r).toFixed(2) + 'px'; };
+      return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.accent + '}'
+        /* la carte encartée : marges relevées sur l'habillage (~5 % de W) */
+        + '.carte{position:absolute;top:' + (Z.haut + W * 0.05) + 'px;left:' + u(0.05)
+          + ';right:' + u(0.05) + ';bottom:' + (Z.bas + W * 0.05) + 'px;background:' + c.creme
+          + ';color:' + c.accent + ';display:flex;flex-direction:column;align-items:center'
+          + ';padding:' + u(0.085) + ' ' + u(0.075) + '}'
+        + '.barre{width:' + u(0.125) + ';height:' + u(0.014) + ';background:' + c.jaune
+          + ';border:1px solid ' + c.accent + ';margin-bottom:' + u(0.036) + '}'
+        + ".lbl{font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.028)
+          + ';letter-spacing:.28em;text-transform:uppercase;text-indent:.28em}'
+        + '.corps{flex:1;display:flex;align-items:center;justify-content:center}'
+        + ".msg{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.072)
+          + ';line-height:1.18;text-align:center;text-transform:lowercase}'
+        + ".pied{font-family:'Elms',sans-serif;font-size:" + u(0.023)
+          + ';letter-spacing:.18em;text-transform:uppercase;text-indent:.18em;opacity:.45}';
+    },
+    corps: function (A, W, H, fmt, Z, slide) {
+      const texte = (slide && slide.texte) || '';
+      return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+           +   '<div class="carte">'
+           +     '<div class="barre"></div>'
+           +     '<div class="lbl">annonce</div>'
+           +     '<div class="corps"><div class="msg">' + xml(texte) + '</div></div>'
+           +     '<div class="pied">bistrot sassy</div>'
+           +   '</div>'
+           + '</div>';
+    }
+  };
+
+  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR, annonce: ANNONCE };
 
   /* ── LE RASTERISEUR, UNIQUE ET PARAMÉTRÉ ────────────────────────────────────
      `hab` ne sert QU'À donner le rapport du format : le template peint son propre
