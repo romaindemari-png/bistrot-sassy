@@ -477,6 +477,11 @@
       const f = (slide && slide.focal) || {};
       const fx = (typeof f.x === 'number' ? f.x : 0.5) * 100;
       const fy = (typeof f.y === 'number' ? f.y : 0.5) * 100;
+      const zt = (slide && slide.zoneTexte) || null;
+      const txt = (slide && String(slide.texte || '').trim()) || '';
+      /* Même rôle sémantique que le canvas : `drawZoneText` lit `semantic.infos`. Une
+         seule source pour la police du texte libre, sur les deux chemins. */
+      const I = (window.CLIENT_TOKENS.semantic && window.CLIENT_TOKENS.semantic.infos) || {};
       /* ══════════════════════════════════════════════════════════════════════
          LE POINT FOCAL — `object-position`, ET C'EST L'ÉQUIVALENT EXACT DU CANVAS
          ══════════════════════════════════════════════════════════════════════
@@ -517,11 +522,22 @@
         /* ══════════════════════════════════════════════════════════════════════
            M3 — LE DÉCOR, DÉRIVÉ DU `.stack-hint` DU HERO
            ══════════════════════════════════════════════════════════════════════
-           ⚠️ `sassy-photo` NE DÉCLARE AUCUNE `zoneTexte` — vérifié dans themes.json.
-              Le post photo ne porte donc PAS de texte de contenu : son décor est une
-              SIGNATURE, rien de plus. Y ajouter un titre serait inventer un champ que
-              l'admin ne propose pas, et l'aperçu mentirait à l'export (c'est la « zone
-              fantôme » que le LELAB.md du master nomme déjà).
+           🔴 CE COMMENTAIRE A DIT LE CONTRAIRE, ET IL ÉTAIT FAUX. Il affirmait :
+              « `sassy-photo` NE DÉCLARE AUCUNE `zoneTexte` — vérifié dans themes.json ».
+              La vérification n'avait porté que sur `carre` et `portrait`. En **story**,
+              `sassy-photo` déclare bien une zoneTexte (x.10 y.42 w.80 h.16, 46 px, blanc,
+              centrée) et l'admin offre le champ `#storyText`. Sans le `.txt` ci-dessous,
+              publier une story photo par le v2 aurait JETÉ le texte écrit par le client,
+              sans erreur et sans trace — l'export aurait montré une photo nue.
+              → Cinquième exemplaire du motif « ne couvrir qu'un cas, et mentir par
+                omission » : c'est le même geste que la sonde 5 qui ne testait qu'un
+                format sur trois. Une assertion sur `themes.json` se vérifie sur LES TROIS
+                FORMATS, jamais sur celui qu'on a sous les yeux.
+           ⚠️ `zoneTexte` reste ABSENTE en carre/portrait, et sur les trois formats de
+              `sassy-event` : dans ces cas `.txt` n'est pas émis du tout. On ne peint que
+              ce que l'admin propose — pas de zone fantôme.
+           ⚠️ LA TAILLE EST ABSOLUE DANS themes.json, exprimée en px À 1080. D'où le
+              × W/1080 : sans lui l'aperçu à 540 porterait un texte deux fois trop gros.
 
            Le site traite ses photos ainsi (hero, stack) :
              .stack-hint  crème, Elms, .1em, uppercase, à 70 %, EN BAS, sur la photo
@@ -534,6 +550,18 @@
               (Même raisonnement que le voile de l'annonce chez Georges, dosé pour le
               PIRE cas et non pour le cas moyen.)
            ⚠️ PAS DE `mix-blend-mode`, PAS DE GRAIN : Sassy n'a aucune texture. */
+        + (zt && txt
+            ? '.txt{position:absolute'
+              + ';left:' + (zt.x * W).toFixed(2) + 'px;top:' + (zt.y * H).toFixed(2) + 'px'
+              + ';width:' + (zt.w * W).toFixed(2) + 'px;height:' + (zt.h * H).toFixed(2) + 'px'
+              + ';display:flex;align-items:center;overflow:hidden'      // = le centrage vertical de drawZoneText
+              + ';font-family:' + window.CLIENT_TOKENS.primitives.font[I.font || 'body']
+              + ';font-weight:' + (I.weight || 800)
+              + ';font-size:' + ((zt.taille || 48) * W / 1080).toFixed(2) + 'px;line-height:1.12'
+              + ';color:' + (zt.couleur || '#fff')
+              + ';text-align:' + (zt.align || 'center') + '}'
+              + '.txt > span{display:block;width:100%;word-break:break-word}'
+            : '')
         + '.voile{position:absolute;left:0;right:0;bottom:0;height:' + (W * MEP_PHOTO.voileH).toFixed(2) + 'px'
           + ';background:linear-gradient(to top,rgba(32,80,231,' + MEP_PHOTO.voileA + '),rgba(32,80,231,0))}'
         + ".sign{position:absolute;left:" + (W * MEP_PHOTO.signX).toFixed(2) + 'px;bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px'
@@ -542,11 +570,17 @@
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const src = (slide && slide.photo) || '';
+      const zt = (slide && slide.zoneTexte) || null;
+      const txt = (slide && String(slide.texte || '').trim()) || '';
       /* ⚠️ BALISE AUTO-FERMÉE : on est en XML dans un foreignObject. Un `<img>` non
          fermé fait REFUSER le SVG entier, sans message. */
+      /* Ordre des couches = celui du canvas : photo, voile, texte, signature. Le texte
+         passe AU-DESSUS du voile (c'est le voile qui le rend lisible) et SOUS la
+         signature, qui reste la dernière chose posée. */
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
            +   '<div class="voile"></div>'
+           +   (zt && txt ? '<div class="txt"><span>' + xml(txt) + '</span></div>' : '')
            +   '<div class="sign">bistrot sassy</div>'
            + '</div>';
     }
@@ -632,13 +666,20 @@
           +   (e.heure ? '<span class="heure">' + xml(e.heure) + '</span>' : '')
           + '</span></div>'
         : '';
+      /* ⚠️ CARROUSEL : la carte ne se pose QUE sur la slide qui porte l'événement.
+            `renderFinalCustom` ne passe le texte qu'à la 1ʳᵉ slide (`withText`) ; sans ce
+            garde, les slides 2+ recevraient une carte BLANCHE VIDE à filet bleu — un
+            cartouche vide en plein milieu de la photo, et l'aperçu mentirait à l'export. */
+      const carte = (badge || e.titre || desc)
+        ? '<div class="carte">' + badge
+          + (e.titre ? '<div class="nom">' + xml(e.titre) + '</div>' : '')
+          + desc
+        + '</div>'
+        : '';
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
            +   '<div class="voile"></div>'
-           +   '<div class="carte">' + badge
-           +     (e.titre ? '<div class="nom">' + xml(e.titre) + '</div>' : '')
-           +     desc
-           +   '</div>'
+           +   carte
            + '</div>';
     }
   };
@@ -723,10 +764,17 @@
     const hab = hote.querySelector('.ig-habillage');
     if (!tpl || theme.type !== 'photo') {          // pas notre cas → on efface et on rend la main
       vieux.forEach(function (e) { e.remove(); });
-      if (hab) hab.style.removeProperty('display');
+      /* ⚠️ ON NE DÉFAIT QUE CE QU'ON A FAIT. `removeProperty` était FAUX : la feuille de
+            style de l'admin déclare `.ig-habillage{display:none}`, donc retirer le style
+            en ligne ne « rend pas la main », il CACHE le PNG. Or `composeCustomPreview`
+            vient justement de le poser à `block`. Passer d'un thème photo v2 à un thème
+            sans template faisait donc disparaître l'habillage — en silence.
+            D'où le drapeau : on restitue `block` (la valeur que l'admin emploie) et
+            uniquement si c'est nous qui avons masqué. */
+      if (hab && hab.dataset.v2Masque) { hab.style.display = 'block'; delete hab.dataset.v2Masque; }
       return;
     }
-    if (hab) hab.style.display = 'none';
+    if (hab) { hab.style.display = 'none'; hab.dataset.v2Masque = '1'; }
     const c = window.CLIENT_TOKENS.primitives.color;
     const e = (hote.clientWidth || 260) / 1080;    // l'échelle, LUE
     const M = MEP_PHOTO;
@@ -738,9 +786,14 @@
       el.style.cssText = 'position:absolute;pointer-events:none;' + css;
       return el;
     };
-    pose('v2-voile', 'left:0;right:0;bottom:0;height:' + px(M.voileH)
+    /* ⚠️ LES z-index REPRODUISENT L'ORDRE DES COUCHES DE L'EXPORT : photo, voile,
+          texte, signature. Sans eux, `.ig-text` (z-index 4 dans la feuille de l'admin)
+          l'emporterait sur un voile en `auto`, et la signature passerait SOUS le texte —
+          l'inverse de l'export. Les deux ne se recouvrent pas aujourd'hui (signature en
+          bas à gauche, texte à 42 %), mais on ne laisse pas l'aperçu dépendre de ça. */
+    pose('v2-voile', 'z-index:3;left:0;right:0;bottom:0;height:' + px(M.voileH)
       + ';background:linear-gradient(to top,rgba(32,80,231,' + M.voileA + '),rgba(32,80,231,0))');
-    pose('v2-sign', 'left:' + px(M.signX) + ';bottom:' + px(M.signY)
+    pose('v2-sign', 'z-index:5;left:' + px(M.signX) + ';bottom:' + px(M.signY)
       + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + px(M.signTail)
       + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7'
     ).textContent = 'bistrot sassy';

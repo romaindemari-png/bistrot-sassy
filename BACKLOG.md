@@ -552,6 +552,122 @@ commode »*. Ce qui manquait n'était pas la règle : c'était de l'appliquer **
 Elle avait été appliquée le matin même (vérifier qu'on regardait le bon commit avant de conclure
 sur l'admin) et oubliée l'après-midi.
 
+## 🔴 11/09/2026 — LE BOUT DES ACCROCHES A DÉTERRÉ QUATRE DÉFAUTS RÉELS
+
+Brancher le moteur, c'est le seul geste qui pouvait révéler ceux-là : jusqu'ici rien ne l'appelait.
+Les quatre ont été trouvés **en relisant le contrat du module contre celui de l'admin**, pas par une
+sonde — et les sondes ne les auraient pas tous vus.
+
+**1. `sassy-photo` DÉCLARE BIEN UNE `zoneTexte`, EN STORY — et le template la jetait.**
+Le commentaire de `PHOTO.css` affirmait : *« `sassy-photo` NE DÉCLARE AUCUNE `zoneTexte` — vérifié
+dans themes.json »*. La vérification n'avait porté que sur `carre` et `portrait`. En **story**, le
+thème déclare `{x:.10, y:.42, w:.80, h:.16, taille:46, couleur:#fff, align:center}` et l'admin offre
+le champ `#storyText`. Publier une story photo par le v2 aurait **jeté le texte écrit par le
+client**, sans erreur et sans trace : une photo nue.
+→ **Cinquième exemplaire du motif « ne couvrir qu'un cas, et mentir par omission »** (cf. ligne 276),
+  et le premier où c'est un COMMENTAIRE qui mentait, pas une sonde. Une assertion sur `themes.json`
+  se vérifie sur LES TROIS FORMATS. Corrigé : `.txt` émis quand `zoneTexte` ET texte existent, taille
+  mise à l'échelle (`× W/1080` — la valeur de themes.json est en px à 1080), police lue dans
+  `semantic.infos` comme le fait `drawZoneText`.
+
+**2. LE THÈME ÉVÉNEMENT POSAIT UNE CARTE BLANCHE VIDE SUR LES SLIDES 2+ D'UN CARROUSEL.**
+`renderFinalCustom` ne passe le texte qu'à la 1ʳᵉ slide (`withText`). Le template `EVENT` émettait
+`<div class="carte">` inconditionnellement : sur un carrousel de 3 photos, les photos 2 et 3
+recevaient un cartouche blanc à filet bleu, vide, en plein milieu. Corrigé des deux côtés :
+`event: withText ? slideEvenement() : null` à l'accroche, et garde `(badge || titre || desc)` au
+template.
+
+**3. `habillerApercuPhoto` CACHAIT UN HABILLAGE QU'ELLE N'AVAIT PAS CACHÉ.**
+Sa branche « pas notre cas » faisait `hab.style.removeProperty('display')` — or la feuille de l'admin
+déclare `.ig-habillage{display:none}`. Retirer le style en ligne ne « rend pas la main » : ça CACHE
+le PNG que `composeCustomPreview` vient de poser à `block`. Passer d'un thème photo v2 à un thème
+sans template faisait donc **disparaître l'habillage, en silence**. Corrigé par un drapeau
+(`dataset.v2Masque`) : on ne restitue que si c'est nous qui avons masqué.
+→ **Le correctif et sa sonde voyagent ensemble** (comme D ↔ `test-atteignabilite`, comme l'écran
+  crème ↔ sonde 6) : c'est le critère **D2** de `test-accroches-v2`, et il teste les DEUX SENS —
+  masqué sur les thèmes photo v2, `block` sur un thème sans template.
+
+**4. LE BANDEAU DE REPLI NOMMAIT LE CHEMIN DE RENDU, PAS LE THÈME.**
+`renderFinalCarte` sert carte ET dujour ; `renderFinalInfos` sert infos ET annonce (cf.
+`RENDER_KIND`). Le client sur *Plat du jour* lisait « rendu de secours — carte », et sur *Annonce*,
+« — infos » : **deux noms de thèmes qui existent dans son écran et qui désignaient autre chose**.
+Corrigé : `nomDuTheme(theme)`, le seul repère que le client partage avec nous.
+
+## ⚠️ 11/09/2026 — `pointer-events:none` N'EST PAS CE QUI GARDE LE GLISSEMENT VIVANT
+
+La note du bout M4 disait : *« pointer-events:none non testé par une sonde »*. La sonde a été écrite,
+et **elle a démenti l'hypothèse qu'elle devait confirmer**. Première version : « on retire
+`pointer-events:none` des calques, le glissement doit mourir ». Il n'est pas mort — **Δfocal 0,5000
+dans les deux cas**, geste de confiance (`page.mouse`), doigt posé sur le voile.
+
+Raison mesurée : les écouteurs `pointerdown/pointermove` vivent sur **`#igPhoto`**, et les calques
+sont ses **ENFANTS**. L'événement remonte, quelle que soit la cible du test de survol.
+
+→ **LA GARANTIE PORTANTE EST LA PARENTÉ, PAS LE CSS.** C'est elle qu'un remaniement peut rompre, en
+  posant le décor ailleurs que dans l'hôte — et c'est ce que mesure le critère **B1** (éprouvé au
+  rouge avec un décor posé à côté de l'hôte : geste mort, Δ 0,0000).
+→ `pointer-events:none` achète autre chose, réel mais de moindre portée : le calque reste
+  **transparent au test de survol** — curseur `grab` conservé, pas de sélection de texte sur la
+  signature. C'est le critère **B2**, et lui rougit bien quand on retire la garde.
+→ Même geste que pour les sondes 2 et 4 : **on change ce que la sonde mesure, jamais son seuil.**
+  Ici on a changé ce qu'elle mesure parce que l'épreuve au rouge a montré qu'elle mesurait une
+  propriété que la garde ne contrôle pas.
+
+## 🔧 11/09/2026 — CE QU'IL FAUT SAVOIR POUR ÉCRIRE UNE SONDE SUR L'ADMIN
+
+Quatre pièges rencontrés en écrivant `test-accroches-v2`, tous ayant produit un résultat FAUX avant
+d'être compris. À lire avant d'en écrire une autre.
+
+- **`Profiler.takePreciseCoverage` REMET LES COMPTEURS À ZÉRO** à chaque lecture : une lecture est un
+  DELTA depuis la précédente. La première version calculait `après − avant` et rapportait des
+  comptes **négatifs** (`rasteriser ×−2`). On purge avant, on lit après, on ne soustrait pas.
+- **V8 compile paresseusement** : une fonction jamais exécutée peut être **absente** du rapport de
+  couverture, pas à zéro. « Absente » doit être interprétée comme « zéro appel ».
+- **`let` en portée globale n'est PAS une propriété de `window`.** Lire `window.currentCustomTheme`
+  renvoie `undefined` : la sonde concluait « aucun thème sélectionné » alors qu'il l'était. Il faut
+  lire l'identifiant nu. Même piège à l'épreuve au rouge du garde de course : `window.v2ApercuGen =
+  undefined` **ne désarmait rien** et l'épreuve « passait » sans avoir rien désarmé. Ce qui EST sur
+  `window`, c'est une **déclaration de fonction** — d'où le remplacement de `apercuV2Canvas`.
+- **L'aperçu est un VOLET GARÉ HORS ÉCRAN.** En mobile, `.preview-pane` est `position:fixed` avec
+  `translateY(-900px)` jusqu'à ce que le client touche la mini-vignette. Sans `togglePreview()`,
+  `getBoundingClientRect` renvoie **y = −628** : la souris tape 600 px au-dessus de la fenêtre et la
+  sonde conclut « le glissement ne marche pas ». **Rouge pour une raison étrangère à ce qu'elle
+  mesure.**
+
+⚠️ **ET UN CINQUIÈME, QUI EST LE MOTIF DU « CHIFFRE JUSTE SOUS UN MAUVAIS NOM » — 5ᵉ exemplaire.**
+La sonde du point 23 injectait le thème sans `template` **en queue** de `themes.json`. Or l'admin
+auto-sélectionne le thème **n° 1** à l'ouverture du studio (`renderCustomThemes`) — `sassy-carte`,
+qui A un template : son aperçu se rasterisait, et la couverture comptait CE rendu-là. La sonde
+annonçait « le moteur s'est réveillé » en affichant `socleCSS`, `css`, `corps`, `xml` et six requêtes
+`.woff2` — **des comptes exacts, appartenant à un autre thème**. Corrigé en plaçant le thème en TÊTE :
+rien qui porte un template n'est alors touché de tout le parcours, et l'absence de requête `.woff2`
+redevient un critère valide (les polices sont mises en cache dans `_assets` dès le premier rendu v2 ;
+après lui, leur absence ne prouve plus rien).
+
+## ✅ 11/09/2026 — LE 10ᵉ GARDE-FOU : `test-accroches-v2`
+
+`npm run test-accroches-v2 [port]` — 8 critères, chacun **vu rouge avant d'être cru vert**, et six
+drapeaux d'épreuve qui reproduisent chaque rouge à la demande :
+
+| critère | ce qu'il mesure | son épreuve au rouge |
+|---|---|---|
+| A1 | le v2 peint les 6 thèmes, bandeau caché | `--rouge-sans-moteur` |
+| A2 | la panne crie À L'ÉCRAN, la publication tient | `--rouge-muet` (19 `console.warn` émis, **et la sonde reste rouge**) |
+| B1 | le geste de cadrage aboutit (la parenté) | `--rouge-hors-hote` |
+| B2 | le calque est transparent au survol | `--rouge-sans-garde` |
+| C  | un thème sans `template` n'exécute aucune ligne | `--rouge-avec-template` |
+| D1 | l'aperçu typo passe par le rasteriseur | `--rouge-sans-moteur` |
+| D2 | gabarit masqué seulement quand il le faut | `--rouge-sans-moteur` + test destructif |
+| D3 | pas de rendu périmé affiché | `--rouge-sans-compteur` |
+
+La panne employée par A2 est **réelle, pas un monkeypatch** : les `.woff2` répondent 404 — la panne la
+plus probable en production (un chemin d'asset qui bouge).
+
+⚠️ **PRÉREQUIS NON ÉVIDENT** : ce garde-fou, comme les 9 autres, exige que le site soit servi
+**localement** (le bypass `DEV_LOCAL` de `restoreSession` démarre l'admin sans Netlify Identity — en
+prod le hostname n'y est pas). Il faut un serveur qui RÉPONDE aux chemins `/.netlify/*` ou un client
+qui les intercepte : `test-accroches-v2` les intercepte lui-même (404 immédiat).
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
