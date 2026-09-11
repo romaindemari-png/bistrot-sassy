@@ -105,6 +105,29 @@
   DONNÉES », « un manifeste qu'on ne confronte jamais au réel »).
   **→ À trancher : soit `renderCarte` les rend, soit on ne les déclare pas.** Pas de troisième voie.
 
+## 🚪 BOUT 9 — CE QUI DOIT PASSER PAR L'iPHONE RÉEL (à faire APRÈS fusion sur `main`)
+
+*(posé le 11/09/2026, au cherry-pick de D)*
+
+**Le banc headless prouve que le code réagit correctement à une géométrie DONNÉE. Il ne prouve pas
+que Safari produit cette géométrie, ni qu'il l'annonce au bon moment.** Quatre points, à vérifier
+et non à improviser :
+
+1. **L'écart existe vraiment.** Les 45 px (`layoutH 714` / visible qui s'arrête à `669`) sont un
+   relevé d'époque, pas une mesure d'aujourd'hui. À reconstater.
+2. **Safari émet bien `visualViewport.resize` quand les BARRES bougent** — pas seulement le clavier.
+   ⚠️ D n'a **aucun listener `scroll`** (il produisait le rebond) : toute la compensation dépend de
+   ce `resize`. S'il n'arrive pas, rien ne se déclenche.
+3. **La remesure à 350 ms attrape l'état FINAL.** iOS anime ses barres en ~300 ms et n'émet pas
+   toujours d'événement sur l'état stabilisé.
+4. **Aucun rebond.** C'est exactement ce que le listener `scroll` retiré provoquait.
+
+**LE GESTE :** ouvrir `/admin/` sur iPhone → entrer dans le studio → **scroller vers le bas puis
+vers le haut** (les barres se replient puis se redéploient) → « Suivant / Publier » doit rester
+visible → puis toucher un champ texte (clavier monte) et le refermer.
+
+⚠️ **Identity est KO en deploy preview** : ce test n'est possible qu'APRÈS fusion sur `main`.
+
 ## Chantiers STUDIO (raffinement)
 - [ ] Vignette Insta mobile : dégraisser l'habillage encadré → **ligne fine** sous le bandeau (poids visuel).
 - [ ] Vignette Insta : **avatar + popup moderne** (pattern Buffer/Later). ⚠️ **SEULEMENT après validation Meta** — tant que la review n'est pas passée, le triplet avatar+@compte+ID doit rester visible SANS clic.

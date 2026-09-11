@@ -745,7 +745,8 @@ body.in-tunnel .lelab-foot .btn-save{margin-top:0;}    /* .btn-save porte une ma
 body.in-tunnel .mobile-nav{display:none;}   /* tunnel : la nav globale s'efface, place à la barre d'action */
 @media(max-width:960px){
   /* MOBILE : le pied redevient FIXE (zone du pouce).
-     ⚠️ La mécanique du clavier iOS (studioFootKeyboard) s'applique à CE mode-là. NE PAS y toucher. */
+     ⚠️ La compensation du viewport iOS (studioFootViewport — barres de Safari ET clavier) s'applique
+        à CE mode-là, celui où le pied est `fixed`. NE PAS y toucher. */
   body.in-tunnel .lelab-foot{
     /* 🐛 c'était `left:0` : entre 721 et 960 px la sidebar est VISIBLE, et le pied passait dessous.
        Il s'adosse désormais à elle. Sous 720 px, --sidebar-w vaut 0 → il reprend toute la largeur. */
@@ -3021,12 +3022,11 @@ function applyScreen(name) {
   if (name === 'studio') adjustStepsHeight();   // hauteur du stepper (la reprise est désormais DIRECTE, cf. handlePlusClick)
   if (name !== 'studio') document.body.classList.remove('studio-canreset');   // hors studio : jamais de « Recommencer »
 
-  /* applyScreen est le point de passage UNIQUE des changements d'écran → le pied s'y remet à plat.
-     ⚠️ Ce commentaire décrivait un transform périmé « posé sous les barres de Safari redéployées ».
-        Ce cas n'existe plus : les barres ne sont plus compensées du tout (cf. studioFootKeyboard —
-        seul le clavier l'est). L'appel reste parce qu'il coûte une ligne et garantit qu'aucun
-        translate résiduel ne survit à un changement d'écran ; il ne rattrape plus rien d'autre. */
-  studioFootKeyboard();
+  /* applyScreen est le point de passage UNIQUE des changements d'écran → le pied s'y recale.
+     ⚠️ EN SETTLE, et c'est le cas qui compte : entrer dans le studio change la hauteur du document,
+        donc la scrollabilité, donc l'état des barres de Safari — et ce changement-là arrive APRÈS
+        cet appel. La remesure de 350 ms est ce qui rattrape le nouvel état. */
+  studioFootSettle();
 }
 
 /* ⚠️ UN SEUL timer, gardé par son id et ANNULÉ dès qu'un 2e appel arrive. C'est la RACINE d'une
@@ -4277,7 +4277,10 @@ function goStep(n){
         était calculé trop grand. D'où le fait que seul « Infos pratiques » y échappait : c'est le seul
         écran de saisie qui tient dans l'écran, donc le seul où l'on n'avait pas scrollé. */
   window.scrollTo(0, 0);
-  studioFootKeyboard();           // repose le pied (efface un translate résiduel laissé par le clavier)
+  /* ⚠️ APRÈS le scrollTo, et en SETTLE : remonter en haut REDÉPLOIE les barres de Safari. Mesurer
+     dans la foulée lirait la géométrie d'AVANT le déploiement ; le filet de 350 ms lit celle
+     d'après. C'est exactement le cas du reveal, où plus aucun scroll ne viendra corriger. */
+  studioFootSettle();
   syncStudioScreens(prevStepN);   // Légende (aperçu réduit) / Final (post complet + anim) : visuels bakés à l'entrée
   saveStudioDraft();
   /* LA PLACE DANS L'URL — à côté de saveStudioDraft, et c'est délibéré : les deux lignes répondent à
@@ -4636,88 +4639,100 @@ function prevStep(){
 }
 function studioPrimary(){ if (!isLastStep()) nextStep(); else studioPublish(); }
 
-// Clavier iOS : garder le pied sticky AU-DESSUS du clavier (position:fixed bottom passe sinon derrière).
-/* Maintient le pied CTA (position:fixed) DANS la zone réellement visible.
-   Un `fixed; bottom:0` est posé contre le LAYOUT viewport (document.documentElement.clientHeight),
-   pas contre ce que l'œil voit. Sur iOS, les barres de Safari et le clavier rétrécissent la fenêtre
-   VISIBLE sans réduire le layout : le pied tombe alors SOUS l'écran.
-   ⚠️ L'ancienne formule (`innerHeight - vv.height - vv.offsetTop`) était structurellement AVEUGLE à
-   cet écart : sur iOS, innerHeight SUIT la fenêtre visible, donc innerHeight ≈ vv.height → overlap 0
-   → aucun rattrapage, alors que le pied était bel et bien sous les barres.
-   Mesuré sur iPhone : état cassé → écart layout−visible = 45 px, overlap calculé par l'ancienne
-   formule = 0, pied à bottom 714 alors que le visible s'arrête à 669. État sain → écart négatif,
-   pied visible. Les barres se déploient/replient au fil des gestes (indépendamment de la
-   scrollabilité) : d'où un bug qui OSCILLE.
-   On mesure donc l'écart contre le layout — ce qui couvre les barres ET le clavier, d'une seule
-   formule, sans listener resize (les événements visualViewport suffisent). */
-/* ═══ LE PIED NE SE COMPENSE QUE POUR LE CLAVIER — LES BARRES, C'EST L'AFFAIRE DU CSS ════════════
-   ⚠️ LA FORMULE MÉLANGEAIT DEUX SUJETS, ET ELLE L'ÉCRIVAIT : « overlap = barres de Safari + clavier ».
-      Une seule mesure pour deux phénomènes qui n'appellent PAS le même geste :
-        · le CLAVIER couvre le bas de l'écran → un `position:fixed;bottom:0` finit DERRIÈRE lui.
-          Là, il FAUT le remonter : c'est la seule raison d'exister de ce transform.
-        · les BARRES de Safari se déplient/replient EN CONTINU au scroll. `position:fixed` sait déjà
-          vivre avec. Recalculer un transform à chaque frame ne corrigeait rien — ça DÉPLAÇAIT le pied
-          au doigt et à l'œil : c'est ça, le « détachement » au scroll.
-   ⚠️ Retirer le listener `scroll` n'avait enlevé QUE LA MOITIÉ des déclencheurs : quand les barres
-      bougent, `visualViewport.height` change → `resize` se déclenche aussi. Le frétillement partait,
-      le détachement restait. Le vrai partage n'est pas « quel événement » mais « QUEL PHÉNOMÈNE ».
-   → Hors clavier : AUCUN transform. Le CSS (fixed + safe-area) fait le travail, seul. */
-let studioClavierOuvert = false;
-function studioFootKeyboard(){
-  const foot = document.getElementById('studioFoot');
-  if (!foot) return;
-  if (!studioClavierOuvert){ foot.style.transform = ''; return; }   // CSS pur — et ça efface tout transform périmé
+/* ═══ LE PIED SUIT LE VIEWPORT VISIBLE — BARRES DE SAFARI COMPRISES ═══════════════════════════
+   Un `position:fixed; bottom:0` est posé contre le viewport de LAYOUT
+   (document.documentElement.clientHeight), PAS contre ce que l'œil voit. Sur iOS, les barres de
+   Safari ET le clavier rétrécissent la fenêtre VISIBLE sans réduire le layout : le pied tombe
+   alors SOUS l'écran, et le CTA « Continuer » avec lui.
+
+   🔴 RÉTABLI LE 03/08/2026, SUR CONSTAT IPHONE RÉEL. Le lot précédent avait retiré la compensation
+      des BARRES pour ne garder que celle du CLAVIER, en pariant que « position:fixed sait déjà
+      vivre avec les barres ». Le pari est perdu — et la mesure qui le disait était DÉJÀ écrite
+      ici : barres déployées, écart layout−visible = 45 px, pied à bottom 714 alors que le visible
+      s'arrête à 669. Les barres se déploient/replient au fil des gestes → le bug OSCILLE, d'où
+      « les CTA disparaissent PARFOIS ».
+   🔴 ET IL EST PERMANENT AU REVEAL. Safari ne replie ses barres QU'AU SCROLL. L'écran final tient
+      dans la page (body.in-final : plus de topbar-m, steps-viewport en height:auto) → rien à
+      scroller → barres déployées pour toujours → CTA jamais atteignable. Sur cet écran-là ce
+      n'était pas « parfois », c'était TOUJOURS.
+   🔴 LA LEÇON, ET ELLE EST GÉNÉRALE : le pari « le CSS suffit » a été pris alors que le fichier
+      portait, dix lignes plus haut, la mesure qui le contredisait. Une mesure faite sur l'appareil
+      bat un raisonnement sur la spec.
+
+   ⚠️ CE QU'ON NE REMET PAS, ET C'EST L'ACQUIS DU LOT PRÉCÉDENT : le listener `scroll`. C'ÉTAIT LUI,
+      LE REBOND. iOS rapporte une géométrie intermédiaire à CHAQUE frame de scroll ; le pied recevait
+      un transform par frame et frétillait sous le pouce. On compense donc sur le SEUL
+      `visualViewport.resize` — que les barres émettent aussi quand elles bougent (constaté au lot
+      précédent : « le frétillement partait, le détachement restait »).
+   ⚠️ ET LE « DÉTACHEMENT » QUI RESTAIT N'ÉTAIT PAS LA COMPENSATION : c'était un transform PÉRIMÉ —
+      barres repliées sans `resize` final, le pied restait remonté et flottait au-dessus du bord.
+      D'où la remesure de repli ci-dessous. Elle ne DEVINE rien et ne MÉMORISE rien : elle relit la
+      géométrie. Un transform ne peut donc pas survivre à ce qui l'a produit — c'est ce qui rend
+      inutile la machinerie de rattrapage supprimée au lot précédent (`pageshow`,
+      `visibilitychange`, `orientationchange`, `focus`, studioFootAfterSettle…), et qu'on NE
+      RÉINTRODUIT PAS : chacune de ces lignes n'existait que pour effacer un transform périmé.
+
+   ⚠️ `interactive-widget=resizes-content` est dans le <meta viewport> : si Safari l'honore, l'écart
+      vaut 0 pour le CLAVIER et ce code ne fait rien de ce côté-là. Il n'a jamais rien promis pour
+      les BARRES — c'est le trou qu'on rebouche ici.
+
+   ⚠️ EFFET DE BORD VOULU : fitFinalPost / verifyFinalFit mesurent `foot.getBoundingClientRect().top`
+      pour calculer la place du post au reveal. Avec le pied posé SOUS le visible, cette mesure
+      sur-estimait l'espace disponible. Compensé, le repère redevient vrai. */
+
+/* L'écart entre le viewport de LAYOUT et le viewport VISIBLE. UNE mesure pour les DEUX phénomènes
+   (barres, clavier) : c'est la même géométrie, et la même conséquence pour un `fixed`.
+   ⚠️ On mesure contre `documentElement.clientHeight`, jamais contre `innerHeight` : sur iOS ce
+      dernier SUIT déjà la fenêtre visible, donc l'écart y vaudrait toujours 0 — c'était la cécité
+      de la toute première formule. */
+function studioFootOverlap(){
   const vv = window.visualViewport;
-  const layoutH = document.documentElement.clientHeight;                        // ce contre quoi un fixed est POSÉ
-  const visibleBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;   // ce que l'œil voit RÉELLEMENT
-  const overlap = Math.max(0, layoutH - visibleBottom);                         // le clavier, et lui seul
-  foot.style.transform = overlap > 4 ? 'translateY(-' + overlap + 'px)' : '';
+  const layoutH = document.documentElement.clientHeight;
+  const visibleBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
+  return Math.max(0, layoutH - visibleBottom);
 }
-/* Le clavier se DÉCLARE (focusin/focusout), il ne se devine pas depuis une géométrie : c'est le seul
-   signal qui distingue « le clavier est monté » de « les barres ont bougé ». Les deux produisent le
-   même `overlap` — les confondre était toute l'erreur. */
+
+function studioFootViewport(){
+  const pieds = document.querySelectorAll('.lelab-foot');
+  if (!pieds.length) return;
+  /* Le pied n'est `fixed` QUE sous 960 px (cf. CSS) ; au-dessus il est `sticky`, DANS le flux de sa
+     colonne — le translater l'en décollerait. Et un pinch-zoom de bureau produit lui aussi un écart
+     layout/visible : sans cette garde, il déplacerait un pied qui n'a aucun problème. */
+  const overlap = isFitMobile() ? studioFootOverlap() : 0;
+  /* Plafond de bon sens. Pendant une rotation ou l'animation d'une barre, iOS rapporte une géométrie
+     transitoire qui peut valoir la moitié de l'écran : la compenser enverrait le pied au milieu de
+     la page. Au-delà du plafond on ne bouge pas — la remesure de repli tranchera. */
+  const plafond = Math.round(document.documentElement.clientHeight * 0.6);
+  const y = (overlap > 4 && overlap <= plafond) ? overlap : 0;
+  pieds.forEach(p => { p.style.transform = y ? 'translateY(-' + y + 'px)' : ''; });
+}
+
+/* Remesure de REPLI — UN seul timer, réarmé à chaque appel. iOS anime ses barres (et son clavier) en
+   ~300 ms et n'émet pas toujours d'événement sur l'état FINAL : sans elle, un transform calculé en
+   pleine animation resterait posé jusqu'au geste suivant. C'est le même idiome que le filet de 350 ms
+   qui existait déjà sur focusout — généralisé, pas empilé. */
+let studioFootTimer = null;
+function studioFootSettle(){
+  studioFootViewport();
+  clearTimeout(studioFootTimer);
+  studioFootTimer = setTimeout(studioFootViewport, 350);
+}
+
+/* Le clavier n'a plus à être DISTINGUÉ des barres : la compensation est la même, seul le DÉCLENCHEUR
+   manque parfois. focusin/focusout ne portent donc plus d'état (`studioClavierOuvert` est supprimé —
+   plus personne ne le lisait) : ce sont deux occasions de remesurer aux instants où iOS est le plus
+   avare en `resize`. */
 document.addEventListener('focusin', e => {
   if (e.target && e.target.matches && e.target.matches('input, textarea, [contenteditable]')){
-    studioClavierOuvert = true;
-    requestAnimationFrame(studioFootKeyboard);   // le clavier s'anime : on mesure la frame d'après
+    requestAnimationFrame(studioFootSettle);   // le clavier s'anime : on mesure la frame d'après
   }
 });
-document.addEventListener('focusout', () => {
-  studioClavierOuvert = false;
-  studioFootKeyboard();                          // repli immédiat : plus de clavier → plus de transform
-  setTimeout(studioFootKeyboard, 350);           // filet : iOS replie le clavier en ~300ms
-});
+document.addEventListener('focusout', studioFootSettle);
 if (window.visualViewport){
-  window.visualViewport.addEventListener('resize', studioFootKeyboard);
-  /* ⚠️ LE LISTENER `scroll` A ÉTÉ RETIRÉ — C'ÉTAIT LA SOURCE DU REBOND.
-     iOS déplie/replie ses barres EN CONTINU pendant le scroll : `overlap` changeait à chaque frame,
-     le pied recevait un nouveau transform à chaque frame, et la transition (retirée elle aussi, cf.
-     .studio-foot) animait chacun de ces micro-écarts → le pied REBONDISSAIT sous le pouce.
-     Le clavier et les barres, eux, émettent un `resize` de visualViewport : ils restent couverts.
-     ⚠️ ÉTAPE (a) d'un plan en 3 temps. Le CSS pur (supprimer tout transform) n'est PAS fait ici :
-        studioFootKeyboard compense un comportement d'iOS Safari que le harnais (Chrome headless) NE
-        SAIT PAS reproduire — le supprimer serait un pari qu'aucun test local ne peut arbitrer.
-        Décision : après un vrai passage sur iPhone. Et si on y va, le garde-fou A devra être RÉÉCRIT :
-        il mesure « translateY vaut 0 » (le mécanisme), pas « le pied est visible et cliquable » (le
-        résultat) — sans transform à rattraper il rougirait pour la mauvaise raison. */
+  window.visualViewport.addEventListener('resize', studioFootSettle);
+  /* ⚠️ TOUJOURS AUCUN LISTENER `scroll` — c'est lui qui produisait le rebond (cf. plus haut).
+     Les barres émettent un `resize` quand elles bougent : elles restent couvertes sans lui. */
 }
-/* ═══ TOUTE LA MACHINERIE DE RATTRAPAGE A ÉTÉ SUPPRIMÉE ICI — ~60 LIGNES ═══════════════════════
-   Il y avait : `pageshow`, `visibilitychange`, `focus`, `orientationchange`, `screen.orientation`,
-   un `matchMedia(960)`, et studioFootAfterSettle (rAF + filet 350 ms). Trois lots successifs les ont
-   empilés — « le trou de la rotation », « le cas manquant du focus », « le retour d'arrière-plan ».
-
-   ⚠️ ILS NE RÉPARAIENT PAS iOS : ILS RÉPARAIENT NOTRE PROPRE TRANSFORM. Chacun existait pour effacer
-      un `translateY` périmé que la compensation des BARRES avait posé. Plus de compensation des barres
-      (cf. studioFootKeyboard : seul le clavier compense) → plus de transform périmé → plus rien à
-      rattraper. On ne garde pas des filets sous un trapèze qu'on a démonté.
-
-   Et surtout : `interactive-widget=resizes-content` est dans le <meta viewport> DEPUIS LE PREMIER JOUR
-   (commit 203bef4, 12/07 — le même qui a introduit ce JS). Le natif et son contournement sont nés
-   ensemble ; personne n'a vu que le premier rendait le second inutile. Ce qui reste (~24 lignes) n'est
-   qu'un FILET : si Safari honore le meta, `overlap` vaut 0 et le JS ne fait rien. Sinon, il remonte le
-   pied — sans lui, le clavier RECOUVRIRAIT le CTA (le pied ne « reste pas en bas » : un fixed;bottom:0
-   est calé sur le LAYOUT viewport, que `resizes-visual` ne rétrécit pas).
-   → Le jour où l'on saura le natif fiable sur les iOS des clients, ces 24 lignes partiront aussi. */
 
 // Upload un dataURL JPEG dans Blobs (target studio) → URL ABSOLUE (Instagram doit pouvoir la fetch)
 async function uploadStudioImage(dataUrl, token){
