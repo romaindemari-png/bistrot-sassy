@@ -552,7 +552,98 @@
     }
   };
 
-  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR, annonce: ANNONCE, photo: PHOTO };
+  /* ══════════════════════════════════════════════════════════════════════════
+     TEMPLATE « event » — DÉRIVÉ DE LA SECTION #events DU SITE
+     ══════════════════════════════════════════════════════════════════════════
+     M5 : la PREUVE DE GÉNÉRICITÉ. Même rasteriseur, même socle, même `MEP_PHOTO` —
+     seul le décor change. Aucune ligne de plomberie ajoutée.
+
+     Relevé dans le CSS d'`index.html` :
+       #events            background --cream
+       .event-card        #fff, border 2px solid --blue
+       .event-date-badge  --yellow, border 1.5px solid --blue
+       .event-date-day    Canela 1,5rem --blue
+       .event-date-monthyear  .65rem, .1em, uppercase, --blue
+       .event-date-heure  .65rem, --blue à 70 %
+       .event-name        Canela 1,3rem --blue, BAS DE CASSE
+       .event-desc        .82rem, --blue à 70 %, line-height 1,55
+
+     ⚠️ UN ÉCART AU SITE, ASSUMÉ, ET VOICI LA RAISON. Le site EMPILE : photo 16/9
+        en haut, carte en dessous. Le post SUPERPOSE : photo plein cadre, carte
+        posée en bas. Ce n'est pas un choix d'esthétique — `sassy-event` déclare
+        `zonePhoto {x:0,y:0,w:1,h:1}`, et cette zone est lue par TROIS chemins :
+        le rasteriseur v2, le repli canvas, ET l'aperçu déplaçable de l'admin
+        (`composeCustomPreview` positionne `#igPhotoInner` dessus). Mettre la photo
+        dans une bande haute obligerait à changer `zonePhoto` — donc à changer le
+        rendu du repli ET la surface que le client peut faire glisser.
+        On garde la donnée, on adapte la composition.
+     ⚠️ ET C'EST AUSSI LE BON CHOIX POUR LE SUJET : pour un bistrot, un événement EST
+        une photo. Elle reste dominante ; la carte porte l'information.
+
+     ⚠️ LE VOILE VIENT DE `MEP_PHOTO`, PAS D'UNE VALEUR RECOPIÉE — la carte est plus
+        grande qu'une signature, d'où le facteur, mais la table reste la source.
+     ══════════════════════════════════════════════════════════════════════════ */
+  const EVENT = {
+    css: function (A, W, H, fmt, Z, slide) {
+      const c = window.CLIENT_TOKENS.primitives.color;
+      const zp = (slide && slide.zonePhoto) || { x:0, y:0, w:1, h:1 };
+      const f = (slide && slide.focal) || {};
+      const fx = (typeof f.x === 'number' ? f.x : 0.5) * 100;
+      const fy = (typeof f.y === 'number' ? f.y : 0.5) * 100;
+      const u = function (r) { return (W * r).toFixed(2) + 'px'; };
+      const M = MEP_PHOTO;
+      return '.page{width:' + W + 'px;height:' + H + 'px;background:' + c.creme + '}'
+        + '.ph{position:absolute'
+          + ';left:' + (zp.x * W).toFixed(2) + 'px;top:' + (zp.y * H).toFixed(2) + 'px'
+          + ';width:' + (zp.w * W).toFixed(2) + 'px;height:' + (zp.h * H).toFixed(2) + 'px'
+          + ';object-fit:cover;object-position:' + fx.toFixed(4) + '% ' + fy.toFixed(4) + '%'
+          + ';display:block}'
+        + '.voile{position:absolute;left:0;right:0;bottom:0;height:' + u(M.voileH * 2.2)
+          + ';background:linear-gradient(to top,rgba(32,80,231,' + M.voileA + '),rgba(32,80,231,0))}'
+        /* .event-card : blanc, filet bleu de 2px — mis à l'échelle de W */
+        + '.carte{position:absolute;left:' + u(M.signX) + ';right:' + u(M.signX)
+          + ';bottom:' + u(M.signY) + ';background:' + c.blanc
+          + ';border:' + u(0.0035) + ' solid ' + c.accent
+          + ';padding:' + u(0.038) + ' ' + u(0.036) + ';color:' + c.accent + '}'
+        /* .event-date-badge : jaune, filet bleu, aligné à gauche */
+        + '.badge{display:inline-flex;align-items:center;gap:' + u(0.016)
+          + ';background:' + c.jaune + ';border:' + u(0.0026) + ' solid ' + c.accent
+          + ';padding:' + u(0.010) + ' ' + u(0.020) + ';margin-bottom:' + u(0.026) + '}'
+        + ".jour{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.042)
+          + ';line-height:1}'
+        + '.quand{display:flex;flex-direction:column}'
+        + ".mois{font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.020)
+          + ';letter-spacing:.1em;text-transform:uppercase;line-height:1.2}'
+        + ".heure{font-family:'Elms',sans-serif;font-size:" + u(0.020) + ';opacity:.7}'
+        + ".nom{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.052)
+          + ';line-height:1.2;text-transform:lowercase;margin-bottom:' + u(0.014) + '}'
+        + ".desc{font-family:'Elms',sans-serif;font-size:" + u(0.026)
+          + ';line-height:1.55;opacity:.7}';
+    },
+    corps: function (A, W, H, fmt, Z, slide) {
+      const src = (slide && slide.photo) || '';
+      const e = (slide && slide.event) || {};
+      const desc = e.desc ? '<div class="desc">' + xml(e.desc) + '</div>' : '';
+      const badge = (e.jour || e.mois || e.heure)
+        ? '<div class="badge">'
+          + (e.jour ? '<span class="jour">' + xml(e.jour) + '</span>' : '')
+          + '<span class="quand">'
+          +   (e.mois  ? '<span class="mois">'  + xml(e.mois)  + '</span>' : '')
+          +   (e.heure ? '<span class="heure">' + xml(e.heure) + '</span>' : '')
+          + '</span></div>'
+        : '';
+      return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+           +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
+           +   '<div class="voile"></div>'
+           +   '<div class="carte">' + badge
+           +     (e.titre ? '<div class="nom">' + xml(e.titre) + '</div>' : '')
+           +     desc
+           +   '</div>'
+           + '</div>';
+    }
+  };
+
+  const TEMPLATES = { carte: CARTE, infos: INFOS, dujour: DUJOUR, annonce: ANNONCE, photo: PHOTO, event: EVENT };
 
   /* ── LE RASTERISEUR, UNIQUE ET PARAMÉTRÉ ────────────────────────────────────
      `hab` ne sert QU'À donner le rapport du format : le template peint son propre

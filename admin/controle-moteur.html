@@ -283,9 +283,22 @@ function slidePour(t){
      avec des pixels que le cadre ne montrera jamais. `_photoDemo` est encodée une fois
      au démarrage. Le focal est laissé au centre — M2 a prouvé l'équivalence du cadrage,
      ce n'est pas ce que le contrôle mesure ici. */
-  if (t.type === 'photo')
-    return { photo: _photoDemo, focal: { x:0.5, y:0.5 },
-             zonePhoto: (t.formats[Object.keys(t.formats)[0]] || {}).zonePhoto };
+  if (t.type === 'photo'){
+    const base = { photo: _photoDemo, focal: { x:0.5, y:0.5 },
+                   zonePhoto: (t.formats[Object.keys(t.formats)[0]] || {}).zonePhoto };
+    /* ⚠️ LA DONNÉE D'ÉVÉNEMENT VIENT DE `_data/events.json`, jamais fabriquée pour le
+       contrôle : un détecteur nourri d'un cas commode ne dit rien du cas du client.
+       Le prochain à venir, comme le fait le site (`nextUpcomingEvent`). */
+    if (t.template === 'event'){
+      const ev = (_donnees.events || [])[0] || {};
+      const d = ev.date ? new Date(ev.date) : null;
+      const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+      base.event = { jour: d ? String(d.getDate()) : '',
+                     mois: d ? (MOIS[d.getMonth()] + ' ' + d.getFullYear()) : '',
+                     heure: ev.heure || '', titre: ev.titre || '', desc: ev.description || '' };
+    }
+    return base;
+  }
   if (t.template === 'infos' || t.template === 'annonce')
     return { texte: (_donnees.general && _donnees.general.description) || '' };
   if (t.template === 'dujour')
@@ -317,7 +330,7 @@ const img = src => new Promise((ok, ko) => {
   try {
     const themes = await (await fetch('/_data/themes.json', { cache:'no-store' })).json();
     _photoDemo = await chargerPhotoDemo().catch(() => '');
-    for (const f of ['carte','dujour','general'])
+    for (const f of ['carte','dujour','general','events'])
       _donnees[f] = await (await fetch('/_data/' + f + '.json', { cache:'no-store' })).json().catch(() => null);
     const v2 = sondeInventaire(themes);
 
