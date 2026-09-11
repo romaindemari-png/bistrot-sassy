@@ -665,8 +665,105 @@ plus probable en production (un chemin d'asset qui bouge).
 
 ⚠️ **PRÉREQUIS NON ÉVIDENT** : ce garde-fou, comme les 9 autres, exige que le site soit servi
 **localement** (le bypass `DEV_LOCAL` de `restoreSession` démarre l'admin sans Netlify Identity — en
-prod le hostname n'y est pas). Il faut un serveur qui RÉPONDE aux chemins `/.netlify/*` ou un client
-qui les intercepte : `test-accroches-v2` les intercepte lui-même (404 immédiat).
+prod le hostname n'y est pas). Contrairement aux 9 autres il est **immunisé contre le faux rouge du
+serveur mono-thread** (cf. section dédiée plus bas) : il intercepte lui-même les `/.netlify/*` et
+répond 404 immédiatement, au lieu d'attendre `networkidle0`.
+
+## ⚠️ MOTIF — UN COMMENTAIRE EST UNE SONDE, ET PERSONNE NE LE RELANCE
+
+*(11/09/2026, au bout des accroches)*
+
+Le motif « une sonde qui ne couvre qu'un cas ment par omission » (cf. plus haut) a un **premier
+exemplaire où le menteur est un COMMENTAIRE**, pas une sonde :
+
+> `⚠️ sassy-photo NE DÉCLARE AUCUNE zoneTexte — vérifié dans themes.json.`
+
+Écrit dans `PHOTO.css` du moteur, avec la mention explicite d'une vérification. La vérification
+avait eu lieu — sur `carre` et `portrait`. Pas sur **story**, où le thème déclare bien une
+`zoneTexte` et où l'admin offre le champ `#storyText`. Le template ne peignait donc pas ce texte :
+publier une story photo par le v2 aurait **jeté ce que le client a écrit**, sans erreur, sans trace.
+
+**→ LA RÈGLE : un commentaire est une sonde comme une autre. Il affirme sans mesurer, et
+personne ne le relance.**
+
+C'est ce dernier point qui le rend PIRE qu'une sonde fausse :
+
+| | une sonde fausse | un commentaire faux |
+|---|---|---|
+| se rejoue | à chaque `npm run` | **jamais** |
+| est confrontée au code | en permanence | **une fois, le jour où on l'écrit** |
+| vieillit | visiblement (elle rougit) | **en silence** |
+
+Conséquences pratiques, à appliquer :
+- une affirmation du type « vérifié dans `themes.json` » se vérifie sur **les trois formats**, jamais
+  sur celui qu'on a sous les yeux. Idem pour « sur les six thèmes », « partout dans l'admin ».
+- un commentaire qui affirme un FAIT doit dire **comment on le reconstate** (le chemin, la commande,
+  le champ) — sinon il n'est pas re-vérifiable, donc il n'est pas une sonde, juste une croyance.
+- quand un commentaire est démenti, **on le réécrit en disant qu'il était faux** (c'est ce qui a été
+  fait : le bloc porte maintenant un 🔴 et raconte l'erreur). Le supprimer effacerait la leçon.
+
+## ⚠️ MOTIF — UNE SONDE PEUT VÉRIFIER LA MAUVAISE GARANTIE
+
+*(11/09/2026, au bout des accroches)*
+
+Les trois occurrences précédentes disaient : *quand une sonde rougit sur un cas légitime, on change
+ce qu'elle mesure, jamais son seuil.* En voici une **quatrième, d'une autre espèce** : la sonde était
+VERTE, et c'est son épreuve au rouge qui a révélé qu'elle ne mesurait pas ce qu'elle croyait.
+
+**La sonde `pointer-events` de l'aperçu photo.** Hypothèse : les calques du décor v2 sont posés
+par-dessus la photo déplaçable, donc `pointer-events:none` est ce qui laisse passer le geste de
+cadrage. Épreuve : on retire la garde, le glissement doit mourir.
+
+**Il n'est pas mort. Δfocal = 0,5000 dans les deux cas** — geste de confiance (`page.mouse`), doigt
+posé sur le voile. Raison mesurée : les écouteurs `pointerdown`/`pointermove` vivent sur `#igPhoto`,
+et les calques sont ses **ENFANTS**. L'événement remonte, quelle que soit la cible du survol.
+
+→ **La garantie portante est LA PARENTÉ, pas le CSS.** C'est elle qu'un remaniement peut rompre, en
+  posant le décor ailleurs que dans l'hôte. Critère **B1** de `test-accroches-v2`, éprouvé au rouge
+  avec un décor posé à côté de l'hôte : geste mort, Δ 0,0000.
+→ `pointer-events:none` achète autre chose, réel mais de moindre portée : le calque reste
+  **transparent au test de survol** (curseur `grab` conservé, pas de sélection sur la signature).
+  Critère **B2**, qui rougit bien quand on retire la garde.
+→ **La note du bout M4 est corrigée** : elle disait « `pointer-events:none` non testé par une
+  sonde », ce qui supposait une garde qui ne garde pas ça. Deux critères ont remplacé la sonde
+  fausse, au lieu de la garder verte sur un mauvais motif.
+
+⚠️ **CE QUE ÇA AJOUTE À LA DOCTRINE : une sonde verte n'est pas une sonde valide.** Seule l'épreuve
+au rouge dit ce qu'elle mesure vraiment. Celle-ci serait restée verte pour toujours, en donnant
+l'impression de garder une propriété qu'elle ne gardait pas — et le jour où quelqu'un aurait sorti
+le décor de l'hôte, elle n'aurait rien vu.
+
+## 🔴 LE FAUX ROUGE DU SERVEUR MONO-THREAD — À LIRE AVANT DE CONCLURE À UNE RÉGRESSION
+
+*(11/09/2026, au bout des accroches)*
+
+**LE SYMPTÔME.** Un garde-fou s'arrête sur `TimeoutError: Navigation timeout of 30000 ms exceeded`,
+dans `CdpFrame.goto`, **avant d'avoir rien testé**. Pas un critère rouge : un plantage. Ça ressemble
+à une régression de l'admin. Ce n'en est pas une.
+
+**LA CAUSE, MESURÉE.** Les **neuf** garde-fous naviguent en `waitUntil: 'networkidle0'`. L'admin
+appelle `/.netlify/functions/get-instagram-status` au démarrage. Sur un serveur statique **qui ne
+traite qu'une requête à la fois**, cet appel reste **en vol 8 s et plus** (mesuré) : `networkidle0`
+n'arrive jamais, et `goto` expire. Les neuf y sont exposés — lesquels tombent dépend de ce qui se
+trouve en vol au moment de la navigation, pas du script.
+
+⚠️ **CE N'EST PAS LA COMMANDE DOCUMENTÉE QUI EST EN CAUSE, ET J'AI DIT LE CONTRAIRE.**
+J'ai d'abord rapporté que *« deux garde-fous expirent sur `python3 -m http.server` »*. **C'est faux,
+et la mesure le dit :** `python3 -m http.server` emploie **`ThreadingHTTPServer` depuis Python 3.7**
+(vérifié dans la source du module, Python 3.9.6), et sur lui `scan-troncature` et `test-allerretour`
+passent tous les deux au vert. Le serveur fautif était **le mien** — un `socketserver.TCPServer`
+écrit à la main pour le harnais des sondes, mono-thread par défaut.
+→ Encore un « chiffre juste sous un mauvais nom » : le timeout était réel, la cause diagnostiquée
+  ne l'était pas. Et je l'avais écrit dans un rapport avant de l'avoir vérifié.
+
+**CE QU'IL FAUT FAIRE.**
+- Lancer les garde-fous avec la commande documentée : `python3 -m http.server 8080`. Elle va bien.
+- Si tu écris un serveur à la main pour une sonde : **`ThreadingHTTPServer`, jamais
+  `socketserver.TCPServer`.** Ou bien intercepter les `/.netlify/*` côté client, ce que fait
+  `test-accroches-v2` (404 immédiat) — c'est pourquoi lui seul est immunisé.
+- Devant un `Navigation timeout` dans `goto` : **vérifier le serveur avant de soupçonner l'admin.**
+  La requête en vol se lit en quelques lignes (`p.on('request')` / `requestfinished`, puis afficher
+  ce qui reste après 8 s).
 
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
