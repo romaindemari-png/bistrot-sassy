@@ -497,7 +497,32 @@
           + ';left:' + (zp.x * W).toFixed(2) + 'px;top:' + (zp.y * H).toFixed(2) + 'px'
           + ';width:' + (zp.w * W).toFixed(2) + 'px;height:' + (zp.h * H).toFixed(2) + 'px'
           + ';object-fit:cover;object-position:' + fx.toFixed(4) + '% ' + fy.toFixed(4) + '%'
-          + ';display:block}';
+          + ';display:block}'
+        /* ══════════════════════════════════════════════════════════════════════
+           M3 — LE DÉCOR, DÉRIVÉ DU `.stack-hint` DU HERO
+           ══════════════════════════════════════════════════════════════════════
+           ⚠️ `sassy-photo` NE DÉCLARE AUCUNE `zoneTexte` — vérifié dans themes.json.
+              Le post photo ne porte donc PAS de texte de contenu : son décor est une
+              SIGNATURE, rien de plus. Y ajouter un titre serait inventer un champ que
+              l'admin ne propose pas, et l'aperçu mentirait à l'export (c'est la « zone
+              fantôme » que le LELAB.md du master nomme déjà).
+
+           Le site traite ses photos ainsi (hero, stack) :
+             .stack-hint  crème, Elms, .1em, uppercase, à 70 %, EN BAS, sur la photo
+             .hero-right / .galerie-cell  le bleu comme fond derrière la photo
+
+           ⚠️ LE VOILE N'EST PAS UN EFFET, C'EST UNE CONDITION DE LISIBILITÉ. Du crème
+              posé sur une photo quelconque est illisible dès qu'elle est claire — et on
+              ne sait pas d'avance quelle zone tombera sous la signature. Un dégradé
+              depuis le bas, pas un aplat : la photo reste une photo partout ailleurs.
+              (Même raisonnement que le voile de l'annonce chez Georges, dosé pour le
+              PIRE cas et non pour le cas moyen.)
+           ⚠️ PAS DE `mix-blend-mode`, PAS DE GRAIN : Sassy n'a aucune texture. */
+        + '.voile{position:absolute;left:0;right:0;bottom:0;height:' + (W * 0.22).toFixed(2) + 'px'
+          + ';background:linear-gradient(to top,rgba(32,80,231,.78),rgba(32,80,231,0))}'
+        + ".sign{position:absolute;left:" + (W * 0.06).toFixed(2) + 'px;bottom:' + (W * 0.055).toFixed(2) + 'px'
+          + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + (W * 0.026).toFixed(2) + 'px'
+          + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7}';
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const src = (slide && slide.photo) || '';
@@ -505,6 +530,8 @@
          fermé fait REFUSER le SVG entier, sans message. */
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
+           +   '<div class="voile"></div>'
+           +   '<div class="sign">bistrot sassy</div>'
            + '</div>';
     }
   };

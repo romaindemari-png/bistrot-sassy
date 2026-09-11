@@ -331,6 +331,26 @@ qui a un sens hors du projet plutôt qu'un nombre de pixels calibré à la main 
 (`sassy-carte-portrait` → GABARIT, `sassy-dujour-portrait` → propre) avant de juger un rendu. Une
 sonde qui ne sait plus reconnaître un gabarit connu se signale elle-même.
 
+### 🔁 TROIS OCCURRENCES DANS LA MÊME JOURNÉE — LE MOTIF EST ÉTABLI
+
+**Quand une sonde rougit sur un cas LÉGITIME, on change CE QU'ELLE MESURE. Jamais son seuil.**
+
+| Sonde | Le cas légitime qui la faisait rougir | Le seuil qui l'aurait verdie | Ce qu'on a fait |
+|---|---|---|---|
+| **2 · bandeau** | les 3 `sassy-annonce`, dont le bas est un aplat bleu plein cadre | monter de 12 à 140 | changé **ce qu'elle mesure** : l'empreinte `rgb(211,203,191)` + texte centré. 15/18 → **18/18** |
+| **3 · polices** | rien — elle est **aveugle** : Canela (38 variantes) et ElmsSans sont installées dans `~/Library/Fonts`, Chrome les résout par le nom | descendre sous 0,5 % | **N/A avec sa raison**. Verdict renvoyé à l'iPhone, seul appareil sans ces polices |
+| **4 · qui a peint** | le rendu **photo** : une photographie contient du gris sombre par nature (6,82 % de `texte`/`encre`, contre 0,00 % sur les 4 templates typo) | monter de 0,1 % à 7 % | **N/A sur les thèmes photo**. Monter le seuil l'aurait rendue aveugle sur les templates typo, **où elle est le seul signal indépendant** |
+
+⚠️ **CE QUI REND LE MOTIF DANGEREUX : le seuil est TOUJOURS le chemin le plus court.** Il est à
+portée, il fait passer au vert en un caractère, et le résultat ressemble exactement à une sonde qui
+marche. Les trois fois, la bonne réponse a demandé de comprendre **pourquoi** le cas légitime
+déclenchait la sonde — et deux fois sur trois, la conclusion a été qu'elle **ne pouvait pas
+conclure**, pas qu'elle devait être plus tolérante.
+
+⚠️ **ET LA TOLÉRANCE COÛTE AILLEURS.** Le cas de la sonde 4 est le plus net : monter son seuil à 7 %
+pour accommoder les photos l'aurait rendue **muette là où elle est utile**. Un seuil élargi n'est pas
+« la même sonde en plus souple » : c'est une autre sonde, qui mesure moins.
+
 ### ⏳ Reste à poser sur le contrôle
 
 - [ ] **Sonde 4 — le seuil d'encre `#2050E7`** : à MESURER sur le premier rendu v2 réel, **pas à

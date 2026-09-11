@@ -115,7 +115,8 @@
           "align": "center"
         }
       }
-    }
+    },
+    "template": "photo"
   },
   {
     "id": "sassy-infos",

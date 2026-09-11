@@ -264,8 +264,28 @@ async function deborde(tpl, W, H, fmt, slide){
 /* Le contenu RÉEL du thème, pris dans /_data — jamais un contenu fabriqué pour
    la circonstance. Un détecteur de débordement nourri d'un cas commode ne dit rien
    du cas du client. `_donnees` est rempli une fois au démarrage. */
-let _donnees = {};
+let _donnees = {}, _photoDemo = '';
+/* la photo de démo, encodée UNE fois, à la largeur du cadre */
+async function chargerPhotoDemo(){
+  const chemin = CLIENT_TOKENS.demoPhoto;
+  if (!chemin) return '';
+  const im = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = chemin; });
+  const W = CLIENT_TOKENS.render.canvasW;
+  const cv = document.createElement('canvas');
+  cv.width = Math.min(W, im.naturalWidth);
+  cv.height = Math.round(im.naturalHeight * cv.width / im.naturalWidth);
+  cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+  return cv.toDataURL('image/jpeg', 0.82);
+}
 function slidePour(t){
+  /* ⚠️ LE THÈME PHOTO REÇOIT LA PHOTO DE DÉMO, RAMENÉE À LA LARGEUR DU CADRE.
+     C'est le chemin de production : une photo d'iPhone de 4032 px partirait en base64
+     avec des pixels que le cadre ne montrera jamais. `_photoDemo` est encodée une fois
+     au démarrage. Le focal est laissé au centre — M2 a prouvé l'équivalence du cadrage,
+     ce n'est pas ce que le contrôle mesure ici. */
+  if (t.type === 'photo')
+    return { photo: _photoDemo, focal: { x:0.5, y:0.5 },
+             zonePhoto: (t.formats[Object.keys(t.formats)[0]] || {}).zonePhoto };
   if (t.template === 'infos' || t.template === 'annonce')
     return { texte: (_donnees.general && _donnees.general.description) || '' };
   if (t.template === 'dujour')
@@ -296,6 +316,7 @@ const img = src => new Promise((ok, ko) => {
 (async function(){
   try {
     const themes = await (await fetch('/_data/themes.json', { cache:'no-store' })).json();
+    _photoDemo = await chargerPhotoDemo().catch(() => '');
     for (const f of ['carte','dujour','general'])
       _donnees[f] = await (await fetch('/_data/' + f + '.json', { cache:'no-store' })).json().catch(() => null);
     const v2 = sondeInventaire(themes);
@@ -353,10 +374,47 @@ const img = src => new Promise((ok, ko) => {
             ? ' <b class="na">— N/A : les polices sont INSTALLÉES sur cette machine, la sonde est aveugle. À juger sur iPhone.</b>'
             : ''));
 
-      /* SONDE 4 — QUI A PEINT ? Zéro pixel des couleurs du peintre canvas ⇒ c'est le v2. */
+      /* SONDE 4 — QUI A PEINT ? Zéro pixel des couleurs du peintre canvas ⇒ c'est le v2.
+         ⚠️ INAPPLICABLE AUX THÈMES PHOTO, ET IL FAUT LE DIRE PLUTÔT QUE DE RENDRE UN
+            VERDICT. Sa prémisse est « `texte` #3a3a3a et `encre` #211f1e n'apparaissent
+            que si le peintre canvas a écrit » — vraie sur une palette CONTRÔLÉE (les
+            templates typo ne composent qu'en crème, bleu et jaune), FAUSSE sur une
+            photographie, qui contient du gris sombre par nature. Mesuré : 6,82 % sur le
+            rendu photo, contre 0,00 % sur les quatre templates typo.
+            → N/A. Sur un thème photo, c'est la SONDE 2 qui discrimine le repli : le
+              canvas dessine l'habillage, donc le bandeau GABARIT réapparaît. Et la
+              SONDE 6 confirme que la photo est là. Sonde 4 n'ajoute rien ici.
+         ⚠️ NE PAS monter son seuil à 7 % pour la verdir : elle cesserait de voir le
+            peintre sur les templates typo, où elle est le seul signal indépendant. */
       const peintre = partPeintreCanvas(r.ctx, r.W, r.H);
-      dire('4. qui a peint', t.id, peintre < 0.001,
-        (peintre*100).toFixed(2) + ' % de couleurs du peintre canvas (texte/encre) — seuil 0,1 % ; repli mesuré à 0,58 %');
+      dire('4. qui a peint', t.id, t.type === 'photo' ? null : (peintre < 0.001),
+        (peintre*100).toFixed(2) + ' % de couleurs du peintre canvas (texte/encre)'
+        + (t.type === 'photo'
+            ? ' <b class="na">— N/A : une photographie contient du gris sombre par nature. C\'est la sonde 2 qui discrimine ici.</b>'
+            : ' — seuil 0,1 % ; repli mesuré à 0,58 %'));
+
+      /* ══════════════════════════════════════════════════════════════════════════
+         SONDE 6 — Y A-T-IL VRAIMENT UNE PHOTO DANS CE RENDU ?
+         ══════════════════════════════════════════════════════════════════════════
+         ⚠️ LE FOND REPEINT EN CRÈME NEUTRALISE L'ÉCRAN NOIR — ET CRÉE L'ÉCRAN CRÈME.
+            Le défaut d'origine : un `foreignObject` qui ne peint rien laisse du
+            transparent, que le JPEG rend NOIR (une image 100 % noire de 9 Ko, bien
+            formée, sans erreur). `rasteriser()` repeint donc le fond de la charte —
+            mais une photo qui ne s'encode pas donne alors un APLAT CRÈME. Même
+            défaut, visage différent, et PLUS DISCRET donc plus dangereux : un aplat
+            noir se remarque, un aplat crème ressemble à un post minimaliste.
+         SIGNATURE, PAS SEUIL : « une photographie n'est pas faite des trois couleurs
+         d'une charte ». Éprouvée au rouge le 11/09 en rasterisant sans la photo :
+            avec photo 96,8 % hors charte · sans photo 0,0 %.
+         ══════════════════════════════════════════════════════════════════════════ */
+      if (t.type === 'photo'){
+        const hors = 1 - (partCouleur(r.ctx, r.W, r.H, CLIENT_TOKENS.primitives.color.accent)
+                        + partCouleur(r.ctx, r.W, r.H, CLIENT_TOKENS.primitives.color.creme)
+                        + partCouleur(r.ctx, r.W, r.H, CLIENT_TOKENS.primitives.color.jaune));
+        dire('6. la photo est là', t.id, hors > 0.5,
+          (hors*100).toFixed(1) + ' % de pixels hors charte'
+          + (hors > 0.5 ? '' : ' <b class="ko">— l\'écran CRÈME : la photo n\'a pas été peinte</b>'));
+      }
 
       /* SONDE 5 — le débordement, sur le contenu RÉEL du thème. */
       /* ⚠️ TOUS LES FORMATS, PAS SEULEMENT LE PREMIER. Un contenu qui tient en portrait
