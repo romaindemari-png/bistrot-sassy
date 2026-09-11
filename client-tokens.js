@@ -23,14 +23,23 @@
    `ensureStudioFonts()` appelle `document.fonts.load()`, qui **ne lève jamais** quand la famille
    est absente — le peintre retombait sur une police système sans un mot.
 
-   Les deux fichiers ont été EXTRAITS des base64 d'`index.html` vers /assets/fonts/.
+   Les deux fichiers ont été EXTRAITS des base64 d'`index.html`, puis CONVERTIS EN WOFF2.
    `index.html` n'est PAS modifié : le site garde ses polices embarquées, l'admin a les siennes.
 
+   ⚠️ POURQUOI WOFF2, ET CE N'EST PAS QUE DU CONFORT. Le moteur v2 embarque les polices EN BASE64
+      DANS LE SVG — un SVG en `data:` URI est un document ISOLÉ : il ne voit ni les @font-face de
+      la page, ni un fichier par URL. La charge par slide en dépend donc directement :
+        OTF + TTF ..... 312 Ko binaire  ->  416 Ko de base64
+        WOFF2 ......... 115 Ko binaire  ->  154 Ko de base64
+        Georges ....... 180 Ko de base64, VALIDÉ sur iPhone réel
+      On passe donc SOUS une configuration déjà éprouvée sur un vrai appareil, au lieu de 2,3× au-dessus.
+      Conversion vérifiée : mêmes noms, 494 et 1080 glyphes inchangés, Elms toujours variable.
+
    ⚠️ LEURS GRAISSES RÉELLES, MESURÉES (fontTools, pas déduites du nom) :
-     · canela.otf — `OTTO`, STATIQUE, usWeightClass **900** (« Canela Black »). UNE seule graisse.
+     · canela.woff2 — CFF (`OTTO`), STATIQUE, usWeightClass **900** (« Canela Black »). UNE seule graisse.
        → tout ce qui est en `titre` DOIT demander 900. Demander 700 ferait SYNTHÉTISER un faux
          gras par le navigateur, sans erreur et sans que ça se voie ailleurs qu'à l'œil.
-     · elms.ttf — TrueType **VARIABLE**, axe `wght` 100 → 900 (défaut 100, « Elms Sans Thin »).
+     · elms.woff2 — TrueType **VARIABLE**, axe `wght` 100 → 900 (défaut 100, « Elms Sans Thin »).
        → toute graisse de 100 à 900 est rendue NATIVEMENT. Rien à aligner ici.
 
    D'où la règle de ce fichier : `titre` ⇒ 900, toujours. `body` ⇒ ce que la DA veut.
@@ -44,13 +53,13 @@ const CLIENT_TOKENS = {
      ⚠️ `weight:'100 900'` sur Elms n'est pas une coquette : c'est ce qui autorise le navigateur à
         employer l'axe variable au lieu de synthétiser. Une valeur unique le priverait de l'axe. */
   fontFaces: [
-    { family:'Canela', src:"url('/assets/fonts/canela.otf') format('opentype')", weight:900 },
-    { family:'Elms',   src:"url('/assets/fonts/elms.ttf') format('truetype')",   weight:'100 900' }
+    { family:'Canela', src:"url('/assets/fonts/canela.woff2') format('woff2')", weight:900 },
+    { family:'Elms',   src:"url('/assets/fonts/elms.woff2') format('woff2')",   weight:'100 900' }
   ],
 
   /* La PHOTO DE DÉMO du thème photo — montrée avant tout upload, JAMAIS publiée.
-     ⚠️ Le fichier n'arrive qu'au bout 5 du re-base. D'ici là le chemin rend 404 et le thème photo
-        s'affiche vide — c'est le comportement prévu ('' ou absent → vide), pas une panne. */
+     C'est un asset du client : le chemin se déclare ici, pas dans le code de l'admin.
+     '' ou absent → thème photo vide. (Le fichier est arrivé au bout 5 du re-base.) */
   demoPhoto: '/_data/demo/photo-demo.jpg',
 
   // ── Niveau 1 : PRIMITIVES (valeurs brutes = miroir du :root du site) ──
