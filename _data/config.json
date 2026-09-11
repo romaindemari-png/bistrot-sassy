@@ -1,5 +1,6 @@
 {
   "plan": "lelab_plus",
+  "famille": "food",
   "commerce": {
     "nom": "Bistrot Sassy",
     "type": "restaurant",
@@ -9,18 +10,61 @@
     "socle": {
       "carte": {
         "label": "La carte",
+        "action": "Modifier la carte",
         "actif": true,
         "sections": [
           "carte"
-        ]
+        ],
+        "admin": {
+          "edit": "menu",
+          "fichier": "carte",
+          "picto": "carte",
+          "sub": "Entrées · Plats · Desserts"
+        },
+        "type": "categories",
+        "textes": {
+          "intro": "Ajoutez vos produits par catégorie. Chaque ligne a un nom, une description et un prix.",
+          "titreVisuel": "Menu du jour",
+          "suite": " (suite)",
+          "categories": [
+            {
+              "cle": "entrees",
+              "label": "Entrées",
+              "sub": "tartares, verrines, crudités",
+              "unite": "Entrée",
+              "ajouter": "+ Ajouter une entrée"
+            },
+            {
+              "cle": "plats",
+              "label": "Plats",
+              "unite": "Plat",
+              "ajouter": "+ Ajouter un plat"
+            },
+            {
+              "cle": "desserts",
+              "label": "Desserts",
+              "sub": "maison, de saison",
+              "unite": "Dessert",
+              "ajouter": "+ Ajouter un dessert"
+            }
+          ]
+        }
       },
       "photos": {
         "label": "Photos",
+        "action": "Changer les photos",
         "actif": true,
         "sections": [
           "hero",
           "galerie"
-        ]
+        ],
+        "admin": {
+          "edit": "photos",
+          "fichier": "photos",
+          "picto": "photo",
+          "sub": "Slider d'accueil · Galerie",
+          "sliderEditable": true
+        }
       },
       "infos": {
         "label": "Infos",
@@ -28,23 +72,74 @@
         "sections": [
           "horaires",
           "contact"
+        ],
+        "admin": [
+          {
+            "edit": "horaires",
+            "fichier": "horaires",
+            "label": "Horaires",
+            "action": "Régler les horaires",
+            "picto": "horloge",
+            "sub": "Jours et heures"
+          },
+          {
+            "edit": "contact",
+            "fichier": "general",
+            "label": "Infos",
+            "action": "Mettre à jour mes infos",
+            "picto": "lieu",
+            "sub": "Téléphone, adresse, réseaux"
+          }
         ]
       }
     },
     "optionnels": {
+      "dujour": {
+        "label": "Le plat du jour",
+        "action": "Changer le plat du jour",
+        "actif": false,
+        "sections": [
+          "dujour"
+        ],
+        "type": "produits",
+        "admin": {
+          "edit": "dujour",
+          "fichier": "dujour",
+          "picto": "soleil",
+          "sub": "Disponible ou épuisé"
+        },
+        "textes": {
+          "intro": "Vos suggestions du moment (max 8). Basculez un produit sur « épuisé » : il reste affiché sur le site, barré.",
+          "titreGroupe": "Les suggestions du jour",
+          "unite": "Suggestion",
+          "ajouter": "+ Ajouter une suggestion"
+        }
+      },
       "events": {
         "label": "Événements",
+        "action": "Gérer mes événements",
         "actif": true,
         "sections": [
           "events"
-        ]
+        ],
+        "type": "evenements",
+        "admin": {
+          "edit": "events",
+          "fichier": "events",
+          "picto": "calendrier",
+          "sub": "Soirées, concerts, menus spéciaux"
+        }
       },
       "reservation": {
         "label": "Réservation",
         "actif": true,
         "sections": [
           "reservation"
-        ]
+        ],
+        "admin": {
+          "picto": "telephone",
+          "sub": "Bouton de réservation WhatsApp"
+        }
       }
     }
   }

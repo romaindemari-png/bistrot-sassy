@@ -1,20 +1,14 @@
+/* ⚠️ SITE_URL et le jeton des Blobs étaient ÉCRITS EN DUR ici — et pas pareil selon le fork.
+   Ils vivent désormais dans netlify/lib/site.mjs : UNE seule vérité, et le fichier redevient
+   IDENTIQUE d'un fork à l'autre. (Le repli du master pointait sur « gorgeous-heliotrope », un
+   domaine qui n'est même pas le sien ; et un `cp` vers Masa aurait cassé ses Blobs.) */
 import { getStore } from '@netlify/blobs';
+import { SITE_URL, verifyIdentity, storeOpts } from '../lib/site.mjs';
 
 // Toujours cibler l'Identity de prod (même depuis un deploy preview, où process.env.URL = URL du preview)
-const SITE_URL = process.env.IDENTITY_URL || 'https://gorgeous-heliotrope-e2e59d.netlify.app';
+
 
 // Vérifie le jeton Netlify Identity de l'utilisateur connecté
-async function verifyIdentity(token) {
-  if (!token) return false;
-  try {
-    const res = await fetch(`${SITE_URL}/.netlify/identity/user`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
 
 const isOurKey = (k) => typeof k === 'string' && k.startsWith('photos/');
 
@@ -48,11 +42,7 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'JSON invalide' }) };
   }
 
-  const store = getStore({
-    name: 'photos',
-    siteID: process.env.SITE_ID,
-    token: process.env.NETLIFY_API_TOKEN
-  });
+  const store = getStore(storeOpts('photos'));
 
   try {
     // — Suppression seule —

@@ -1,2 +1,8 @@
+# Banc d'essai master — déploiement continu depuis `main` (comme Masa).
+# Site statique sans build : on publie la RACINE du repo (node_modules est .gitignore → jamais déployé).
+[build]
+  publish = "."
+
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"

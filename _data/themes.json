@@ -1,8 +1,10 @@
 [
   {
     "id": "sassy-carte",
-    "nom": "La carte",
+    "nom": "Publier ma carte",
+    "sousTitre": "Votre carte complète",
     "type": "typo",
+    "prefill": "carte",
     "formats": {
       "carre": {
         "habillage": "/_data/themes/sassy-carte-carre.png",
@@ -34,8 +36,45 @@
     }
   },
   {
+    "id": "sassy-dujour",
+    "nom": "Publier mon plat du jour",
+    "sousTitre": "Ce qui est frais aujourd'hui",
+    "type": "typo",
+    "prefill": "dujour",
+    "formats": {
+      "carre": {
+        "habillage": "/_data/themes/sassy-dujour-carre.png",
+        "zoneListe": {
+          "x": 0.12,
+          "y": 0.4,
+          "w": 0.76,
+          "h": 0.34
+        }
+      },
+      "portrait": {
+        "habillage": "/_data/themes/sassy-dujour-portrait.png",
+        "zoneListe": {
+          "x": 0.12,
+          "y": 0.36,
+          "w": 0.76,
+          "h": 0.33
+        }
+      },
+      "story": {
+        "habillage": "/_data/themes/sassy-dujour-story.png",
+        "zoneListe": {
+          "x": 0.12,
+          "y": 0.32,
+          "w": 0.76,
+          "h": 0.34
+        }
+      }
+    }
+  },
+  {
     "id": "sassy-photo",
-    "nom": "Photo + cadre",
+    "nom": "Publier une photo",
+    "sousTitre": "Une photo, habillée à votre charte",
     "type": "photo",
     "formats": {
       "carre": {
@@ -63,14 +102,25 @@
           "y": 0,
           "w": 1,
           "h": 1
+        },
+        "zoneTexte": {
+          "x": 0.1,
+          "y": 0.42,
+          "w": 0.8,
+          "h": 0.16,
+          "taille": 46,
+          "couleur": "#fff",
+          "align": "center"
         }
       }
     }
   },
   {
     "id": "sassy-infos",
-    "nom": "Infos pratiques",
+    "nom": "Publier mes infos",
+    "sousTitre": "Horaires, adresse, contact",
     "type": "infos",
+    "prefill": "infos",
     "formats": {
       "carre": {
         "habillage": "/_data/themes/sassy-infos-carre.png",
@@ -102,9 +152,46 @@
     }
   },
   {
+    "id": "sassy-annonce",
+    "nom": "Publier une annonce",
+    "sousTitre": "Fermeture, congés, une nouvelle…",
+    "type": "annonce",
+    "formats": {
+      "carre": {
+        "habillage": "/_data/themes/sassy-annonce-carre.png",
+        "zoneTexte": {
+          "x": 0.14,
+          "y": 0.38,
+          "w": 0.72,
+          "h": 0.28
+        }
+      },
+      "portrait": {
+        "habillage": "/_data/themes/sassy-annonce-portrait.png",
+        "zoneTexte": {
+          "x": 0.14,
+          "y": 0.36,
+          "w": 0.72,
+          "h": 0.28
+        }
+      },
+      "story": {
+        "habillage": "/_data/themes/sassy-annonce-story.png",
+        "zoneTexte": {
+          "x": 0.14,
+          "y": 0.38,
+          "w": 0.72,
+          "h": 0.24
+        }
+      }
+    }
+  },
+  {
     "id": "sassy-event",
-    "nom": "Événement",
+    "nom": "Publier un événement",
+    "sousTitre": "Une date à annoncer",
     "type": "photo",
+    "prefill": "event",
     "formats": {
       "carre": {
         "habillage": "/_data/themes/sassy-event-carre.png",

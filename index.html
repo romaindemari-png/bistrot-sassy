@@ -43,6 +43,13 @@
    RESET & BASE
 ============================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ⚠️ Sans ça, Safari iOS GONFLE tout seul le texte de certains blocs (« text autosizing »), selon une
+   heuristique liée à leur largeur — donc inégalement. Sur une vitrine dont la typo EST le sujet, un
+   moteur qui redimensionne un bloc et pas son voisin défait la composition en silence, et seulement
+   sur iPhone. `100%` = « rends la taille déclarée ». Le pinch-zoom et le zoom de page Safari restent
+   entiers (aucun maximum-scale / user-scalable ici — et jamais).
+   ⚠️ AUCUN TEST LOCAL NE PEUT LE VOIR — c'est `test-atteignabilite` qui l'a trouvé, pas l'œil. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html { scroll-behavior: smooth; }
 body {
   font-family: 'Elms', sans-serif;
