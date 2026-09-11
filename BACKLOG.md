@@ -33,6 +33,26 @@
 - [ ] **Auditer + remplir `separation`** (shared / client_specific) par fork. Prérequis Cockpit Niveau 2 avant toute propagation auto.
 - [ ] **Mettre à jour `LELAB.md`** dans le master, au moment de la consolidation, avec les évolutions studio ci-dessus.
 
+## Chantiers RENDU (à traiter APRÈS le re-base)
+
+- [ ] **🟠 `paintCarte` ROGNE LES PRIX — le `€` est coupé par son propre clip** *(constaté le 11/09/2026,
+  pendant le bout 1 du re-base)*.
+  `paintCarte` pose `ctx.clip()` sur `rect(zx, dzy, zw, dzh)` puis dessine le prix en
+  `textAlign:'right'` **exactement à `zx + zw`** — c'est-à-dire sur la ligne de coupe. Tout
+  débordement latéral du glyphe (approche, chasse du `€`) est donc rasé.
+  **Mesuré** sur `sassy-carte` portrait 1080×1350, pixels d'encre collés à `x = 950` (`0.88 × 1080`) :
+
+  | | encre au bord du clip |
+  |---|---|
+  | tokens d'avant (Bricolage 700) | **33 px** |
+  | tokens d'après (Canela Black 900) | **42 px** |
+
+  ⚠️ **ANTÉRIEUR AU BOUT 1, PAS UNE RÉGRESSION.** Le défaut existe avec les deux jeux de tokens ;
+  Canela Black a un `€` plus large, ce qui le rend un peu plus visible. Le changement de graisse
+  n'en est pas la cause — le rendu a été validé à l'œil avec, et les graisses restent en l'état.
+  **→ Le correctif est dans `paintCarte`** (marge droite dans le clip, ou prix aligné à
+  `zx + zw − marge`), pas dans les tokens ni dans la zone de `themes.json`.
+
 ## Chantiers STUDIO (raffinement)
 - [ ] Vignette Insta mobile : dégraisser l'habillage encadré → **ligne fine** sous le bandeau (poids visuel).
 - [ ] Vignette Insta : **avatar + popup moderne** (pattern Buffer/Later). ⚠️ **SEULEMENT après validation Meta** — tant que la review n'est pas passée, le triplet avatar+@compte+ID doit rester visible SANS clic.
