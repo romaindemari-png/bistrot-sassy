@@ -57,6 +57,23 @@ const CLIENT_TOKENS = {
     { family:'Elms',   src:"url('/assets/fonts/elms.woff2') format('woff2')",   weight:'100 900' }
   ],
 
+  /* Les LOGOS de marque, lus par `listeAssets()` du moteur v2 et embarqués en base64
+     dans chaque SVG. Chaque entrée coûte ~17,5 Ko de base64 PAR SLIDE.
+     ⚠️ UNE SEULE VARIANTE EST DÉCLARÉE, ET C'EST MESURÉ. Le moteur la colore par
+        `mask-image` depuis les tokens, donc un fichier suffit pour les six templates :
+          polices seules ......... 152,8 Ko
+          + 1 variante (masque) .. 170,4 Ko  ← ici, 5,4 % SOUS le repère
+          + 2 variantes .......... 187,9 Ko  → 4,4 % au-dessus
+          repère iPhone validé chez Georges : 180 Ko
+        La piste a été éprouvée sur le vrai chemin de rasterisation (témoin sans masque à
+        100 %, masques à 28,9 %) ET sur un iPhone réel — c'est Safari qui rasterise, pas
+        nos machines. Banc : `BANC-mask-image-iphone.html`.
+     ⚠️ DÉCLARER UNE SECONDE VARIANTE FAIT PASSER CHAQUE SLIDE AU-DESSUS DU REPÈRE.
+        `chargerAssets()` embarque TOUS les logos déclarés dans CHAQUE slide, même ceux
+        qu'un template n'emploie pas. Ce n'est donc pas gratuit : à ne faire que mesure
+        en main sur un appareil réel. */
+  logos: { creme: '/assets/logos/creme.png' },
+
   /* La PHOTO DE DÉMO du thème photo — montrée avant tout upload, JAMAIS publiée.
      C'est un asset du client : le chemin se déclare ici, pas dans le code de l'admin.
      '' ou absent → thème photo vide. (Le fichier est arrivé au bout 5 du re-base.) */

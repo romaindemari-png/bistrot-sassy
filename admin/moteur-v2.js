@@ -141,6 +141,69 @@
       + '.page{position:relative;overflow:hidden;-webkit-font-smoothing:antialiased;font-kerning:normal}';
   }
 
+  /* ══════════════════════════════════════════════════════════════════════════════
+     LA SIGNATURE — LE LOGO, UNE SEULE IMAGE POUR LES SIX TEMPLATES
+     ══════════════════════════════════════════════════════════════════════════════
+     Les six templates portaient « bistrot sassy » EN TEXTE (`.pied` sur les quatre typo,
+     `.sign` sur photo ; event n'en avait aucun). Le logo le remplace — il ne s'y ajoute
+     pas.
+
+     ⚠️ UN SEUL FICHIER, COLORÉ PAR `mask-image` DEPUIS LES TOKENS. Déclarer une variante
+        par couleur de fond coûterait 17,5 Ko de base64 DE PLUS PAR SLIDE, et
+        `chargerAssets()` les embarque TOUTES dans CHAQUE slide — deux variantes portent
+        la charge à 187,9 Ko, au-dessus du seul repère validé sur un iPhone réel (180 Ko).
+        Avec le masque : 170,4 Ko. La piste a été éprouvée sur le vrai chemin de
+        rasterisation (témoin sans masque à 100 %, masques à 28,9 %, préfixé comme non
+        préfixé) puis sur un iPhone réel — c'est Safari qui rasterise chez le client, pas
+        nos machines.
+
+     ⚠️ LES DEUX PROPRIÉTÉS SONT ÉCRITES, PRÉFIXÉE ET NON PRÉFIXÉE. Safari a longtemps
+        exigé `-webkit-mask-image` ; on ne parie pas sur la version de l'appareil du
+        client.
+
+     ⚠️ LARGEUR ET HAUTEUR EN PIXELS, PAS D'`aspect-ratio`. On connaît W, donc on calcule :
+        une propriété de moins dont dépendre à l'intérieur d'un `foreignObject`.
+
+     ⚠️ PAS D'ASSET ⇒ PAS DE LOGO, ET LE TEXTE REVIENT. Si `CLIENT_TOKENS.logos` n'est pas
+        déclaré, `A['logo:creme']` vaut `undefined` et un `url(undefined)` rendrait un
+        RECTANGLE PLEIN — un aplat de couleur en bas du visuel, sans un mot. `signature()`
+        retombe donc sur le texte. Un fork qui ne déclare pas de logo garde sa signature. */
+  const MEP_LOGO = {
+    haut:     0.050,   // × W — hauteur du logo. L'encre du texte qu'il remplace faisait
+                       //       22,9 % de W de large et 2,96 % de haut (mesuré) : à largeur
+                       //       égale le logo serait 2,5× plus haut, d'où un choix de MEP.
+    opacite:  0.62,    // le texte était à .45 ; un logotype plein pèse plus à opacité égale
+    ratio:    1326 / 424   // le gabarit des quatre variantes, identique
+  };
+
+  /* Le style du texte de signature, TEL QU'IL ÉTAIT avant le logo. Il ne sert plus qu'au
+     repli, mais il doit rester FIDÈLE : un repli qui rend le nom dans la police héritée
+     serait pire que pas de repli du tout — il passerait pour un choix. */
+  const SIGN_TEXTE = "font-family:'Elms',sans-serif;letter-spacing:.18em"
+                   + ';text-transform:uppercase;opacity:.45';
+
+  /** La règle de la signature : le masque du logo si l'asset est là, le style du TEXTE
+      sinon. Une seule fonction décide, donc les deux cas ne peuvent pas diverger ni
+      s'additionner. Le POSITIONNEMENT reste au template : il diffère d'un template à
+      l'autre (`margin-top:auto` ici, un `margin-top` fixe ailleurs). */
+  function signatureCSS(A, sel, couleur, W) {
+    const src = A && A['logo:creme'];
+    if (!src) return sel + '{' + SIGN_TEXTE + ';font-size:' + (W * 0.023).toFixed(2) + 'px}';
+    const h = W * MEP_LOGO.haut;
+    return sel + '{width:' + (h * MEP_LOGO.ratio).toFixed(2) + 'px;height:' + h.toFixed(2) + 'px'
+      + ';background:' + couleur + ';opacity:' + MEP_LOGO.opacite
+      + ";mask-image:url('" + src + "');mask-size:contain;mask-repeat:no-repeat;mask-position:left center"
+      + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:contain"
+      + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:left center}';
+  }
+
+  /** Le corps de la signature : le logo s'il est là, le texte sinon. */
+  function signature(A, cls) {
+    return (A && A['logo:creme'])
+      ? '<div class="' + cls + '"></div>'
+      : '<div class="' + cls + '">bistrot sassy</div>';
+  }
+
   /* ── LE REGISTRE ────────────────────────────────────────────────────────────
      Un template fournit deux fonctions PURES :
        css(A, W, H, fmt, Z)     → la feuille de style, SANS le socle
@@ -213,8 +276,13 @@
         + ".prix{font-family:'Elms',sans-serif;font-size:" + u(0.030) + ';white-space:nowrap}'
         + ".desc{font-family:'Elms',sans-serif;font-size:" + u(0.025)
           + ';line-height:1.5;opacity:.6;margin-top:' + u(0.008) + '}'
-        + '.pied{margin-top:auto;font-family:\'Elms\',sans-serif;font-size:' + u(0.023)
-          + ';letter-spacing:.18em;text-transform:uppercase;opacity:.45}';
+        /* ⚠️ LE LOGO REMPLACE LE TEXTE : les proprietes typographiques de `.pied`
+           (font-family, letter-spacing, text-transform) DISPARAISSENT. Les laisser ne se
+           verrait pas — un div vide n'affiche rien — mais elles mentiraient sur ce que la
+           regle fait, et le prochain qui lit croirait a un texte.
+           `margin-top:auto` reste : c'est lui qui colle la signature en bas de la colonne. */
+        + '.pied{margin-top:auto}'
+        + signatureCSS(A, '.pied', c.creme, W);
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const plats = ((slide && slide.dishes) || []).filter(function (d) { return d.n; });
@@ -237,7 +305,7 @@
            +       (label ? '<div class="cat-t">' + xml(label) + '</div>' : '')
            +       rangees
            +     '</div></div>'
-           +     '<div class="pied">bistrot sassy</div>'
+           +     signature(A, 'pied')
            +   '</div>'
            + '</div>';
     }
@@ -825,6 +893,9 @@
       xml: xml,
       ZONE_SURE: ZONE_SURE,
       MEP_PHOTO: MEP_PHOTO,
+      MEP_LOGO: MEP_LOGO,
+      signatureCSS: signatureCSS,
+      signature: signature,
       habillerApercuPhoto: habillerApercuPhoto
     }
   };
