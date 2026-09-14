@@ -98,7 +98,8 @@
         "label": "Le plat du jour",
         "action": "Changer le plat du jour",
         "actif": false,
-        "sections": [
+        "sections": [],
+        "sectionsPrevues": [
           "dujour"
         ],
         "type": "produits",

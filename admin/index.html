@@ -6182,7 +6182,25 @@ function cartesDuBloc(bloc){
     sub:     a.sub     || '',
     picto:   a.picto   || 'carte',
     bloc:    bloc.cle,
-    optionnel: bloc.optionnel,
+    /* ⚠️⚠️ UN BLOC QUI NE PILOTE AUCUNE SECTION N'A PAS D'INTERRUPTEUR. C'est
+       `optionnel` qui décide de l'afficher (cf. `renderSiteCards`), et il exige donc
+       maintenant que le bloc gouverne AU MOINS UNE section du site.
+       ⚠️ POURQUOI : le bloc `dujour` portait `sections: ["dujour"]` alors que
+          `#dujour` N'EXISTE PAS dans `index.html` — vérifié le 14/09/2026. L'écran
+          « Mon site » affichait donc un interrupteur « Affichée » qui, passé sur ON,
+          ne faisait apparaître RIEN. Une promesse que le site ne tient pas, à côté
+          d'un éditeur de contenu qui, lui, fonctionne : le client édite ses plats et
+          les publie sur Instagram par le thème v2, mais aucune page ne les montre.
+          Même classe de défaut que `#events` le même jour, à l'autre bout — là une
+          règle CSS masquait ce que le config disait affiché, ici un interrupteur
+          promet ce que le site n'a pas.
+       ⚠️ LA RÈGLE EST GÉNÉRALE, PAS UN CAS PARTICULIER `dujour`. Le jour où la
+          section `#dujour` est créée, il suffit de remettre son id dans `sections`
+          (il attend dans `sectionsPrevues`) et l'interrupteur revient SANS toucher à
+          ce code. Aucun `if (cle === 'dujour')` ici, jamais.
+       ⚠️ L'ÉDITEUR, LUI, RESTE. `editable` ne dépend pas de ça : la card garde sa
+          flèche et son écran d'édition. On retire la promesse, pas l'outil. */
+    optionnel: bloc.optionnel && Array.isArray(bloc.sections) && bloc.sections.length > 0,
     editable:  Array.isArray(bloc.admin) ? !!a.edit : !!(bloc.admin && bloc.admin.edit) || !bloc.admin,
   }));
 }

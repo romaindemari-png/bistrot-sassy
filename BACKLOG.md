@@ -1260,6 +1260,75 @@ au lieu de 540, soit **quatre fois plus de pixels** à chaque frappe du client. 
 argument connu en faveur du 540 — et il n'a jamais été mesuré. À faire : le temps de
 rasterisation à 540 contre 1080 sur l'iPhone du client, pas sur un Mac.
 
+### 14/09/2026 — le plat du jour : appartient-il au site, ou seulement à Instagram ? (À TRANCHER À FROID)
+
+**Constat mesuré le 14/09.** L'écran « Mon site » de LeLab affichait un interrupteur
+« **Affichée** · Changer le plat du jour », et `#dujour` **n'existe pas dans `index.html`**.
+Passé sur ON devant un client, il ne faisait apparaître **rien**. Pendant ce temps
+`_data/dujour.json` porte 4 vrais plats, l'éditeur fonctionne, et le thème v2
+`sassy-dujour` les publie sur Instagram.
+
+C'est la même classe de défaut que `#events` le même jour, **à l'autre bout** : là une règle
+CSS masquait ce que le config disait affiché, ici un interrupteur promettait ce que le site
+n'a pas.
+
+**Fait le 14/09 (option 2, avant la démo) :** l'interrupteur est retiré. Pas par un cas
+particulier — par une **règle générale** : `optionnel` exige désormais que le bloc pilote au
+moins une section (`bloc.sections.length > 0`), et `dujour` porte `sections: []` avec
+`sectionsPrevues: ["dujour"]`. L'éditeur, le contenu et le thème v2 sont **intacts**. Le jour
+où la section existe, remettre son id dans `sections` fait revenir l'interrupteur **sans
+toucher au code**.
+
+**→ CE QUI RESTE À TRANCHER, ET C'EST UNE DÉCISION DE PRODUIT, PAS DE CODE :**
+
+| | ce que ça veut dire |
+|---|---|
+| **1 · créer `#dujour` sur le site** | Le plat du jour appartient au site. Section à dessiner : titre, cartes, état « épuisé ». Le contenu, l'éditeur et le thème existent déjà. L'interrupteur revient tout seul. |
+| **2 · statu quo** | Le plat du jour appartient à **Instagram seulement**. C'est l'état d'aujourd'hui, cohérent : plus de promesse fausse. |
+| **3 · suivre Georges** | `dujour` quitte `optionnels` pour le **socle**, avec une section créée : plus d'interrupteur du tout, le plat du jour fait partie du site. |
+
+⚠️ **CE QUE FAIT GEORGES, MESURÉ DANS `georges-maquette` :** il n'a **aucun bloc `dujour`**.
+Son équivalent est **`ardoise`**, et il est dans le **`socle`** — `actif: true`, section
+`#ardoise` qui **existe** dans son `index.html`. Il n'en a jamais fait un bloc optionnel :
+chez lui, les plats du jour sont une partie du site, pas une option qu'on peut éteindre. Son
+argument implicite, et il tient : *un plat du jour qu'on peut éteindre est un plat du jour
+qu'on oublie d'allumer.*
+
+### 14/09/2026 — deux constats non traités, trouvés en diagnostiquant la visibilité des blocs
+
+**1 · Le bloc `photos` de Georges déclare deux sections qui n'existent pas chez lui.**
+Mesuré dans `georges-maquette` : `blocs.socle.photos.sections = ["hero", "band"]`, et
+**aucun `id="hero"` ni `id="band"`** dans son `index.html`. Même classe de défaut que le
+`dujour` de Sassy — une section déclarée sans section réelle — mais **inoffensif chez lui**
+parce que le bloc est dans le **socle**, que le loader ne parcourt jamais. Il n'y a donc ni
+interrupteur ni masquage possible : personne ne peut s'appuyer sur cette déclaration fausse.
+⚠️ **À voir à la remontée au master** : si le mécanisme de visibilité est un jour étendu, ou
+si `photos` passe en optionnel, la déclaration devient active et fausse le même jour. Ses
+blocs `horaires` et `infos` pointent aussi **tous les deux** sur `#contact` — à regarder en
+même temps.
+
+**2 · Le sens « afficher » du loader ne rend pas le CSS statique inoffensif.**
+Le bout A du 14/09 pose `display: revert` sur une section masquée dont le bloc est actif.
+Éprouvé avec une règle `#events{display:none}` réintroduite : il la bat dans **5 cas sur 7**,
+mais **pas** quand le **config est illisible** (HTTP 500) ni quand **le bloc est absent du
+config** — dans ces deux cas le loader ne décide rien, et la règle statique gagne.
+
+| | avec une règle statique réintroduite |
+|---|---|
+| `actif` true / absent / null / `"false"` | ✓ battue (`display: revert` posé) |
+| `actif: false` | ✓ masquée, comme attendu |
+| **bloc retiré du config** | ✗ **reste masquée** |
+| **config illisible (500)** | ✗ **reste masquée** |
+
+**→ LA GARANTIE N'EST DONC PAS DANS LE CODE, ELLE EST DANS UNE RÈGLE ÉCRITE :** `CLAUDE.md`
+dit « ne pas réintroduire de CSS statique pour masquer un bloc, c'est `config.json` qui
+décide ». **Et aucun garde-fou ne la surveille.** C'est précisément la forme de défaut que la
+journée a passée son temps à corriger — une affirmation dont le mécanisme n'existe pas.
+⚠️ **À faire, après mardi** : une sonde qui, pour chaque section déclarée dans
+`blocs.optionnels`, vérifie qu'**aucune règle de feuille de style** ne lui pose
+`display: none`. C'est mesurable en une passe sur `document.styleSheets`, comme le diagnostic
+du 14/09 l'a fait à la main.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
