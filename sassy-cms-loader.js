@@ -104,24 +104,66 @@
 
   /* ══════════════════════════════════════════════════
      0. BLOCS / VISIBILITÉ
-     Lit _data/config.json et masque les sections des blocs
-     OPTIONNELS désactivés (actif === false). Le socle, ainsi
-     que about et quote, ne sont JAMAIS masqués.
-     Fallback par construction : config absent / vide / illisible
-     ⇒ tout reste affiché. On ne masque QUE ce qui est
-     explicitement désactivé dans un config valide.
+     Lit _data/config.json et pilote la visibilité des sections
+     des blocs OPTIONNELS, DANS LES DEUX SENS :
+       · actif === false ......... masquée (display:none)
+       · actif absent ou vrai .... rendue visible SI elle était
+                                   masquée (display:revert)
+
+     ⚠️ LE REPLI EST « AFFICHÉ », ET C'EST UNE DÉCISION, PAS UN
+        EFFET DE BORD. Un `actif` absent ne masque RIEN — le
+        contrat reste « on ne masque QUE ce qui est explicitement
+        désactivé ». Tranché par Romain le 14/09/2026 : un config
+        mal écrit doit faire apparaître une section de trop, jamais
+        faire disparaître le site. Même raison pour config absent,
+        vide ou illisible : tout reste affiché.
+
+     ⚠️⚠️ LE SOCLE RESTE HORS DU MÉCANISME, ET CE N'EST PAS UN OUBLI.
+        Seul `blocs.optionnels` est parcouru. `blocs.socle` — carte,
+        photos (hero + galerie), infos (horaires + contact) — n'est
+        JAMAIS touché, quoi qu'il déclare, et `about` et `quote` non
+        plus : ce sont les sections sans lesquelles le site n'est
+        plus un site. NE PAS « ARRANGER » ÇA en parcourant
+        `blocs` entier : un `actif:false` mal recopié dans le socle
+        effacerait la carte ou le hero d'un client en production.
      ══════════════════════════════════════════════════ */
   const config = await loadJSON('/_data/config.json');
   try {
     const optionnels = config && config.blocs && config.blocs.optionnels;
     if (optionnels && typeof optionnels === 'object') {
       Object.values(optionnels).forEach(bloc => {
-        if (bloc && bloc.actif === false && Array.isArray(bloc.sections)) {
-          bloc.sections.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-          });
-        }
+        if (!bloc || !Array.isArray(bloc.sections)) return;
+        bloc.sections.forEach(id => {
+          const el = document.getElementById(id);
+          if (!el) return;                     // section déclarée mais absente du site
+          if (bloc.actif === false) { el.style.display = 'none'; return; }
+
+          /* ⚠️⚠️ ET LE SENS INVERSE, DEPUIS LE 14/09/2026. Ce bloc ne savait que
+             MASQUER : il n'avait aucune branche pour `actif !== false`. Un
+             `#events { display:none }` statique traînait dans `index.html` avec un
+             commentaire annonçant « réactivable via config.json » — trois documents
+             l'affirmaient, aucun mécanisme ne le faisait. L'interrupteur écrivait
+             `actif: true`, ce code le lisait, et la règle statique gagnait.
+
+             ⚠️ `display = ''` NE SUFFIT PAS, ET C'EST MESURÉ : sur une section
+                masquée par une règle de feuille de style, `''` et
+                `removeProperty('display')` laissent le calculé à `none` — ils ne
+                retirent qu'un style EN LIGNE, qui n'existe pas ici. Relevé :
+                  ''                 → none   ✗        revert  → block  ✓
+                  removeProperty     → none   ✗        'block' → block  ✓
+                  'initial'          → inline ✗ (casse la mise en page)
+                `revert` est retenu : il écarte les règles de l'auteur et rend la
+                valeur du navigateur pour cette balise, au lieu d'imposer une valeur
+                qu'on aurait inventée.
+
+             ⚠️ ON N'AGIT QUE SI LA SECTION EST EFFECTIVEMENT MASQUÉE, et c'est une
+                garde, pas une optimisation. `#hero` est en `display: grid` et
+                `revert` lui donnerait `block` — mesuré. Il appartient au socle, donc
+                hors d'atteinte ici, mais le jour où une section pilotée porte une
+                mise en page en flex ou en grid, un `revert` aveugle la casserait.
+                Une section déjà visible n'a rien à réparer : on la laisse. */
+          if (getComputedStyle(el).display === 'none') el.style.display = 'revert';
+        });
       });
     }
   } catch (e) {
