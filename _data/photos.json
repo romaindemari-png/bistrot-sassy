@@ -5,15 +5,19 @@
       "alt": "Bistrot Sassy ambiance 1"
     },
     {
-      "image": "/.netlify/functions/serve-image?key=photos%2Fslider%2F1780913616833-un2km0.jpg",
-      "alt": "Bistrot Sassy ambiance 2"
+      "image": "/assets/photos/devanture-vitrine.webp",
+      "alt": "La vitrine du Bistrot Sassy, boulevard Chave"
     },
     {
-      "image": "/.netlify/functions/serve-image?key=photos%2Fslider%2F1780432841621-87nhxc.jpg",
-      "alt": "Bistrot Sassy ambiance 3"
+      "image": "/assets/photos/devanture-enseigne.webp",
+      "alt": "L'enseigne du Bistrot Sassy"
     }
   ],
   "galerie": [
+    {
+      "image": "/assets/photos/piments.webp",
+      "legende": ""
+    },
     {
       "image": "/galerie1.png",
       "legende": ""
