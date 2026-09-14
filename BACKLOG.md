@@ -1027,6 +1027,55 @@ ne l'a pas créée ; il a ajouté un élément de plus que l'aperçu ne montre p
   thème photo : celui-là garantit que PHOTO, privé de son voile, n'est pas dessiné avec un
   voile dans l'aperçu. Il ne touche pas au cas d'EVENT.
 
+## 🔴 14/09/2026 — CORRECTION DE HIÉRARCHIE : LE SEUL ROUGE SUR FORMAT VIVANT EST `portrait · sassy-dujour`
+
+J'avais d'abord alerté sur `portrait · sassy-carte`. **C'était une mesure irréaliste** : mon
+contenu hostile mettait **6 plats dans une seule slide de carte**, ce que l'admin ne produit
+jamais.
+
+**LE PLAFOND, LU DANS LE CODE.** `studioSlides()` (`admin/index.html:5244`) ne plafonne
+**que si les lignes portent un `data-cat`** :
+
+```js
+const MAX_PER_SLIDE = 5;
+const hasCat = rows.some(r => r.dataset.cat);
+if (!hasCat) return dishes.length ? [{ label: '', dishes }] : [];   // ← AUCUN plafond
+…
+for (let i = 0; i < dishes.length; i += MAX_PER_SLIDE) { … }        // ← plafond
+```
+
+Mesuré dans l'admin réel :
+
+| | lignes avec `data-cat` | 8 produits donnent | visuels publiés |
+|---|---|---|---|
+| **la carte** | oui | `Entrées` (5) + `Entrées (suite)` (3) | **2**, un carrousel |
+| **le plat du jour** | **0 sur 6** | une seule slide de 6 | **1**, tronqué |
+
+**→ LA CARTE EST PROTÉGÉE, LE PLAT DU JOUR NE L'EST PAS.**
+
+Au contenu **réaliste** (5 produits, le maximum atteignable) :
+
+| | dépassement | |
+|---|---|---|
+| `carre · sassy-carte` | 208 px | format mort |
+| `carre · sassy-dujour` | 446 px | format mort |
+| **`portrait · sassy-dujour`** | **176 px** | **format VIVANT** |
+| `portrait · sassy-carte` | — | vert |
+
+⚠️ **CE QUE LE CLIENT VOIT.** Le visuel part tronqué, mais **pas à son insu** : l'aperçu des
+thèmes typo repeint **le bitmap de l'export lui-même**, donc la troncature est à l'écran
+avant publication. Encore faut-il qu'il regarde le bas de la vignette, qui fait 260 px de
+large dans la maquette de téléphone.
+
+→ **À traiter après mardi. Deux voies, Romain tranchera :** un plafond sur le plat du jour
+  (comme la carte), ou une réduction. ⚠️ **Aucune règle de réduction ne doit être posée de
+  notre initiative** — c'est une décision de mise en page.
+
+⚠️ **ET LA LEÇON DE MÉTHODE :** un contenu « hostile » doit rester **atteignable par
+l'admin**. Le mien ne l'était pas, et il a déplacé l'alarme sur le mauvais thème pendant une
+demi-heure. Avant de qualifier un contenu d'hostile, vérifier que l'interface peut le
+produire.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
