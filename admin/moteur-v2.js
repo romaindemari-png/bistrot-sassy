@@ -172,7 +172,15 @@
     haut:     0.050,   // × W — hauteur du logo. L'encre du texte qu'il remplace faisait
                        //       22,9 % de W de large et 2,96 % de haut (mesuré) : à largeur
                        //       égale le logo serait 2,5× plus haut, d'où un choix de MEP.
-    opacite:  0.62,    // le texte était à .45 ; un logotype plein pèse plus à opacité égale
+    opacite:  0.70,    /* ⚠️ CHOISIE SUR UN SEUIL, PAS AU JUGÉ. L'opacité coupe le contraste,
+                          et le relevé le dit :
+                            texte remplacé (.45) ... CARTE 2,25  ·  INFOS 2,05
+                            logo à .62 ............. CARTE 3,06  ·  INFOS 2,81
+                            logo à .70 ............. CARTE 3,51  ·  INFOS 3,27
+                          Le seuil AA d'un grand caractère est 3,00. À .62 INFOS passait
+                          dessous ; à .70 les deux le franchissent, et la signature reste
+                          discrète. Un premier jet disait « .62 parce qu'un logotype plein
+                          pèse plus » — un raisonnement sans mesure. */
     ratio:    1326 / 424   // le gabarit des quatre variantes, identique
   };
 
@@ -353,8 +361,11 @@
            Calé en haut, il laisserait toujours une moitié morte. `flex:1` + `center`. */
         + ".texte{flex:1;display:flex;align-items:center;font-family:'Elms',sans-serif;font-size:" + u(0.046)
           + ';line-height:1.7;opacity:.85}'
-        + ".pied{margin-top:auto;font-family:'Elms',sans-serif;font-size:" + u(0.023)
-          + ';letter-spacing:.18em;text-transform:uppercase;opacity:.45}';
+        /* Le fond d'INFOS est le CRÈME : la signature y passe donc en ACCENT, comme tout
+           le texte de ce template (`.page` porte `color:accent`). Contraste relevé à
+           l'inventaire : 5,56 — le seul utilisable des quatre variantes sur ce fond. */
+        + '.pied{margin-top:auto}'
+        + signatureCSS(A, '.pied', c.accent, W);
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const texte = (slide && slide.texte) || '';
@@ -364,7 +375,7 @@
            +     '<div class="titre">nous trouver</div>'
            +     '<div class="filet"></div>'
            +     '<div class="texte">' + xml(texte) + '</div>'
-           +     '<div class="pied">bistrot sassy</div>'
+           +     signature(A, 'pied')
            +   '</div>'
            + '</div>';
     }
