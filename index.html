@@ -370,12 +370,16 @@ body {
    desktop ne bouge pas d'un pixel.
    ⚠️ SCOPE AUX DEUX CARTES, PAS AUX TROIS. La meme regle sur `card-0` fait remonter la
       photo de plat : on y voit le pied du verre et la fourchette, l'assiette part en bas.
-   ⚠️ COUPLAGE ASSUME : ces selecteurs designent une PLACE (card-1, card-2), pas une
-      image. Reordonner `slider` dans _data/photos.json deplace le cadrage avec la place,
-      pas avec la photo. Les deux emplacements portent les deux devantures aujourd'hui ;
-      le jour ou l'un accueille autre chose, cette regle est a revoir. */
-#card-1 img,
-#card-2 img { object-position: 50% 0; }
+   ⚠️ COUPLAGE ASSUME, ET IL A DEJA JOUE : ces selecteurs designent une PLACE, pas une
+      image. Le 14/09 l'emplacement card-2 est repasse au grand « S » (434x438, rapport
+      0,991) et la regle a du etre RESSERREE sur card-1 seul — mesure : en mobile,
+      `50% 0` ouvrait la fenetre sur y 0 % -> 81,3 % alors que le S descend a 86,1 %,
+      donc IL ETAIT COUPE EN BAS. Au `50% 50%` par defaut il passe entier (9,4 % ->
+      90,6 %). En desktop le Y reste sans effet pour lui aussi (0,991 > 0,711 : c'est la
+      largeur qui est rognee).
+      → Le jour ou card-1 accueille autre chose qu'une devanture, cette regle est a
+        remesurer, pas a deplacer. */
+#card-1 img { object-position: 50% 0; }
 
 /* Stack click hint */
 .stack-hint {
