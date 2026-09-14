@@ -1110,6 +1110,46 @@ vouloir dire « la sonde a réussi » ou « la sonde est arrivée après la pann
 
 **Décision de Romain le 14/09 :** écrit, pas traité. Après mardi.
 
+### 14/09/2026 — le format `carre` n'est offert par AUCUN écran de l'admin (À RETIRER)
+
+Mesuré, pas supposé — et ça tranche la question qui traînait depuis le matin.
+
+`#fmtRow`, le sélecteur de format de l'étape 1, ne porte que **deux boutons** :
+
+| bouton | présent |
+|---|---|
+| `portrait` | oui |
+| `story` | oui |
+| `carre` | **aucun, pour aucun thème** |
+
+Or `_data/themes.json` déclare `carre` pour **les six thèmes** (`sassy-carte`, `sassy-dujour`,
+`sassy-photo`, `sassy-infos`, `sassy-annonce`, `sassy-event`), avec habillage et zones.
+
+**→ LE ROUGE `carre · sassy-dujour` EST SUR UN FORMAT QU'AUCUN CLIENT NE PEUT PRODUIRE.**
+Les 230 px de dépassement rapportés par le contrôle toute la journée — et les 446 px au
+contenu réaliste relevés plus haut — portent sur une combinaison inatteignable par
+l'interface. On l'appelait « format mort » depuis ce matin ; c'est désormais une mesure.
+
+⚠️ **CE N'EST PAS UNE RAISON DE LE LAISSER.** Un format déclaré que rien n'offre est de la
+surface de test qui produit des rouges permanents, et un rouge permanent finit par ne plus
+être lu — c'est exactement ainsi qu'un vrai défaut se cache derrière un faux. Le
+dépassement de `carre` a d'ailleurs déjà déplacé l'attention pendant une demi-heure.
+
+**Ce que le retrait implique, à vérifier avant de toucher quoi que ce soit :**
+1. les six blocs `formats.carre` de `themes.json`, plus les habillages `*-carre.png` ;
+2. le contrôle (`admin/controle-moteur.html`) parcourt `carre` dans sa sonde 5 — il
+   perdrait une colonne, ce qui est le but ;
+3. `ZONE_SURE.carre` et les cas `carre` du garde-fou `D4` (qui les affiche déjà comme
+   « non offert par l'admin — hors périmètre », volontairement, pour que l'écart entre le
+   déclaré et l'offert reste visible) ;
+4. ⚠️ **et la question de DA, qui n'est pas à moi :** le carré est le format Instagram
+   historique. Est-ce qu'on le retire du produit, ou est-ce qu'on remet le bouton ? Le
+   déclaratif dit « on le veut », l'interface dit « on ne l'a jamais branché ». Les deux ne
+   peuvent pas rester vrais.
+
+**Décision de Romain le 14/09 :** retrait à faire, **après mardi**. Le point 4 se tranche
+avant les points 1 à 3.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
