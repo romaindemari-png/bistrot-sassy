@@ -473,9 +473,29 @@ async function sondeD() {
      main », ça CACHE le PNG que `composeCustomPreview` vient de poser à `block`.
      Un thème sans template perdait son habillage, en silence. D'où le drapeau,
      et d'où le troisième cas testé ici. */
-  verdict('D2 · gabarit masqué seulement quand il le faut',
-          photo.every(c => c.hab === 'none' && c.drapeau === '1' && c.voile && c.sign)
-          && !!sans && sans.hab === 'block' && !sans.voile && !sans.sign);
+  /* ⚠️⚠️ LE DÉCOR ATTENDU N'EST PLUS LE MÊME POUR LES DEUX THÈMES PHOTO, ET CE CRITÈRE
+     A DÛ ÊTRE RÉÉCRIT LE 14/09. Il exigeait un voile pour TOUT thème de type `photo` —
+     c'était le contrat de M3/M4, quand `habillerApercuPhoto` branchait sur `theme.type`.
+     Depuis que le thème photo n'a plus de voile (décision de DA : le logo crème se pose
+     directement sur l'image), l'aperçu branche sur `theme.template`, et le critère doit
+     dire la vérité PAR TEMPLATE :
+
+       template `photo` → PAS de voile, une signature (le logo centré)
+       template `event` → un voile, une signature      (inchangé, et son export
+                          porte en plus une carte que l'aperçu ne dessine pas —
+                          divergence connue, documentée au BACKLOG, autre chantier)
+       sans template    → ni voile ni signature, et l'habillage RESTE visible
+
+     ⚠️ Le critère n'a pas été ASSOUPLI, il a été rendu plus précis : il teste désormais
+        trois contrats distincts au lieu d'un seul approximatif. C'est la règle du dépôt —
+        quand une sonde rougit sur un cas légitime, on change ce qu'elle MESURE. */
+  const attendu = { photo: { voile: false, sign: true }, event: { voile: true, sign: true } };
+  const d2 = photo.every(c => {
+    const t = c.id === 'sassy-photo' ? 'photo' : 'event';
+    return c.hab === 'none' && c.drapeau === '1'
+        && c.voile === attendu[t].voile && c.sign === attendu[t].sign;
+  }) && !!sans && sans.hab === 'block' && !sans.voile && !sans.sign;
+  verdict('D2 · le décor attendu par template, et le gabarit masqué au bon moment', d2);
   if (emp.saute) dire('  · D3 · pas de rendu périmé affiché                     sans objet (aucun moteur)');
   else verdict('D3 · pas de rendu périmé affiché', emp.hFinal === emp.hRecent);
 }
