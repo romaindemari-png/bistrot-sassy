@@ -974,6 +974,20 @@ html.lenis, html.lenis body { height: auto; }
 
 <!-- ── Smooth scroll + animations scroll (CDN, pas de npm) ── -->
 <meta name="color-scheme" content="light"/>
+
+<!-- ═══ ICÔNES ═══ Il n'y en avait AUCUNE : ni favicon, ni apple-touch-icon (verifie
+     sur la tete entiere, et en prod ou /favicon.ico repondait 404).
+     ⚠️ CHAQUE TAILLE EST UN FICHIER RENDU DEPUIS LA SOURCE 1326 px, pas la reduction
+        d'une autre : a 16 px, un downscale du 32 perd les delies du serif.
+     ⚠️ Le logotype fait 3,13:1 — il ne rentre pas dans un carre de 16 px. L'icone porte
+        donc le S SEUL, creme sur bleu : c'est la seule variante lisible a 16 px, et elle
+        se detache sur une barre d'onglets claire comme sombre. -->
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png"/>
+<!-- ⚠️ SANS CANAL ALPHA : iOS compose l'icone sur du blanc, un fond transparent ferait
+     disparaitre un logo creme. Le fichier est en RGB, pas en RGBA. -->
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png"/>
+
 <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
