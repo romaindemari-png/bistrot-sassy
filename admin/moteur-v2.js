@@ -169,9 +169,28 @@
         RECTANGLE PLEIN — un aplat de couleur en bas du visuel, sans un mot. `signature()`
         retombe donc sur le texte. Un fork qui ne déclare pas de logo garde sa signature. */
   const MEP_LOGO = {
-    haut:     0.050,   // × W — hauteur du logo. L'encre du texte qu'il remplace faisait
-                       //       22,9 % de W de large et 2,96 % de haut (mesuré) : à largeur
-                       //       égale le logo serait 2,5× plus haut, d'où un choix de MEP.
+    haut:     0.060,   /* × W — hauteur du logo. +20 % le 14/09, décision de DA.
+                          L'encre du texte remplacé faisait 22,9 % de W de large et 2,96 %
+                          de haut (mesuré) ; le logo fait maintenant 6,0 % de haut et
+                          20,3 % de large — soit 64,8 × 202,7 px à W = 1080.
+
+                          ⚠️ LE DÉBORDEMENT A ÉTÉ MESURÉ AVANT D'APPLIQUER, sur les trois
+                             formats et les six templates, avec un contenu ATTEIGNABLE PAR
+                             L'ADMIN — 5 produits par slide, le plafond de `studioSlides()` :
+
+                               dépassement      texte   .050   .060
+                               carre · carte      —      208    219    (format mort)
+                               carre · dujour     —      446    457    (format mort)
+                               portrait · dujour  —      176    187    ← format VIVANT
+                               portrait · carte   —     vert   vert
+
+                             Les trois rouges PRÉEXISTENT ; le +20 % ajoute ~11 px et n'en
+                             crée AUCUN nouveau. `story` reste à 6/6.
+                          ⚠️ Un premier jet de ce commentaire portait 365/380/391 sous
+                             l'étiquette « contenu réaliste » — des chiffres pris avec
+                             6 plats dans une slide, ce que l'admin ne produit JAMAIS. Un
+                             chiffre juste sous un mauvais nom, corrigé ici.
+                          */
     opacite:  1.00,    /* ⚠️ PLUS DE TRANSPARENCE — DÉCISION DE DA DU 14/09. L'opacité
                           coupait le contraste ; à 1 le logo rend la couleur exacte du
                           token. Relevés successifs, sur les templates typo :
