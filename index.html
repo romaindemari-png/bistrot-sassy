@@ -988,6 +988,26 @@ html.lenis, html.lenis body { height: auto; }
      disparaitre un logo creme. Le fichier est en RGB, pas en RGBA. -->
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png"/>
 
+<!-- ═══ PARTAGE (Open Graph) ═══ Il n'y en avait aucun non plus.
+     ⚠️ LE TITRE ET LA DESCRIPTION SONT CEUX DE LA PAGE, a l'identique. On ne redige pas
+        un second discours : deux textes qui divergent finissent par se contredire.
+     ⚠️ L'URL DE L'IMAGE EST ABSOLUE, ET ELLE DOIT L'ETRE : les scrapers ne resolvent pas
+        les chemins relatifs. Elle pointe sur le domaine Netlify parce que c'est le SEUL
+        vivant aujourd'hui — aucune URL canonique n'est declaree dans le depot et
+        bistrotsassy.fr ne resout pas. A reprendre le jour ou un domaine propre arrive. -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Bistrot Sassy"/>
+<meta property="og:locale" content="fr_FR"/>
+<meta property="og:title" content="Bistrot Sassy &#8212; cuisine maison, Marseille 5e"/>
+<meta property="og:description" content="Bistrot de quartier bistronomique à Marseille 5e. Cuisine maison créative, ardoise du jour. 167 bd Chave, Marseille."/>
+<meta property="og:url" content="https://bistrot-sassy.netlify.app/"/>
+<meta property="og:image" content="https://bistrot-sassy.netlify.app/assets/og-image.png"/>
+<meta property="og:image:type" content="image/png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<!-- twitter:title / :description / :image heritent des og: — une seule balise suffit. -->
+<meta name="twitter:card" content="summary_large_image"/>
+
 <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
