@@ -1076,6 +1076,40 @@ l'admin**. Le mien ne l'était pas, et il a déplacé l'alarme sur le mauvais th
 demi-heure. Avant de qualifier un contenu d'hostile, vérifier que l'interface peut le
 produire.
 
+### 14/09/2026 — un rouge de `A2` qui ne s'est pas reproduit (NON TRAITÉ)
+
+`test-accroches-v2`, critère **A2 · la panne crie à l'écran, la publication tient**. Trois
+exécutions consécutives, même dépôt, même serveur, aucune modification entre elles :
+
+| exécution | verdict | total |
+|---|---|---|
+| 1 | **✗ A2 ROUGE** | 8 verts, 1 rouge sur 9 |
+| 2 | ✓ A2 vert | 9 verts, 0 rouge sur 9 |
+| 3 | ✓ A2 vert | 9 verts, 0 rouge sur 9 |
+
+À l'exécution 1, les six lignes de détail étaient pourtant **toutes nominales** : les six
+thèmes rapportaient `bandeau VISIBLE` avec le bon message (`/assets/fonts/canela.woff2 :
+HTTP 404`), les six poids d'image étaient identiques à ceux des exécutions vertes, et
+`console.warn émis : 0`. Le rouge n'a donc pas été accompagné d'une ligne qui l'explique.
+
+**→ CE N'EST PAS RIEN, ET CE N'EST PAS TRANCHÉ.** Deux lectures possibles, aucune écartée :
+
+1. **un faux rouge de plus** — la famille est déjà nourrie dans ce dépôt : le serveur
+   mono-thread bricolé, la pression mémoire en lot. A2 attend un bandeau qui apparaît après
+   un aller-retour réseau ; une attente trop courte sous charge produirait exactement ça ;
+2. **un défaut intermittent réel** — une course entre `signalerRepli()` et
+   `effacerRepli()`. Si le rendu de secours d'un thème arrive APRÈS que le thème suivant a
+   effacé le bandeau, le bandeau disparaît alors qu'une panne est en cours. Le garde-fou de
+   la course (`v2ApercuGen`) protège l'APERÇU, pas le bandeau.
+
+⚠️ **NE PAS CHOISIR ENTRE LES DEUX PAR RAISONNEMENT.** La seule chose qui tranche est une
+**reproduction** : relancer A2 seul, en boucle, et compter. Si le rouge revient, la piste 2
+se mesure en horodatant `signalerRepli`/`effacerRepli`. Tant que le compte n'est pas fait,
+le motif « chiffre juste sous un mauvais nom » s'applique aussi aux verdicts : *vert* peut
+vouloir dire « la sonde a réussi » ou « la sonde est arrivée après la panne ».
+
+**Décision de Romain le 14/09 :** écrit, pas traité. Après mardi.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
