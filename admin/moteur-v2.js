@@ -769,7 +769,20 @@
         + ".nom{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.052)
           + ';line-height:1.2;text-transform:lowercase;margin-bottom:' + u(0.014) + '}'
         + ".desc{font-family:'Elms',sans-serif;font-size:" + u(0.026)
-          + ';line-height:1.55;opacity:.7}';
+          + ';line-height:1.55;opacity:.7}'
+        /* ⚠️⚠️ EVENT EST LE SEUL DES SIX A N'AVOIR JAMAIS PORTE DE SIGNATURE. Ici le logo
+           est un AJOUT, pas un remplacement — et la bande basse est occupee par `.carte`
+           sur toute la largeur (left/right a `signX`) : il n'y a pas de « bas a gauche »
+           libre sur l'image.
+           Deux options ont ete rendues et soumises : DANS la carte, en accent, ou AU-DESSUS
+           en creme sur le voile. Retenu DANS LA CARTE, et la raison est mesuree — 7,98 de
+           contraste, GARANTI quelle que soit la photo du client, contre 3,29 au-dessus et
+           dependant de l'image (sur une photo claire il tombe sous le seuil).
+           ⚠️ Le fond REEL sous la signature est le BLANC de la carte, ni le voile ni la
+              photo. C'est la lecon d'ANNONCE : lire le fond de l'ELEMENT, pas celui du
+              conteneur. D'ou l'accent. */
+        + '.pied{margin-top:' + u(0.030) + '}'
+        + signatureCSS(A, '.pied', c.accent, W);
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const src = (slide && slide.photo) || '';
@@ -787,10 +800,14 @@
             `renderFinalCustom` ne passe le texte qu'à la 1ʳᵉ slide (`withText`) ; sans ce
             garde, les slides 2+ recevraient une carte BLANCHE VIDE à filet bleu — un
             cartouche vide en plein milieu de la photo, et l'aperçu mentirait à l'export. */
+      /* La signature entre DANS la carte, sous la description — et SEULEMENT si la carte
+         existe : sur les slides 2+ d'un carrousel il n'y a pas de carte, donc pas de
+         signature. Une signature seule sur la photo serait un orphelin. */
       const carte = (badge || e.titre || desc)
         ? '<div class="carte">' + badge
           + (e.titre ? '<div class="nom">' + xml(e.titre) + '</div>' : '')
           + desc
+          + signature(A, 'pied')
         + '</div>'
         : '';
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
