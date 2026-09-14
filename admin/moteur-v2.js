@@ -679,11 +679,22 @@
               + ';text-align:' + (zt.align || 'center') + '}'
               + '.txt > span{display:block;width:100%;word-break:break-word}'
             : '')
-        + '.voile{position:absolute;left:0;right:0;bottom:0;height:' + (W * MEP_PHOTO.voileH).toFixed(2) + 'px'
-          + ';background:linear-gradient(to top,rgba(32,80,231,' + MEP_PHOTO.voileA + '),rgba(32,80,231,0))}'
-        + ".sign{position:absolute;left:" + (W * MEP_PHOTO.signX).toFixed(2) + 'px;bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px'
-          + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + (W * MEP_PHOTO.signTail).toFixed(2) + 'px'
-          + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7}';
+        /* ⚠️⚠️ PAS DE VOILE, ET C'EST UN PARTI PRIS. Le logo crème se pose DIRECTEMENT sur
+           la photo, centré en bas. Le dégradé bleu qui protégeait la lisibilité de
+           l'ancienne signature a été retiré : la photo reste une photo d'un bord à l'autre.
+           ⚠️ `MEP_PHOTO.voileH` et `voileA` RESTENT DANS LA TABLE : EVENT a sa propre règle
+              `.voile` qui les lit (voileH × 2,2) et elle est intacte. C'est la règle de CE
+              template qui disparaît, pas les valeurs partagées.
+           ⚠️ ET L'APERÇU SUIT : `habillerApercuPhoto` branche désormais sur
+              `theme.template` — pas de voile et logo centré pour `photo`, voile conservé
+              pour `event`. Sans ce branchement l'aperçu aurait montré un voile que l'export
+              ne produit plus, et c'est exactement ce que MEP_PHOTO existe pour empêcher.
+           Le centrage est calculé, pas obtenu par `transform` : on connaît W et la largeur
+           du logo, donc `left` suffit — une propriété de moins dont dépendre dans un
+           `foreignObject`. */
+        + '.sign{position:absolute;left:' + ((W - W * MEP_LOGO.haut * MEP_LOGO.ratio) / 2).toFixed(2) + 'px'
+          + ';bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px}'
+        + signatureCSS(A, '.sign', c.creme, W);
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const src = (slide && slide.photo) || '';
@@ -696,9 +707,8 @@
          signature, qui reste la dernière chose posée. */
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
-           +   '<div class="voile"></div>'
            +   (zt && txt ? '<div class="txt"><span>' + xml(txt) + '</span></div>' : '')
-           +   '<div class="sign">bistrot sassy</div>'
+           +   signature(A, 'sign')
            + '</div>';
     }
   };
@@ -925,12 +935,47 @@
           l'emporterait sur un voile en `auto`, et la signature passerait SOUS le texte —
           l'inverse de l'export. Les deux ne se recouvrent pas aujourd'hui (signature en
           bas à gauche, texte à 42 %), mais on ne laisse pas l'aperçu dépendre de ça. */
-    pose('v2-voile', 'z-index:3;left:0;right:0;bottom:0;height:' + px(M.voileH)
-      + ';background:linear-gradient(to top,rgba(32,80,231,' + M.voileA + '),rgba(32,80,231,0))');
-    pose('v2-sign', 'z-index:5;left:' + px(M.signX) + ';bottom:' + px(M.signY)
-      + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + px(M.signTail)
-      + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7'
-    ).textContent = 'bistrot sassy';
+
+    /* ⚠️⚠️ ON BRANCHE SUR LE TEMPLATE, PAS SUR LE TYPE. `theme.type` vaut `photo` pour
+       `sassy-photo` ET pour `sassy-event` : jusqu'ici l'aperçu leur posait donc le MÊME
+       décor. Depuis que PHOTO n'a plus de voile, poser un voile pour lui ferait mentir
+       l'aperçu — précisément ce que `MEP_PHOTO` existe pour empêcher.
+       ⚠️ Le cas d'EVENT reste divergent et c'est SU : son export porte une carte blanche
+          que l'aperçu ne dessine pas, et l'aperçu y pose un `sign` que l'export n'a pas.
+          Antérieur (M4/M5), documenté au BACKLOG, autre chantier. On n'y touche pas ici :
+          EVENT garde donc exactement le décor qu'il avait. */
+    const estPhoto = theme.template === 'photo';
+
+    if (!estPhoto) {
+      pose('v2-voile', 'z-index:3;left:0;right:0;bottom:0;height:' + px(M.voileH)
+        + ';background:linear-gradient(to top,rgba(32,80,231,' + M.voileA + '),rgba(32,80,231,0))');
+    } else {
+      const v = hote.querySelector('.v2-voile');
+      if (v) v.remove();                        // on retire celui qu'un autre thème a pu laisser
+    }
+
+    /* La signature de l'aperçu : le LOGO pour `photo`, le texte pour le reste.
+       ⚠️ ICI LE LOGO PASSE PAR SON URL, pas par le base64 : on est dans le DOM vivant de
+          l'admin, pas dans un SVG isolé — donc rien à embarquer, et l'image est déjà en
+          cache après le premier rendu. Même fichier, même dessin : aucune divergence.
+       ⚠️ La hauteur et le centrage sont ceux de MEP_LOGO et du template, à l'échelle près.
+          Un seul endroit décide de la taille du logo. */
+    if (estPhoto) {
+      const lw = 1080 * MEP_LOGO.haut * MEP_LOGO.ratio * e;
+      pose('v2-sign', 'z-index:5;bottom:' + px(M.signY)
+        + ';left:' + ((hote.clientWidth || 260) - lw) / 2 + 'px'
+        + ';width:' + lw.toFixed(2) + 'px;height:' + px(MEP_LOGO.haut)
+        + ';background:' + c.creme + ';opacity:' + MEP_LOGO.opacite
+        + ";mask-image:url('/assets/logos/creme.png');mask-size:contain"
+        + ';mask-repeat:no-repeat;mask-position:center'
+        + ";-webkit-mask-image:url('/assets/logos/creme.png');-webkit-mask-size:contain"
+        + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:center').textContent = '';
+    } else {
+      pose('v2-sign', 'z-index:5;left:' + px(M.signX) + ';bottom:' + px(M.signY)
+        + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + px(M.signTail)
+        + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7'
+      ).textContent = 'bistrot sassy';
+    }
   }
 
   window.MOTEUR_V2 = {
