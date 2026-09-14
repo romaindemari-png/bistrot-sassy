@@ -262,6 +262,13 @@ async function sondeA() {
         `pointer-events:none` achète autre chose, réel mais moindre : le calque
         reste TRANSPARENT au test de survol — curseur `grab`, pas de sélection
         sur la signature (critère B2, celui qui rougit quand on l'enlève). */
+/* ⚠️⚠️ TOUS LES NOMS DE CALQUE, EN UN SEUL ENDROIT. Le 14/09, le thème photo est passé
+   de `.v2-sign` à `.v2-rond`/`.v2-ess` — et ce sélecteur, resté à deux noms, a rendu une
+   liste VIDE. B1 et B2 sont alors passées au VERT en ne vérifiant plus rien, et l'épreuve
+   au rouge `--rouge-sans-garde` est devenue inerte avec elles : elle mettait
+   `pointer-events:auto` sur zéro élément. D'où le critère B0 ci-dessous. */
+const SEL_CALQUES = '.v2-voile,.v2-sign,.v2-rond,.v2-ess';
+
 async function sondeB() {
   dire('\n━━ B · LE CADRAGE AU DOIGT SURVIT AUX CALQUES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   const { nav, p } = await ouvrirAdmin();
@@ -271,8 +278,12 @@ async function sondeB() {
   await p.evaluate(() => document.getElementById('igPhoto').scrollIntoView({ block: 'center' }));
   await dodo(400);
 
-  if (A('--rouge-sans-garde')) await p.evaluate(() =>
-    document.querySelectorAll('.v2-voile,.v2-sign').forEach(e => e.style.pointerEvents = 'auto'));
+  /* ⚠️ `SEL_CALQUES` est PASSÉ en argument, pas capturé : le corps de `p.evaluate`
+     s'exécute dans la page, où les constantes de ce fichier n'existent pas. Une fermeture
+     y lèverait un ReferenceError — et comme la sonde attrape ses erreurs plus haut, ça se
+     serait vu comme une interruption, pas comme un rouge. */
+  if (A('--rouge-sans-garde')) await p.evaluate((sel) =>
+    document.querySelectorAll(sel).forEach(e => e.style.pointerEvents = 'auto'), SEL_CALQUES);
   /* Épreuve au rouge de B1. Déplacer les calques EXISTANTS hors de l'hôte ne
      suffit pas : `pose()` les recrée dans l'hôte au rendu suivant (il les
      cherche par `hote.querySelector`). On simule donc la régression qu'on veut
@@ -287,7 +298,7 @@ async function sondeB() {
     document.body.appendChild(faux);
   });
 
-  const e = await p.evaluate(() => {
+  const e = await p.evaluate((sel) => {
     const h = document.getElementById('igPhoto'), inner = document.getElementById('igPhotoInner');
     const pp = studioPhotos[studioPhotoIdx], r = h.getBoundingClientRect();
     const s = Math.max(inner.clientWidth / pp.bitmap.width, inner.clientHeight / pp.bitmap.height);
@@ -295,15 +306,29 @@ async function sondeB() {
              jeuX: +(pp.bitmap.width * s - inner.clientWidth).toFixed(1),
              jeuY: +(pp.bitmap.height * s - inner.clientHeight).toFixed(1),
              focal: { ...pp.focal },
-             calques: [...h.querySelectorAll('.v2-voile,.v2-sign')].map(x => ({
-               cls: x.className, pe: getComputedStyle(x).pointerEvents, dansHote: h.contains(x) })) };
-  });
+             calques: [...h.querySelectorAll(sel)].map(x => {
+               const b = x.getBoundingClientRect();
+               return { cls: x.className, pe: getComputedStyle(x).pointerEvents, dansHote: h.contains(x),
+                        z: +getComputedStyle(x).zIndex || 0,
+                        cx: b.x + b.width / 2, cy: b.y + b.height / 2,
+                        aire: +(b.width * b.height).toFixed(0) };
+             }) };
+  }, SEL_CALQUES);
   e.calques.forEach(c => dire('    calque ' + c.cls.padEnd(9) + 'pointer-events:' + c.pe.padEnd(5)
-    + ' enfant de #igPhoto : ' + c.dansHote));
+    + ' enfant de #igPhoto : ' + c.dansHote + '  z-index ' + c.z));
   dire('    jeu de la photo dans le cadre : ' + e.jeuX + ' px en X, ' + e.jeuY + ' px en Y');
 
-  // le doigt se pose SUR LE VOILE (85 % de la hauteur), là où le calque est sous lui
-  const cx = e.r.x + e.r.w / 2, cy = e.r.y + e.r.h * 0.85;
+  /* ⚠️⚠️ LE DOIGT SE POSE SUR UN CALQUE RÉEL, ET C'EST LA SECONDE FAUTE DU 14/09.
+     Il se posait à 85 % de la hauteur, « sur le voile » — vrai du temps où tout thème
+     photo avait un voile plein bas de cadre. Le thème photo n'en a plus, et son médaillon
+     est entre 41 et 59 % : le doigt tombait sur la photo NUE. B2 passait donc au vert en
+     mesurant que le vide est transparent, ce qui est vrai partout et ne dit rien.
+     Le point est maintenant CALCULÉ : le centre du calque le plus haut (plus grand
+     z-index, puis plus grande aire). Si le décor bouge, le doigt le suit. */
+  const cible = e.calques.slice().sort((a, b) => (b.z - a.z) || (b.aire - a.aire))[0];
+  const cx = cible ? cible.cx : e.r.x + e.r.w / 2;
+  const cy = cible ? cible.cy : e.r.y + e.r.h * 0.85;
+  dire('    le doigt se pose sur : ' + (cible ? cible.cls + ' (z ' + cible.z + ')' : 'AUCUN CALQUE'));
   const survol = await p.evaluate((x, y) => {
     const el = document.elementFromPoint(x, y);
     return { cible: el ? (el.id || el.className || el.tagName) : '(rien)',
@@ -321,8 +346,20 @@ async function sondeB() {
   const d = axe === 'Y' ? Math.abs(ap.focal.y - e.focal.y) : Math.abs(ap.focal.x - e.focal.x);
   dire('    focal ' + JSON.stringify(e.focal) + ' → ' + JSON.stringify(ap.focal) + '   Δ' + axe + ' = ' + d.toFixed(4));
   await nav.close();
-  verdict('B1 · le geste aboutit (la parenté tient)', d > 0.01 && ap.bouge === true);
-  verdict('B2 · le calque est transparent au survol', survol.cible === 'igPhotoInner' && survol.curseur === 'grab');
+  /* ⚠️⚠️ B0 EXISTE PARCE QUE B1 ET B2 SE SONT TUES. Elles mesurent la survie du
+     glissement MALGRÉ les calques ; sans calque, elles mesurent la survie du glissement
+     tout court — vrai, mais hors sujet, et vert. Le 14/09 la liste est devenue vide et
+     les deux ont verdi sur rien.
+     Une sonde qui n'a rien à vérifier doit le DIRE. B0 est ce dire : au moins un calque
+     de décor, et tous enfants de l'hôte. C'est aussi le critère qui porte la garantie de
+     B1 — la PARENTÉ, celle qu'un remaniement rompt en posant le décor ailleurs. */
+  const n = e.calques.length;
+  verdict('B0 · il y a bien un décor à éprouver (' + n + ' calque(s))',
+          n > 0 && e.calques.every(c => c.dansHote));
+  verdict('B1 · le geste aboutit (la parenté tient)', d > 0.01 && ap.bouge === true && n > 0);
+  verdict('B2 · le calque est transparent au survol',
+          survol.cible === 'igPhotoInner' && survol.curseur === 'grab'
+          && n > 0 && e.calques.every(c => c.pe === 'none'));
 }
 
 /* ══════════════════ SONDE C ══════════════════════════════════════════════════ */
@@ -367,6 +404,30 @@ async function sondeC() {
   verdict('C · un thème sans template n\'exécute aucune ligne', fuites.length === 0 && p.__fontes.length === 0);
 }
 
+/* ⚠️⚠️ LE SEUIL, ET POURQUOI CELUI-LÀ. L'écart mesuré entre le calque et le template,
+   moteur sain, vaut 0,00 pt en portrait et 0,05 pt en story — ces 0,05 sont un CHOIX
+   assumé : la taille du cercle reste en pixels pour qu'il reste un cercle, alors que le
+   cadre de l'aperçu en story fait 425 px là où 9:16 en veut 423,1.
+   La divergence que cette sonde doit attraper valait 34 POINTS (logotype à 93,6 % contre
+   cercle à 59,7 %). 0,25 laisse donc 5× la marge du bruit connu et reste 136× sous la
+   faute à détecter. Un seuil n'est pas une tolérance qu'on desserre quand ça rougit :
+   c'est la distance entre le bruit mesuré et la faute mesurée. */
+const SEUIL_GEO = 0.25;
+
+/** L'écart maximum, en points de pourcentage, entre les boîtes de l'aperçu et celles que
+    le template annonce. Rend Infinity si un calque attendu manque — un calque absent est
+    un écart infini, pas un écart nul. */
+function ecartMax(mesure, ref) {
+  let m = 0;
+  for (const cle of ['rond', 'ess']) {
+    if (!mesure[cle] || !ref[cle]) return Infinity;
+    for (const bord of ['haut', 'bas', 'g', 'd']) {
+      m = Math.max(m, Math.abs(mesure[cle][bord] - ref[cle][bord]));
+    }
+  }
+  return m;
+}
+
 /* ══════════════════ SONDE D ══════════════════════════════════════════════════ */
 async function sondeD() {
   dire('\n━━ D · APERÇU == EXPORT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -404,12 +465,50 @@ async function sondeD() {
     await ouvrirVolet(p); await dodo(700);
     const r = await p.evaluate(() => {
       const h = document.getElementById('igHabillage');
+      const hote = document.getElementById('igPhoto');
+      const hr = hote.getBoundingClientRect();
+      /* Chaque calque, en POURCENTAGES du cadre : la seule unité dans laquelle l'aperçu
+         et le template sont comparables sans supposer une échelle. */
+      const boite = function (sel) {
+        const el = document.querySelector(sel); if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { haut: +(100 * (r.top - hr.top) / hr.height).toFixed(2),
+                 bas:  +(100 * (r.bottom - hr.top) / hr.height).toFixed(2),
+                 g:    +(100 * (r.left - hr.left) / hr.width).toFixed(2),
+                 d:    +(100 * (r.right - hr.left) / hr.width).toFixed(2) };
+      };
+      /* ⚠️ LA RÉFÉRENCE VIENT DU MOTEUR, PAS D'UN CALCUL RECOPIÉ ICI. `medaillonGeo` est
+         la source unique que le template ET l'aperçu lisent ; la sonde la lit aussi et
+         compare. Une sonde qui refait le calcul ne mesurerait que son propre accord
+         avec elle-même. La hauteur vient du PNG de gabarit, comme dans `rasteriser`. */
+      let ref = null;
+      const I = window.MOTEUR_V2 && window.MOTEUR_V2._interne;
+      if (I && I.medaillonGeo && h.naturalWidth) {
+        const W = 1080, H = Math.round(1080 * h.naturalHeight / h.naturalWidth);
+        const f = (currentCustomTheme.formats || {})[currentFmt] || {};
+        const t = document.querySelector('.ig-text');
+        const vu = !!(t && getComputedStyle(t).display !== 'none');
+        const g = I.medaillonGeo(W, H, vu ? (f.zoneTexte || null) : null);
+        ref = { rond: { haut: +(100 * g.haut / H).toFixed(2), bas: +(100 * (g.haut + g.d) / H).toFixed(2),
+                        g: +(100 * g.gauche / W).toFixed(2), d: +(100 * (g.gauche + g.d) / W).toFixed(2) },
+                ess:  { haut: +(100 * g.sHaut / H).toFixed(2), bas: +(100 * (g.sHaut + g.sh) / H).toFixed(2),
+                        g: +(100 * g.sGauche / W).toFixed(2), d: +(100 * (g.sGauche + g.sw) / W).toFixed(2) },
+                texteVu: vu };
+      }
       return { hab: getComputedStyle(h).display, drapeau: h.dataset.v2Masque || '—',
-               voile: !!document.querySelector('.v2-voile'), sign: !!document.querySelector('.v2-sign') };
+               voile: !!document.querySelector('.v2-voile'), sign: !!document.querySelector('.v2-sign'),
+               rond: boite('.v2-rond'), ess: boite('.v2-ess'), ref: ref };
     });
     calques.push({ id, ...r });
     dire('    ' + id.padEnd(18) + '#igHabillage display:' + r.hab.padEnd(6) + ' drapeau:' + String(r.drapeau).padEnd(3)
-       + ' voile:' + r.voile + ' signature:' + r.sign);
+       + ' voile:' + r.voile + ' medaillon:' + !!(r.rond && r.ess) + ' signature:' + r.sign);
+    if (r.rond && r.ref) {
+      const ec = ecartMax(r, r.ref);
+      dire('      '.padEnd(18) + '  cercle calque ' + r.rond.haut + ' → ' + r.rond.bas
+         + '   template ' + r.ref.rond.haut + ' → ' + r.ref.rond.bas
+         + '   écart max ' + ec.toFixed(2) + ' pt (seuil ' + SEUIL_GEO + ')'
+         + (r.ref.texteVu ? '   [texte affiché : le médaillon cède la place]' : ''));
+    }
   }
 
   /* ⚠️ ÉPREUVE AU ROUGE DE D3 — le premier essai était INOPÉRANT : il faisait
@@ -489,13 +588,38 @@ async function sondeD() {
      ⚠️ Le critère n'a pas été ASSOUPLI, il a été rendu plus précis : il teste désormais
         trois contrats distincts au lieu d'un seul approximatif. C'est la règle du dépôt —
         quand une sonde rougit sur un cas légitime, on change ce qu'elle MESURE. */
-  const attendu = { photo: { voile: false, sign: true }, event: { voile: true, sign: true } };
+  /* ⚠️⚠️ ET CE CRITÈRE A DÛ ÊTRE RENDU PLUS PRÉCIS UNE SECONDE FOIS, LE 14/09 AU SOIR.
+     Il constatait qu'un élément EXISTE (`!!document.querySelector('.v2-sign')`), pas
+     qu'il tombe au bon endroit. Le médaillon a été posé dans le template seul : l'aperçu
+     a continué de peindre le logotype en bas (93,6 → 96,9 %) pendant que l'export peignait
+     le cercle au milieu (59,7 → 72,1 %). Ce critère a rougi — mais PAR ACCIDENT, parce
+     que le nom de classe avait changé de `.v2-sign` à `.v2-rond`/`.v2-ess`. En gardant le
+     même nom et en laissant le calque en bas, il serait resté VERT sur une divergence de
+     34 points. Une sonde qui vérifie un nom ne vérifie pas une mise en page.
+     Il COMPARE donc maintenant la géométrie du calque à celle que le template annonce,
+     bord par bord, en lisant la référence dans `medaillonGeo` — la source unique que les
+     deux côtés lisent. Ce n'est pas un assouplissement : c'est l'énoncé de la section D,
+     « aperçu == export », enfin mesuré pour le thème photo au lieu d'être supposé. */
+  const attendu = {
+    photo: { voile: false, sign: false, medaillon: true },   // le médaillon, PAS le logotype
+    event: { voile: true,  sign: true,  medaillon: false }   // inchangé (divergence connue au BACKLOG)
+  };
   const d2 = photo.every(c => {
     const t = c.id === 'sassy-photo' ? 'photo' : 'event';
-    return c.hab === 'none' && c.drapeau === '1'
-        && c.voile === attendu[t].voile && c.sign === attendu[t].sign;
-  }) && !!sans && sans.hab === 'block' && !sans.voile && !sans.sign;
-  verdict('D2 · le décor attendu par template, et le gabarit masqué au bon moment', d2);
+    const a = attendu[t];
+    const base = c.hab === 'none' && c.drapeau === '1'
+              && c.voile === a.voile && c.sign === a.sign
+              && !!(c.rond && c.ess) === a.medaillon;
+    if (!base) return false;
+    if (!a.medaillon) return true;
+    /* ⚠️ PAS DE RÉFÉRENCE = ROUGE. Si `medaillonGeo` n'est pas exposée ou si le gabarit
+       n'est pas décodé, la sonde n'a RIEN à comparer — et une sonde sans référence doit
+       le dire, pas verdir. C'est la faute qu'on vient de corriger sur B. */
+    if (!c.ref) return false;
+    return ecartMax(c, c.ref) <= SEUIL_GEO;
+  }) && !!sans && sans.hab === 'block' && !sans.voile && !sans.sign
+     && !sans.rond && !sans.ess;
+  verdict('D2 · le décor de l\'aperçu tombe où le template l\'annonce', d2);
   if (emp.saute) dire('  · D3 · pas de rendu périmé affiché                     sans objet (aucun moteur)');
   else verdict('D3 · pas de rendu périmé affiché', emp.hFinal === emp.hRecent);
 }
