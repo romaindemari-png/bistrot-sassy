@@ -117,6 +117,35 @@
     story:    { haut: 250, bas: 250 }
   };
 
+  /* ⚠️⚠️ LA LARGEUR POUR LAQUELLE `ZONE_SURE` EST ÉCRITE. Les 250 px ci-dessus sont des
+     PIXELS D'EXPORT — la story publiée fait 1080 × 1920. Or le moteur rasterise à DEUX
+     échelles : 1080 pour l'export, et 540 pour l'aperçu (`apercuV2Canvas` appelle
+     `r(540, …)`). Tout le reste des templates est écrit en FRACTIONS de W et suit donc
+     l'échelle ; cette table, seule, était en absolu.
+     ⚠️ CE QUE ÇA DONNAIT, MESURÉ SUR LE BITMAP (dujour, story, 3 plats) :
+          export 1080×1920 ... la bande sûre vaut 13,0 % de la hauteur
+          aperçu  540×960 .... la bande sûre vaut 26,0 %          ← LE DOUBLE
+        et l'aperçu s'écartait de l'export jusqu'à 19,53 points :
+          pastille   export 17,76 → 21,20      aperçu 30,73 → 34,27
+          titre      export 23,28 → 29,32      aperçu 36,15 → 48,85
+          le logo    export 78,70 → 82,24      aperçu ABSENT (poussé hors de la colonne)
+        D'où les deux symptômes rapportés le 14/09 : « le titre est collé à la première
+        ligne » (11,71 pt d'air à l'export, 1,25 pt à l'aperçu) et « le logo décroche en
+        story » — un SEUL défaut, celui-ci. Carré et portrait ont `Z = 0` : aucune
+        distorsion, et c'est pourquoi eux seuls paraissaient justes.
+     ⚠️ LA TABLE RESTE EN PIXELS, c'est `zoneSure()` qui la ramène à l'échelle. Une
+        fraction de W aurait perdu le lien avec la mesure d'origine (« environ 250 px sur
+        1920 », relevé sur l'interface d'Instagram) : le chiffre qu'on vérifie un jour
+        contre une capture doit rester lisible dans la table. */
+  const W_EXPORT = 1080;
+
+  /** La zone réservée du format, RAMENÉE À L'ÉCHELLE de rendu demandée. `(fmt, W)`. */
+  function zoneSure(fmt, W) {
+    const Z = ZONE_SURE[fmt] || ZONE_SURE.portrait;
+    const k = W / W_EXPORT;
+    return { haut: Z.haut * k, bas: Z.bas * k };
+  }
+
   /* ── LE SOCLE CSS, ÉCRIT UNE FOIS ───────────────────────────────────────────
      Les @font-face embarquées et le reset. Chez Georges ce bloc est recopié dans
      les cinq `css*()` : c'est ce qui a permis à un `str.replace` de frapper deux
@@ -972,7 +1001,9 @@
      connaissance du master en moins à tenir synchronisée. */
   function rasteriser(tpl, W, hab, slide, fmt, sansPolices) {
     const H = Math.round(W * hab.naturalHeight / hab.naturalWidth);
-    const Z = ZONE_SURE[fmt] || ZONE_SURE.portrait;
+    /* ⚠️ À L'ÉCHELLE, PAS EN ABSOLU. Cf. `zoneSure` : c'est ici que l'aperçu à 540 et
+       l'export à 1080 cessent de diverger. */
+    const Z = zoneSure(fmt, W);
     return chargerAssets().then(function (A) {
       const css = socleCSS(A, sansPolices) + tpl.css(A, W, H, fmt, Z, slide);
       const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">'
@@ -1125,7 +1156,11 @@
       /* ⚠️ LA ZONE SÛRE AUSSI EST LUE, PAS DEVINÉE : c'est elle qui décide de « en bas »
          (250 px réservés en story) et le template la reçoit en argument. Sans elle,
          l'aperçu remettrait le S contre le bord et divergerait de nouveau. */
-      const Zx = ZONE_SURE[fmt] || ZONE_SURE.portrait;
+      /* ⚠️ À L'ÉCHELLE DE L'EXPORT, ET C'EST VOLONTAIRE : `signeGeo` travaille en pixels
+         d'export (Hx vient du PNG de gabarit) et c'est `e` qui ramène à l'aperçu. On
+         passe donc par `zoneSure` avec W_EXPORT — même source que le template, et
+         personne ne viendra « corriger » ça en croyant à un oubli. */
+      const Zx = zoneSure(fmt, W_EXPORT);
       const g = signeGeo(1080, Hx, Zx, texteVisible ? zt : null);
       /* ⚠️ LA POSITION EN POURCENTAGES, LA TAILLE EN PIXELS, et ce n'est pas un caprice.
          Le cadre de l'aperçu n'est pas exactement au rapport du format : en story il fait
@@ -1186,6 +1221,10 @@
       rasteriser: rasteriser,
       xml: xml,
       ZONE_SURE: ZONE_SURE,
+      /* ⚠️ Exposée pour que le garde-fou puisse vérifier que l'aperçu et l'export lisent
+         la MÊME bande sûre à leurs deux échelles — c'est le défaut du 14/09. */
+      zoneSure: zoneSure,
+      W_EXPORT: W_EXPORT,
       MEP_PHOTO: MEP_PHOTO,
       MEP_LOGO: MEP_LOGO,
       signatureCSS: signatureCSS,
