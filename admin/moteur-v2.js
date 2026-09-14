@@ -201,21 +201,24 @@
                           Table unique : ça vaut pour les six, sans exception. */
     ratio:    1326 / 424,  // le gabarit des quatre variantes, identique
 
-    /* ── LE MÉDAILLON DU THÈME PHOTO ────────────────────────────────────────────
-       Le thème photo ne porte pas le logotype mais le S SEUL, dans un cercle bleu,
-       centré dans l'image. C'est le signe qui existe DÉJÀ ailleurs — le favicon et la
-       carte du S du hero sont ce même carré bleu au S crème : on ne l'invente pas.
+    /* ── LE SIGNE DU THÈME PHOTO ────────────────────────────────────────────────
+       Le thème photo ne porte ni le logotype ni un médaillon : le S SEUL, en crème,
+       posé directement sur la photo, EN BAS et centré horizontalement. C'est le signe
+       qui existe DÉJÀ ailleurs — le favicon et la carte du S du hero — on ne l'invente
+       pas. Le contraste sur une photo claire est un PARTI PRIS assumé.
+       ⚠️ LE CERCLE A ÉTÉ RETIRÉ LE 14/09, ET SON VOCABULAIRE AVEC LUI : plus de
+          `medDiam`, plus de `.rond`, plus de « médaillon » dans les noms. Un nom qui
+          décrit une forme disparue est un commentaire qui mentira — c'est le motif
+          « le commentaire qui mentait », appliqué aux identifiants.
        ⚠️ LE S NE COÛTE AUCUN ASSET DE PLUS. Sa boîte occupe `x 0→240, y 0→331` du
           fichier `creme.png` (mesuré), donc son origine est exactement (0,0) : un
           `mask-size: 552.5%` (1326/240) avec `mask-position: 0 0` le cadre au pixel.
-          La charge par slide reste à 170,4 Ko, sous le repère iPhone de 180.
           Un S en fichier séparé aurait coûté +3,6 Ko de base64 pour rien. */
-    medDiam:  0.22,        // × W — diamètre du cercle
-    medS:     0.115,       // × W — largeur du S à l'intérieur
+    signeL:   0.115,       // × W — largeur du S (celle qu'il avait dans le médaillon)
     sRatio:   240 / 331,   // le rapport de la boîte du S, mesuré sur creme.png
     sEchelle: 1326 / 240,  // de combien agrandir le fichier pour n'en montrer que le S
-    medEcart: 0.030        /* × W — l'air laissé sous la bande de texte quand le médaillon
-                              doit lui céder la place. Cf. `medaillonCSS`. */
+    signeEcart: 0.030      /* × W — l'air laissé sous la bande de texte quand le signe
+                              doit lui céder la place. Cf. `signeGeo`. */
   };
 
   /* Le style du texte de signature, TEL QU'IL ÉTAIT avant le logo. Il ne sert plus qu'au
@@ -264,42 +267,59 @@
       + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:' + P + '}';
   }
 
-  /** LA GÉOMÉTRIE DU MÉDAILLON, CALCULÉE UNE FOIS POUR DEUX LECTEURS : le template
-      d'export (`medaillonCSS`) et le décor en calques de l'aperçu
-      (`habillerApercuPhoto`). `(W, H, zt)` → `{ d, sw, sh, haut, gauche, sGauche, sHaut }`
-      en pixels de l'export ; l'aperçu n'a qu'à multiplier par son échelle.
+  /** LA GÉOMÉTRIE DU SIGNE, CALCULÉE UNE FOIS POUR DEUX LECTEURS : le template d'export
+      (`signeCSS`) et le décor en calques de l'aperçu (`habillerApercuPhoto`).
+      `(W, H, Z, zt)` → `{ w, h, gauche, haut }` en pixels de l'export ; l'aperçu n'a
+      qu'à ramener à son échelle.
 
       ⚠️⚠️ C'EST CETTE FONCTION QUI EMPÊCHE LA FAUTE QUE LE MOTEUR EXISTE POUR EMPÊCHER.
-         Le 14/09, le médaillon a été posé dans le template SEUL : l'aperçu a continué
-         de peindre le logotype complet en bas (93,6 → 96,9 % de la hauteur) pendant que
-         l'export peignait le cercle au milieu (59,7 → 72,1 % en story). MESURÉ, pas
-         supposé. Le client aurait vu une image et publié une autre.
-         La cause n'était pas l'oubli — c'était que les deux côtés CALCULAIENT chacun
-         leur géométrie. Ils la LISENT maintenant au même endroit : un chiffre changé se
-         voit des deux côtés, ou d'aucun. Même raison d'être que `MEP_PHOTO`. */
-  function medaillonGeo(W, H, zt) {
-    const d = W * MEP_LOGO.medDiam;                    // diamètre du cercle
-    const sw = W * MEP_LOGO.medS;                      // largeur du S
-    const sh = sw / MEP_LOGO.sRatio;                   // sa hauteur, par son rapport mesuré
+         Le 14/09, le signe a été posé dans le template SEUL : l'aperçu a continué de
+         peindre le logotype complet pendant que l'export peignait autre chose. MESURÉ,
+         pas supposé. Le client aurait vu une image et publié une autre. La cause n'était
+         pas l'oubli — c'était que les deux côtés CALCULAIENT chacun leur géométrie. Ils
+         la LISENT ici : un chiffre changé se voit des deux côtés, ou d'aucun. */
+  function signeGeo(W, H, Z, zt) {
+    const w = W * MEP_LOGO.signeL;                     // largeur du S
+    const h = w / MEP_LOGO.sRatio;                     // sa hauteur, par son rapport mesuré
 
-    /* ⚠️⚠️ QUAND NOTRE MARQUE RENCONTRE LE TEXTE DU CLIENT, C'EST LA MARQUE QUI BOUGE.
-       Centré dans l'image, le médaillon tombait EXACTEMENT sur la `zoneTexte` que
-       `sassy-photo` déclare au format story — mesuré : la bande de texte occupe
-       y 806→1114 px et le médaillon y 841→1079, soit 100 % du médaillon dans la bande
-       et 77 % de la bande sous le médaillon. Le texte du client passait derrière.
-       L'admin OFFRE ce champ (`#storyText`) : le recouvrir en silence serait le même
-       défaut que la « zone fantôme », à l'envers.
-       ⚠️ LA CONDITION PORTE SUR LA DONNÉE, PAS SUR LE FORMAT. On ne teste pas
-          « si story » — on teste « si une zoneTexte est déclarée et qu'elle recouvre ».
-          Le jour où un autre format en déclare une, la règle vaut déjà ; et le jour où
-          celle de story disparaît, le médaillon revient au centre tout seul. */
-    let haut = (H - d) / 2;                            // centré, le cas par défaut
+    /* ⚠️⚠️ « EN BAS » SE COMPTE DEPUIS LA ZONE SÛRE, PAS DEPUIS LE BORD. Sur une story,
+       Instagram superpose son interface DANS l'image : `ZONE_SURE.story` réserve 250 px
+       en bas. L'ancienne signature était posée à `W × signY` du bord, soit 59,4 px —
+       donc 190 px À L'INTÉRIEUR de la bande recouverte. Elle y était depuis le début et
+       personne ne l'avait mesuré : c'est le défaut qui a MASQUÉ un titre chez Georges.
+       Les quatre templates typo comptent déjà `bottom: Z.bas + …` ; le thème photo ne le
+       faisait pas. Il le fait maintenant — même règle, même table, tous les formats. */
+    let haut = H - Z.bas - W * MEP_PHOTO.signY - h;
+
+    /* ⚠️ ET LE SIGNE NE PASSE PAS SOUS LE TEXTE DU CLIENT. La règle de cession de place
+       est conservée telle quelle : si la `zoneTexte` déclarée descend jusque sur la boîte
+       du S, c'est le S qui bouge — notre marque cède, jamais le contenu. La condition
+       porte sur LA DONNÉE, pas sur le format : on ne teste pas « si story ».
+       ⚠️ Elle ne se déclenche pas aujourd'hui (la bande de texte de `sassy-photo` finit à
+          58 % et le S commence à 86 %) — et c'est bien pour ça qu'elle reste : le jour où
+          tu redessines les gabarits, elle est déjà là. Le garde-fou la mesure aux deux
+          bouts, présente ET absente. */
     if (zt) {
       const tb = (zt.y + zt.h) * H;                    // le bas de la bande de texte
-      if (tb > haut) haut = tb + W * MEP_LOGO.medEcart;
+      if (tb > haut) haut = tb + W * MEP_LOGO.signeEcart;
     }
-    return { d: d, sw: sw, sh: sh, haut: haut, gauche: (W - d) / 2,
-             sGauche: (W - sw) / 2, sHaut: haut + (d - sh) / 2 };
+
+    /* ⚠️⚠️ LA CESSION EST BORNÉE PAR LA ZONE SÛRE, et cette borne a été trouvée par la
+       MESURE, pas prévue. Sans elle, une `zoneTexte` qui descend pousse le S indéfiniment :
+       relevé sur des bandes injectées, en story —
+         bande finissant à 58 % (le dépôt) .... S y 1439 → 1611   (rien ne bouge)
+         bande finissant à 78 % ............... S y 1530 → 1701   SORT de la zone sûre
+         bande finissant à 90 % ............... S y 1760 → 1932   HORS DE L'IMAGE (H = 1920)
+       Une marque poussée hors du cadre ne cède pas la place, elle disparaît.
+       ⚠️ ET LE CONFLIT NE DEVIENT PAS SILENCIEUX POUR AUTANT. Quand la borne mord, le S
+          reste au plus bas de la zone sûre et peut alors recouvrir la bande de texte —
+          c'est un vrai conflit de mise en page, que le garde-fou D2 rougit (il compare la
+          boîte du S à celle du texte). On ne l'absorbe pas en silence : on le rend
+          visible. Le jour où ça arrive, c'est le gabarit qu'il faut revoir. */
+    const plancher = H - Z.bas - h;
+    if (haut > plancher) haut = plancher;
+
+    return { w: w, h: h, gauche: (W - w) / 2, haut: haut };
   }
 
   /** Le style du S masqué depuis `creme.png`, PARTAGÉ lui aussi : l'export l'embarque en
@@ -315,21 +335,17 @@
          + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:0 0';
   }
 
-  /** Le médaillon du thème photo : le cercle bleu et le S crème dedans. Rend '' si aucun
-      asset n'est disponible — auquel cas `signature()` remet le texte, comme partout. */
-  function medaillonCSS(A, W, H, zt) {
+  /** Le signe du thème photo : le S crème seul, en bas, centré. Rend '' si aucun asset
+      n'est disponible — auquel cas `signature()` remet le texte, comme partout. */
+  function signeCSS(A, W, H, Z, zt) {
     const src = A && A['logo:creme'];
     if (!src) return '';
     const c = window.CLIENT_TOKENS.primitives.color;
-    const g = medaillonGeo(W, H, zt);
-    return '.rond{position:absolute;left:' + g.gauche.toFixed(2) + 'px'
+    const g = signeGeo(W, H, Z, zt);
+    return '.ess{position:absolute;left:' + g.gauche.toFixed(2) + 'px'
          + ';top:' + g.haut.toFixed(2) + 'px'
-         + ';width:' + g.d.toFixed(2) + 'px;height:' + g.d.toFixed(2) + 'px'
-         + ';border-radius:50%;background:' + c.accent + '}'
-      + '.ess{position:absolute;left:' + g.sGauche.toFixed(2) + 'px'
-         + ';top:' + g.sHaut.toFixed(2) + 'px'      // centré dans le cercle, où qu'il soit
-         + ';width:' + g.sw.toFixed(2) + 'px;height:' + g.sh.toFixed(2) + 'px'
-         + ';background:' + c.creme
+         + ';width:' + g.w.toFixed(2) + 'px;height:' + g.h.toFixed(2) + 'px'
+         + ';background:' + c.creme + ';opacity:' + MEP_LOGO.opacite
          + masqueDuS(src) + '}';
   }
 
@@ -795,18 +811,19 @@
            Le centrage est calculé, pas obtenu par `transform` : on connaît W et la largeur
            du logo, donc `left` suffit — une propriété de moins dont dépendre dans un
            `foreignObject`. */
-        /* ⚠️ LE THÈME PHOTO NE PORTE PLUS LE LOGOTYPE, mais le S SEUL dans un cercle
-           bleu, CENTRÉ dans l'image — plus en bas. C'est le signe du favicon et de la
-           carte du S du hero, pas une invention. Sa géométrie est dans `MEP_LOGO`
-           (`medDiam`, `medS`), donc une seule table décide encore.
-           ⚠️ ET LE REPLI GARDE SA RÈGLE. Sans asset, `medaillonCSS` rend '' et
-              `signature()` remet le texte — mais un premier jet ne posait alors PLUS
-              AUCUNE règle `.sign` : le texte se serait affiché sans style et hors de sa
-              place, en haut à gauche de l'image. Les deux branches sont donc écrites. */
+        /* ⚠️ LE THÈME PHOTO NE PORTE NI LE LOGOTYPE NI UN MÉDAILLON : le S SEUL, en
+           crème, EN BAS et centré. C'est le signe du favicon et de la carte du S du
+           hero, pas une invention. Sa géométrie est dans `MEP_LOGO` (`signeL`), donc une
+           seule table décide encore.
+           ⚠️ ET LE REPLI GARDE SA RÈGLE. Sans asset, `signeCSS` rend '' et `signature()`
+              remet le texte — mais un premier jet ne posait alors PLUS AUCUNE règle
+              `.sign` : le texte se serait affiché sans style et hors de sa place, en haut
+              à gauche de l'image. Les deux branches sont donc écrites, et le repli compte
+              lui aussi `Z.bas` depuis le 14/09. */
         + ((A && A['logo:creme'])
-            ? medaillonCSS(A, W, H, zt && txt ? zt : null)
+            ? signeCSS(A, W, H, Z, zt && txt ? zt : null)
             : '.sign{position:absolute;left:' + (W * MEP_PHOTO.signX).toFixed(2) + 'px'
-              + ';bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px;color:' + c.creme + '}'
+              + ';bottom:' + (Z.bas + W * MEP_PHOTO.signY).toFixed(2) + 'px;color:' + c.creme + '}'
               + signatureCSS(A, '.sign', c.creme, W));
     },
     corps: function (A, W, H, fmt, Z, slide) {
@@ -821,11 +838,10 @@
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
            +   (zt && txt ? '<div class="txt"><span>' + xml(txt) + '</span></div>' : '')
-           /* Le médaillon : le cercle puis le S. Si aucun asset n'est disponible,
-              `medaillonCSS` rend '' et `signature()` remet le TEXTE — le repli du
-              chantier reste entier. */
+           /* Le signe : le S seul. Si aucun asset n'est disponible, `signeCSS` rend ''
+              et `signature()` remet le TEXTE — le repli du chantier reste entier. */
            +   ((A && A['logo:creme'])
-                 ? '<div class="rond"></div><div class="ess"></div>'
+                 ? '<div class="ess"></div>'
                  : signature(A, 'sign'))
            + '</div>';
     }
@@ -1078,7 +1094,7 @@
           cache après le premier rendu. Même fichier, même dessin. Et l'URL vient de
           `CLIENT_TOKENS.logos.creme`, la même entrée que `listeAssets` embarque : elle
           n'est pas réécrite en dur ici.
-       ⚠️⚠️ LA GÉOMÉTRIE N'EST PAS RECALCULÉE ICI, ELLE EST LUE dans `medaillonGeo` — la
+       ⚠️⚠️ LA GÉOMÉTRIE N'EST PAS RECALCULÉE ICI, ELLE EST LUE dans `signeGeo` — la
           même fonction que le template. C'est la leçon du 14/09 : le médaillon avait été
           posé dans le template SEUL, et ce bloc a continué de peindre le logotype complet
           en bas (93,6 → 96,9 % de la hauteur) pendant que l'export peignait le cercle au
@@ -1106,7 +1122,11 @@
       const Hx = (hab && hab.naturalWidth)
         ? Math.round(1080 * hab.naturalHeight / hab.naturalWidth)
         : 1080 * (hote.clientHeight || 1) / (hote.clientWidth || 1);
-      const g = medaillonGeo(1080, Hx, texteVisible ? zt : null);
+      /* ⚠️ LA ZONE SÛRE AUSSI EST LUE, PAS DEVINÉE : c'est elle qui décide de « en bas »
+         (250 px réservés en story) et le template la reçoit en argument. Sans elle,
+         l'aperçu remettrait le S contre le bord et divergerait de nouveau. */
+      const Zx = ZONE_SURE[fmt] || ZONE_SURE.portrait;
+      const g = signeGeo(1080, Hx, Zx, texteVisible ? zt : null);
       /* ⚠️ LA POSITION EN POURCENTAGES, LA TAILLE EN PIXELS, et ce n'est pas un caprice.
          Le cadre de l'aperçu n'est pas exactement au rapport du format : en story il fait
          425 px de haut là où 9:16 en veut 423,1. Or `.ig-text` est posé en POURCENTAGES du
@@ -1119,23 +1139,22 @@
       const pct = function (v, tot) { return (100 * v / tot).toFixed(4) + '%'; };
       const ex = function (v) { return (v * e).toFixed(2) + 'px'; };   // export → aperçu
       const url = (window.CLIENT_TOKENS.logos || {}).creme || '';
-      pose('v2-rond', 'z-index:5;left:' + pct(g.gauche, 1080) + ';top:' + pct(g.haut, Hx)
-        + ';width:' + ex(g.d) + ';height:' + ex(g.d)
-        + ';border-radius:50%;background:' + c.accent);
-      pose('v2-ess', 'z-index:6;left:' + pct(g.sGauche, 1080) + ';top:' + pct(g.sHaut, Hx)
-        + ';width:' + ex(g.sw) + ';height:' + ex(g.sh)
+      pose('v2-ess', 'z-index:5;left:' + pct(g.gauche, 1080) + ';top:' + pct(g.haut, Hx)
+        + ';width:' + ex(g.w) + ';height:' + ex(g.h)
         + ';background:' + c.creme + ';opacity:' + MEP_LOGO.opacite
         + masqueDuS(url)).textContent = '';
       const vieuxSign = hote.querySelector('.v2-sign');
       if (vieuxSign) vieuxSign.remove();      // le logotype qu'un autre thème a pu laisser
+      const vieuxRond = hote.querySelector('.v2-rond');
+      if (vieuxRond) vieuxRond.remove();      // le cercle d'avant le 14/09, s'il traîne
     } else {
       pose('v2-sign', 'z-index:5;left:' + px(M.signX) + ';bottom:' + px(M.signY)
         + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + px(M.signTail)
         + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7'
       ).textContent = 'bistrot sassy';
-      /* ⚠️ Et on retire le médaillon qu'un thème photo aurait laissé : `pose` RÉUTILISE
-         les calques en place, donc sans ça EVENT hériterait du cercle de PHOTO en passant
-         de l'un à l'autre. Symétrique exact du `.v2-voile` retiré plus haut. */
+      /* ⚠️ Et on retire le signe qu'un thème photo aurait laissé : `pose` RÉUTILISE les
+         calques en place, donc sans ça EVENT hériterait du S de PHOTO en passant de l'un
+         à l'autre. Symétrique exact du `.v2-voile` retiré plus haut. */
       ['.v2-rond', '.v2-ess'].forEach(function (sel) {
         const el = hote.querySelector(sel); if (el) el.remove();
       });
@@ -1171,14 +1190,13 @@
       MEP_LOGO: MEP_LOGO,
       signatureCSS: signatureCSS,
       signature: signature,
-      /* ⚠️ `medaillonGeo` est exposée POUR QUE LE GARDE-FOU PUISSE COMPARER. C'est la
-         source unique de la géométrie du médaillon : le template et l'aperçu la lisent
-         tous les deux, et D2 s'en sert comme RÉFÉRENCE pour vérifier que les calques de
-         l'aperçu tombent au même endroit que le template. Sans cette clé, la sonde
-         devrait recopier le calcul — et une sonde qui recopie ce qu'elle mesure ne
-         mesure plus rien. */
-      medaillonGeo: medaillonGeo,
-      medaillonCSS: medaillonCSS,
+      /* ⚠️ `signeGeo` est exposée POUR QUE LE GARDE-FOU PUISSE COMPARER. C'est la source
+         unique de la géométrie du signe : le template et l'aperçu la lisent tous les
+         deux, et D2 s'en sert comme RÉFÉRENCE pour vérifier que le calque de l'aperçu
+         tombe au même endroit que le template. Sans cette clé, la sonde devrait recopier
+         le calcul — et une sonde qui recopie ce qu'elle mesure ne mesure plus rien. */
+      signeGeo: signeGeo,
+      signeCSS: signeCSS,
       habillerApercuPhoto: habillerApercuPhoto
     }
   };

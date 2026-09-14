@@ -112,6 +112,18 @@ async function ouvrirAdmin(opts = {}) {
       l'identifiant nu. */
 async function entrerStudio(p, themeId, fmt) {
   const r = await p.evaluate((themeId, fmt) => {
+    /* ⚠️⚠️ ON RECOMMENCE VRAIMENT, ET C'ÉTAIT UN DÉFAUT DE CE HARNAIS. `handlePlusClick`
+       est une REPRISE par construction — « le seuil est le travail saisi, jamais l'étape
+       atteinte » — donc il NE VIDE PAS `studioPhotos`. En bouclant sur les thèmes, le
+       test empilait les photos : relevé 0/1 → 1/2 → 2/3, et `studioPhotoIdx` avançait
+       avec elles. Or le texte d'overlay n'est peint que sur la PREMIÈRE slide : à partir
+       du deuxième thème, `#igText` restait `none` alors que `studioOverlayText()` rendait
+       bien la phrase. D2 mesurait donc le cas SANS texte en croyant mesurer celui AVEC —
+       vert, et à côté. Troisième fois aujourd'hui qu'une sonde n'a rien à vérifier ;
+       celle-ci venait de l'état qui fuyait d'une itération à l'autre.
+       ⚠️ `studioReset()` est le « Recommencer » DE L'ADMIN, pas un vidage écrit ici : le
+          harnais déclenche ce que le client déclenche, sinon il éprouve autre chose. */
+    if (typeof studioReset === 'function') studioReset();
     const ouvre = document.querySelector('#fabPlus, .fab-plus, [onclick*="handlePlusClick"]');
     if (ouvre) ouvre.click(); else if (typeof handlePlusClick === 'function') handlePlusClick();
     const f = fmt && document.querySelector('#fmtRow .fmt[data-fmt="' + fmt + '"]');
@@ -266,7 +278,10 @@ async function sondeA() {
    de `.v2-sign` à `.v2-rond`/`.v2-ess` — et ce sélecteur, resté à deux noms, a rendu une
    liste VIDE. B1 et B2 sont alors passées au VERT en ne vérifiant plus rien, et l'épreuve
    au rouge `--rouge-sans-garde` est devenue inerte avec elles : elle mettait
-   `pointer-events:auto` sur zéro élément. D'où le critère B0 ci-dessous. */
+   `pointer-events:auto` sur zéro élément. D'où le critère B0 ci-dessous.
+   ⚠️ `.v2-rond` Y RESTE ALORS QUE LE CERCLE A ÉTÉ RETIRÉ LE MÊME JOUR, et c'est
+      volontaire : un nom de trop allonge une liste, un nom qui manque la vide. La
+      sonde doit voir un calque périmé qui survivrait à un remaniement, pas l'ignorer. */
 const SEL_CALQUES = '.v2-voile,.v2-sign,.v2-rond,.v2-ess';
 
 async function sondeB() {
@@ -414,12 +429,19 @@ async function sondeC() {
    c'est la distance entre le bruit mesuré et la faute mesurée. */
 const SEUIL_GEO = 0.25;
 
+/** Le recouvrement vertical de deux boîtes, en points de pourcentage du cadre. 0 quand
+    elles ne se touchent pas. */
+function recouvrement(a, b) {
+  if (!a || !b) return 0;
+  return Math.max(0, Math.min(a.bas, b.bas) - Math.max(a.haut, b.haut));
+}
+
 /** L'écart maximum, en points de pourcentage, entre les boîtes de l'aperçu et celles que
     le template annonce. Rend Infinity si un calque attendu manque — un calque absent est
     un écart infini, pas un écart nul. */
 function ecartMax(mesure, ref) {
   let m = 0;
-  for (const cle of ['rond', 'ess']) {
+  for (const cle of ['ess']) {
     if (!mesure[cle] || !ref[cle]) return Infinity;
     for (const bord of ['haut', 'bas', 'g', 'd']) {
       m = Math.max(m, Math.abs(mesure[cle][bord] - ref[cle][bord]));
@@ -459,8 +481,16 @@ async function sondeD() {
   }
 
   const calques = [];
-  for (const id of ['sassy-photo', 'sassy-event', 'sassy-sans-moteur']) {
-    await entrerStudio(p, id, 'portrait');
+  /* ⚠️⚠️ `sassy-photo` EST ÉPROUVÉ DANS LES DEUX FORMATS, ET C'EST INDISPENSABLE. Ce
+     parcours ne connaissait que `portrait` — or `ZONE_SURE.portrait` vaut 0 en bas et
+     `sassy-photo` ne déclare sa `zoneTexte` qu'en STORY. Les deux garanties ajoutées le
+     14/09 — « le signe tient dans la zone sûre » et « il cède la place au texte du
+     client » — étaient donc mesurées là où elles ne peuvent PAS échouer : vertes, et
+     vides. C'est le motif « une sonde qui n'a rien à vérifier », pour la troisième fois
+     de la journée ; cette fois il vient du FORMAT choisi, pas du sélecteur. */
+  for (const [id, fmt] of [['sassy-photo', 'portrait'], ['sassy-photo', 'story'],
+                           ['sassy-event', 'portrait'], ['sassy-sans-moteur', 'portrait']]) {
+    await entrerStudio(p, id, fmt);
     await remplir(p, id);
     await ouvrirVolet(p); await dodo(700);
     const r = await p.evaluate(() => {
@@ -483,31 +513,43 @@ async function sondeD() {
          avec elle-même. La hauteur vient du PNG de gabarit, comme dans `rasteriser`. */
       let ref = null;
       const I = window.MOTEUR_V2 && window.MOTEUR_V2._interne;
-      if (I && I.medaillonGeo && h.naturalWidth) {
+      if (I && I.signeGeo && h.naturalWidth) {
         const W = 1080, H = Math.round(1080 * h.naturalHeight / h.naturalWidth);
         const f = (currentCustomTheme.formats || {})[currentFmt] || {};
         const t = document.querySelector('.ig-text');
         const vu = !!(t && getComputedStyle(t).display !== 'none');
-        const g = I.medaillonGeo(W, H, vu ? (f.zoneTexte || null) : null);
-        ref = { rond: { haut: +(100 * g.haut / H).toFixed(2), bas: +(100 * (g.haut + g.d) / H).toFixed(2),
-                        g: +(100 * g.gauche / W).toFixed(2), d: +(100 * (g.gauche + g.d) / W).toFixed(2) },
-                ess:  { haut: +(100 * g.sHaut / H).toFixed(2), bas: +(100 * (g.sHaut + g.sh) / H).toFixed(2),
-                        g: +(100 * g.sGauche / W).toFixed(2), d: +(100 * (g.sGauche + g.sw) / W).toFixed(2) },
+        const Z = I.ZONE_SURE[currentFmt] || I.ZONE_SURE.portrait;
+        const g = I.signeGeo(W, H, Z, vu ? (f.zoneTexte || null) : null);
+        ref = { ess: { haut: +(100 * g.haut / H).toFixed(2), bas: +(100 * (g.haut + g.h) / H).toFixed(2),
+                       g: +(100 * g.gauche / W).toFixed(2), d: +(100 * (g.gauche + g.w) / W).toFixed(2) },
+                /* ⚠️ Le bas de la ZONE SÛRE, pour que D2 puisse dire si le signe tombe
+                   dans la bande qu'Instagram recouvre — c'est le défaut trouvé le 14/09,
+                   et une fois trouvé il doit être surveillé. */
+                limiteSure: +(100 * (H - Z.bas) / H).toFixed(2),
                 texteVu: vu };
       }
+      /* La bande de texte du client, si elle est peinte : c'est l'autre moitié du
+         conflit que D2 doit voir. */
+      const t = document.querySelector('.ig-text');
+      const zTexte = (t && getComputedStyle(t).display !== 'none') ? boite('.ig-text') : null;
       return { hab: getComputedStyle(h).display, drapeau: h.dataset.v2Masque || '—',
                voile: !!document.querySelector('.v2-voile'), sign: !!document.querySelector('.v2-sign'),
-               rond: boite('.v2-rond'), ess: boite('.v2-ess'), ref: ref };
+               rond: !!document.querySelector('.v2-rond'), ess: boite('.v2-ess'),
+               zTexte: zTexte, ref: ref };
     });
-    calques.push({ id, ...r });
-    dire('    ' + id.padEnd(18) + '#igHabillage display:' + r.hab.padEnd(6) + ' drapeau:' + String(r.drapeau).padEnd(3)
-       + ' voile:' + r.voile + ' medaillon:' + !!(r.rond && r.ess) + ' signature:' + r.sign);
-    if (r.rond && r.ref) {
+    calques.push({ id, fmt, ...r });
+    dire('    ' + (id + ' · ' + fmt).padEnd(26) + '#igHabillage display:' + r.hab.padEnd(6) + ' drapeau:' + String(r.drapeau).padEnd(3)
+       + ' voile:' + r.voile + ' signe:' + !!r.ess + ' cercle:' + r.rond + ' signature:' + r.sign);
+    if (r.ess && r.ref) {
       const ec = ecartMax(r, r.ref);
-      dire('      '.padEnd(18) + '  cercle calque ' + r.rond.haut + ' → ' + r.rond.bas
-         + '   template ' + r.ref.rond.haut + ' → ' + r.ref.rond.bas
-         + '   écart max ' + ec.toFixed(2) + ' pt (seuil ' + SEUIL_GEO + ')'
-         + (r.ref.texteVu ? '   [texte affiché : le médaillon cède la place]' : ''));
+      dire('      '.padEnd(26) + '  le S  calque ' + r.ess.haut + ' → ' + r.ess.bas
+         + '   template ' + r.ref.ess.haut + ' → ' + r.ref.ess.bas
+         + '   écart max ' + ec.toFixed(2) + ' pt (seuil ' + SEUIL_GEO + ')');
+      dire('      '.padEnd(26) + '  bas de la zone sûre ' + r.ref.limiteSure + ' %'
+         + '   le S finit à ' + r.ess.bas + ' %  → '
+         + (r.ess.bas <= r.ref.limiteSure ? 'DANS la zone sûre' : 'SOUS l\'interface d\'Instagram'));
+      if (r.zTexte) dire('      '.padEnd(26) + '  texte du client ' + r.zTexte.haut + ' → ' + r.zTexte.bas
+         + ' %   recouvrement avec le S : ' + recouvrement(r.ess, r.zTexte).toFixed(2) + ' pt');
     }
   }
 
@@ -601,25 +643,37 @@ async function sondeD() {
      deux côtés lisent. Ce n'est pas un assouplissement : c'est l'énoncé de la section D,
      « aperçu == export », enfin mesuré pour le thème photo au lieu d'être supposé. */
   const attendu = {
-    photo: { voile: false, sign: false, medaillon: true },   // le médaillon, PAS le logotype
-    event: { voile: true,  sign: true,  medaillon: false }   // inchangé (divergence connue au BACKLOG)
+    photo: { voile: false, sign: false, signe: true },   // le S seul, PAS le logotype
+    event: { voile: true,  sign: true,  signe: false }  // inchangé (divergence connue au BACKLOG)
   };
   const d2 = photo.every(c => {
     const t = c.id === 'sassy-photo' ? 'photo' : 'event';
     const a = attendu[t];
-    const base = c.hab === 'none' && c.drapeau === '1'
-              && c.voile === a.voile && c.sign === a.sign
-              && !!(c.rond && c.ess) === a.medaillon;
+    /* ⚠️ `!c.rond` VAUT POUR LES DEUX THÈMES : le cercle a été retiré le 14/09 et aucun
+       template n'a le droit de le faire revenir. Un calque périmé qui survit à un
+       remaniement, c'est ce que la sonde doit voir. */
+    const base = c.hab === 'none' && c.drapeau === '1' && !c.rond
+              && c.voile === a.voile && c.sign === a.sign && !!c.ess === a.signe;
     if (!base) return false;
-    if (!a.medaillon) return true;
-    /* ⚠️ PAS DE RÉFÉRENCE = ROUGE. Si `medaillonGeo` n'est pas exposée ou si le gabarit
-       n'est pas décodé, la sonde n'a RIEN à comparer — et une sonde sans référence doit
-       le dire, pas verdir. C'est la faute qu'on vient de corriger sur B. */
+    if (!a.signe) return true;
+    /* ⚠️ PAS DE RÉFÉRENCE = ROUGE. Si `signeGeo` n'est pas exposée ou si le gabarit n'est
+       pas décodé, la sonde n'a RIEN à comparer — et une sonde sans référence doit le
+       dire, pas verdir. C'est la faute qu'on vient de corriger sur B. */
     if (!c.ref) return false;
-    return ecartMax(c, c.ref) <= SEUIL_GEO;
+    /* ⚠️ ET LE SIGNE DOIT TENIR DANS LA ZONE SÛRE. C'est le défaut trouvé le 14/09 :
+       l'ancienne signature était posée à 59,4 px du bord, soit 190 px SOUS l'interface
+       d'Instagram en story. Une fois mesuré, surveillé.
+       ⚠️ ET IL NE DOIT PAS RECOUVRIR LE TEXTE DU CLIENT. `signeGeo` lui cède la place,
+          mais cette cession est BORNÉE par la zone sûre : si une `zoneTexte` descend trop,
+          le S se cale au plus bas et le conflit devient réel. Mesuré sur une bande
+          injectée finissant à 90 % : 171,3 px de recouvrement. Ce cas n'existe pas dans le
+          dépôt d'aujourd'hui — et c'est justement pour ça qu'il est surveillé plutôt que
+          commenté. */
+    return ecartMax(c, c.ref) <= SEUIL_GEO && c.ess.bas <= c.ref.limiteSure
+        && recouvrement(c.ess, c.zTexte) === 0;
   }) && !!sans && sans.hab === 'block' && !sans.voile && !sans.sign
      && !sans.rond && !sans.ess;
-  verdict('D2 · le décor de l\'aperçu tombe où le template l\'annonce', d2);
+  verdict('D2 · le décor tombe où le template l\'annonce, et dans la zone sûre', d2);
   if (emp.saute) dire('  · D3 · pas de rendu périmé affiché                     sans objet (aucun moteur)');
   else verdict('D3 · pas de rendu périmé affiché', emp.hFinal === emp.hRecent);
 }
