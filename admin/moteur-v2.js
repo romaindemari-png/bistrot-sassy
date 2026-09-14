@@ -194,7 +194,10 @@
       sinon. Une seule fonction décide, donc les deux cas ne peuvent pas diverger ni
       s'additionner. Le POSITIONNEMENT reste au template : il diffère d'un template à
       l'autre (`margin-top:auto` ici, un `margin-top` fixe ailleurs). */
-  function signatureCSS(A, sel, couleur, W) {
+  /* `pos` : 'left center' (defaut) ou 'center'. ⚠️ ANNONCE centre sa signature — son
+     `.carte` porte `align-items:center` — et un masque ferre a gauche y serait decale. */
+  function signatureCSS(A, sel, couleur, W, pos) {
+    const P = pos || 'left center';
     const src = A && A['logo:creme'];
     if (!src) return sel + '{' + SIGN_TEXTE + ';font-size:' + (W * 0.023).toFixed(2) + 'px}';
     const h = W * MEP_LOGO.haut;
@@ -222,9 +225,9 @@
           chiffre a 219, et la mesure directe de la hauteur du pied a confirme. */
     return sel + '{flex-shrink:0;width:' + (h * MEP_LOGO.ratio).toFixed(2) + 'px;height:' + h.toFixed(2) + 'px'
       + ';background:' + couleur + ';opacity:' + MEP_LOGO.opacite
-      + ";mask-image:url('" + src + "');mask-size:contain;mask-repeat:no-repeat;mask-position:left center"
+      + ";mask-image:url('" + src + "');mask-size:contain;mask-repeat:no-repeat;mask-position:" + P
       + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:contain"
-      + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:left center}';
+      + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:' + P + '}';
   }
 
   /** Le corps de la signature : le logo s'il est là, le texte sinon. */
@@ -520,8 +523,16 @@
         + '.corps{flex:1;display:flex;align-items:center;justify-content:center}'
         + ".msg{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.072)
           + ';line-height:1.18;text-align:center;text-transform:lowercase}'
-        + ".pied{font-family:'Elms',sans-serif;font-size:" + u(0.023)
-          + ';letter-spacing:.18em;text-transform:uppercase;text-indent:.18em;opacity:.45}';
+        /* ⚠️⚠️ ICI LA SIGNATURE N'EST PAS SUR LE BLEU, ET L'INVENTAIRE S'ETAIT TROMPE.
+           Il avait lu le fond de `.page` (accent) et conclu « ANNONCE → creme ». Mais
+           `.pied` vit DANS `.carte`, dont le fond est le CREME : un logo creme y serait
+           INVISIBLE. Il passe donc en ACCENT — 5,56 de contraste, comme sur infos.
+           ⚠️ Et `.carte` porte `align-items:center` : la signature est CENTREE, pas ferree
+              a gauche. D'ou `'center'` en position de masque — un masque ferre a gauche
+              serait decale de toute la largeur restante.
+              `text-indent:.18em` disparait : c'etait la compensation du dernier
+              interlettrage du texte, elle n'a pas de sens pour une image. */
+        + signatureCSS(A, '.pied', c.accent, W, 'center');
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const texte = (slide && slide.texte) || '';
@@ -530,7 +541,7 @@
            +     '<div class="barre"></div>'
            +     '<div class="lbl">annonce</div>'
            +     '<div class="corps"><div class="msg">' + xml(texte) + '</div></div>'
-           +     '<div class="pied">bistrot sassy</div>'
+           +     signature(A, 'pied')
            +   '</div>'
            + '</div>';
     }
