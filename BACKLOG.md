@@ -827,6 +827,61 @@ nouveau : le logo suit la même classe que le fond, donc il reste cohérent avec
 tous les cas. Un appel unique au `load` suffirait ; ce n'est pas une décision à prendre de
 notre initiative.
 
+## 🔴 « 7,50 Mo → 344 Ko » EST JUSTE ET TROMPEUR — le vrai chiffre de page est +327 Ko
+
+*(14/09/2026, au chantier photos)*
+
+Le message du commit `600b912` annonce *« les 3 photos converties en webp — 7,50 Mo devient
+344 Ko »*. **C'est exact, et ça ne décrit pas ce que le visiteur télécharge.** Les 7,50 Mo
+sont le poids des **masters PNG** déposés à la racine, que la page n'a jamais servis.
+
+Ce que la page charge **réellement**, mesuré au réseau sur la prod puis en local :
+
+| | images chargées |
+|---|---|
+| avant le chantier photos | **5 872 Ko** |
+| après | **6 199 Ko** |
+| | **+327 Ko** |
+
+Parce que les deux devantures (61 + 93 = 154 Ko) remplacent deux blobs qui ne pesaient que
+30 Ko — les emplacements 1 et 2 portaient des **graphismes plats**, très légers — et que les
+piments **ajoutent** 190 Ko.
+
+**→ Énième exemplaire du motif « un chiffre juste sous un mauvais nom ».** Le nombre est bon,
+son étiquette dit « la conversion a fait maigrir » quand elle a fait **grossir la page**. Les
+deux chiffres doivent voyager avec leur nom :
+
+- **niveau FICHIER** : 7,50 Mo de masters PNG → 344 Ko de webp. Vrai, et sans effet sur la page.
+- **niveau PAGE** : 5 872 → 6 199 Ko, soit **+327 Ko**. C'est celui qui compte pour le visiteur.
+
+⚠️ On ne réécrit pas le message de `600b912` : l'historique ne se retouche pas pour rendre un
+   message plus joli — c'est la règle posée le 11/09. La correction vit ici.
+
+⚠️ Et le contexte qui rend le +327 Ko acceptable : **galerie4 (2 555 Ko) + galerie1 (1 800) +
+   hero1 (976) font 5 331 des 6 199 Ko**. Le levier n'est pas dans les photos ajoutées.
+
+## 🔴 135 Ko TÉLÉCHARGÉS PUIS JETÉS À CHAQUE VISITE
+
+*(14/09/2026, mesuré au réseau pendant le chantier photos)*
+
+`hero2.png` (87 Ko) et `hero3.png` (48 Ko) sont **récupérés par le navigateur puis remplacés**
+sans jamais être affichés. Ce sont les `src` écrits **en dur** dans `index.html` sur les cartes
+`card-1` et `card-2` ; `sassy-cms-loader.js` écrase leur `src` depuis `_data/photos.json` après
+le chargement — mais la requête est déjà partie.
+
+**135 Ko perdus par visiteur.** Antérieur au chantier photos : ça existait déjà quand les
+emplacements portaient les deux blobs.
+
+⚠️ **Ce n'est pas un bug, c'est le coût du repli sûr** : ces `src` en dur sont ce qui s'affiche
+   si `photos.json` tombe ou tarde. Les retirer rendrait le hero vide en cas d'échec. Le
+   corriger veut donc dire **remplacer** les `src` de repli par les webp désormais servis
+   (`devanture-vitrine` 61 Ko, `devanture-enseigne` 93 Ko) — le repli reste, et il devient
+   l'image juste au lieu d'une ancienne.
+
+→ **À régler dans le même chantier que les 5,2 Mo récupérables** (section plus haut) : les deux
+  sont du poids d'images sur des fichiers déjà en ligne, et les deux se mesurent au réseau, pas
+  sur le disque.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
