@@ -992,6 +992,41 @@ Avec le logo à `.85` : **3,44 relevé sur le rendu**. Sur une photo noire, 4,62
 → **À traiter mercredi**, avec la passe du backlog. Trois voies chiffrées ci-dessus : B
   intégral, B avec exception, ou statu quo assumé.
 
+## 🔴 14/09/2026 — L'APERÇU DU THÈME ÉVÉNEMENT NE MONTRE PAS CE QUI PART
+
+**Mesuré dans l'admin réel**, sur les deux thèmes de type `photo` :
+
+| thème | l'APERÇU dessine | l'EXPORT produit | |
+|---|---|---|---|
+| `sassy-photo` | voile ✓ · `sign` « bistrot sassy » ✓ | voile 1 · sign 1 | cohérent |
+| `sassy-event` | voile ✓ · `sign` « bistrot sassy » ✓ | voile 1 · **sign 0** · **carte 1** | **divergent** |
+
+**LA CAUSE.** `habillerApercuPhoto` branche sur `theme.type`, **jamais sur
+`theme.template`** — et `sassy-photo` comme `sassy-event` sont tous deux de type `photo`.
+L'aperçu leur pose donc le même décor : voile + signature en bas à gauche. Or le corps
+d'EVENT n'a **jamais** contenu de `.sign` : il porte une **carte blanche** que l'aperçu ne
+dessine pas du tout.
+
+**CE QUE LE CLIENT VOIT, CONCRÈTEMENT.** À l'écran : la photo, un voile bleu, et « bistrot
+sassy » en petites capitales crème en bas à gauche. Ce qui partirait sur Instagram : la même
+photo, le même voile, mais **une carte blanche en bas** portant le badge de date, le titre,
+la description et le logo. L'aperçu affiche une signature qui n'existera pas, et cache
+entièrement la carte qui existera.
+
+⚠️ **ANTÉRIEURE, ET ÉLARGIE D'UN ÉLÉMENT.** Relevé sur l'historique : **avant** le commit
+du logo dans EVENT, le corps donnait `sign=0 carte=1 pied=0` ; **après**, `sign=0 carte=1
+pied=1`. La divergence date de M4/M5 — `pose('v2-sign')` est apparu au commit `c5ae09e`
+(« l'apercu en calques ») et le template `event` n'a jamais eu de `.sign`. Le commit du logo
+ne l'a pas créée ; il a ajouté un élément de plus que l'aperçu ne montre pas.
+
+→ **Non traité, autre chantier.** La corriger proprement veut dire que l'aperçu **dessine la
+  carte blanche** — badge, titre, description, logo — et non qu'il se contente de retirer le
+  `sign`. C'est le seul cas où « aperçu == export » n'est pas tenu par `MEP_PHOTO`, parce que
+  la carte n'est pas dans la table : elle est dans le template.
+→ ⚠️ À ne pas confondre avec le branchement sur `theme.template` fait le 14/09 pour le
+  thème photo : celui-là garantit que PHOTO, privé de son voile, n'est pas dessiné avec un
+  voile dans l'aperçu. Il ne touche pas au cas d'EVENT.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
