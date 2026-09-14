@@ -198,7 +198,29 @@
     const src = A && A['logo:creme'];
     if (!src) return sel + '{' + SIGN_TEXTE + ';font-size:' + (W * 0.023).toFixed(2) + 'px}';
     const h = W * MEP_LOGO.haut;
-    return sel + '{width:' + (h * MEP_LOGO.ratio).toFixed(2) + 'px;height:' + h.toFixed(2) + 'px'
+    /* ⚠️⚠️ `flex-shrink:0`, ET C'EST LA LIGNE LA PLUS IMPORTANTE DE CETTE FONCTION.
+       Le pied est un div VIDE a hauteur fixe dans une colonne flex : si le contenu
+       deborde, le navigateur a le droit de LE COMPRIMER (`flex-shrink` vaut 1 par defaut),
+       alors qu'un div de texte ne descend pas sous sa ligne. MESURE, sur dujour en carre
+       avec 3 plats a descriptifs — un debordement leger :
+
+         SANS la garde : pied comprime a 28,3 px (52 % de sa taille)
+                         et la colonne rapporte un debordement de ... 0 px
+         AVEC la garde : pied a 54 px
+                         et la colonne rapporte ....................... 26 px
+
+       Deux consequences, et la seconde est la pire :
+         1. la taille de la marque dependrait de la longueur du menu ;
+         2. LE LOGO ABSORBAIT LE DEBORDEMENT ET RENDAIT LE DETECTEUR AVEUGLE. Le controle
+            rapportait 165 px la ou il y en a 219 — l'ecart valait exactement la hauteur du
+            logo. Une garde de mise en page qui desarme une sonde : le motif « une sonde
+            qui ment par omission », mais cette fois causee par le code qu'elle surveille.
+
+       ⚠️ Hypothese posee, PUIS verifiee — pas l'inverse. Le debordement de dujour avait
+          BAISSE de 203 a 165 px en passant au logo, ce qui etait contre-intuitif. La cause
+          n'a pas ete racontee mais eprouvee : ajouter `flex-shrink:0` a fait remonter le
+          chiffre a 219, et la mesure directe de la hauteur du pied a confirme. */
+    return sel + '{flex-shrink:0;width:' + (h * MEP_LOGO.ratio).toFixed(2) + 'px;height:' + h.toFixed(2) + 'px'
       + ';background:' + couleur + ';opacity:' + MEP_LOGO.opacite
       + ";mask-image:url('" + src + "');mask-size:contain;mask-repeat:no-repeat;mask-position:left center"
       + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:contain"
@@ -425,8 +447,13 @@
         + ".prix{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.034) + ';white-space:nowrap}'
         + ".desc{font-family:'Elms',sans-serif;font-size:" + u(0.025)
           + ';line-height:1.55;opacity:.7;margin-top:' + u(0.012) + '}'
-        + ".pied{font-family:'Elms',sans-serif;font-size:" + u(0.023)
-          + ';letter-spacing:.18em;text-transform:uppercase;opacity:.45;margin-top:' + u(0.03) + '}';
+        /* Le fond de DUJOUR est le JAUNE : la signature y passe en ACCENT, comme le reste
+           du texte. Contraste relevé à l'inventaire : 5,36 — et c'est le seul utilisable,
+           les trois autres variantes tombent entre 1,00 et 1,16 sur ce jaune.
+           ⚠️ Ici le positionnement est un `margin-top` FIXE, pas un `auto` : la colonne de
+              dujour n'est pas étirée. C'est lui qu'on garde. */
+        + '.pied{margin-top:' + u(0.03) + '}'
+        + signatureCSS(A, '.pied', c.accent, W);
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const plats = ((slide && slide.dishes) || []).filter(function (d) { return d.n; });
@@ -443,7 +470,7 @@
            +     '<span class="pastille">aujourd\u2019hui</span>'
            +     '<div class="titre">le plat du jour</div>'
            +     '<div class="cartes">' + cartes + '</div>'
-           +     '<div class="pied">bistrot sassy</div>'
+           +     signature(A, 'pied')
            +   '</div>'
            + '</div>';
     }
