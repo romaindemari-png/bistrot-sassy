@@ -586,8 +586,44 @@
         + ".pastille{align-self:flex-start;font-family:'Elms',sans-serif;font-weight:500;font-size:" + u(0.024)
           + ';letter-spacing:.18em;text-transform:uppercase;background:' + c.accent + ';color:' + c.jaune
           + ';padding:' + u(0.014) + ' ' + u(0.022) + ';margin-bottom:' + u(0.028) + '}'
+        /* ⚠️⚠️ L'AIR SOUS LE TITRE EST STRUCTUREL, ET IL NE L'ÉTAIT PAS. Ce template ne
+           portait AUCUNE marge sous `.titre` : l'air venait du `justify-content:center` de
+           `.cartes`, donc DU NOMBRE DE PLATS. Mesuré à l'export, en story : 369 px d'air à
+           1 plat, 152 px à 3 — et 0 px dès que les cartes remplissent la colonne. Le titre
+           se lisait alors comme une ligne de plus de la liste. Un espacement qui dépend du
+           contenu n'est pas un espacement, c'est un reste.
+
+           ⚠️⚠️ LE RAPPORT VIENT DE L'ARDOISE DE GEORGES, QUI EST EN PRODUCTION. Même
+              structure exactement — un titre, puis une liste de plats — et son
+              `.liste{margin-top:52px}` est éprouvé sur des posts publiés. À son W de rendu
+              de 1080, ça fait 52/1080, et c'est cette fraction qu'on reprend.
+              ⚠️ ON A COMMENCÉ PAR DÉRIVER DU SITE ET C'ÉTAIT LA MAUVAISE SOURCE. Les
+                 candidats essayés, tous mesurés sur le bitmap d'export en portrait avec les
+                 4 plats de `_data/dujour.json` — le contenu VRAI :
+                   0     (la prod) ......... logo entier, 65 px avant le bord
+                   3,5 %  (inventé) ........ entier, 27 px      ← sans source, écarté
+                   4,81 % ARDOISE Georges .. entier, 13 px      ← retenu
+                   5,25 % le site .......... entier,  7 px
+                   5,93 % carte fixe Georges entier,  1 px
+                   6,2 %  INFOS de Sassy ... touche le bord
+                   7,0 %  CARTE de Sassy ... ⚠️ LOGO ROGNÉ DE 7,8 px
+                 Le premier choix — 7 %, dérivé de `.liste` de CARTE — coupait la marque.
+                 Le rapport de Georges tient, avec la garde la plus large des trois sources
+                 réelles. Un chiffre éprouvé en production bat un chiffre redérivé.
+
+           ⚠️ ET LA MARGE N'AJOUTE PAS SA PROPRE VALEUR EN AIR, ELLE EN AJOUTE LA MOITIÉ.
+              `margin-bottom` réduit `.cartes` d'autant, et comme les cartes y sont centrées
+              le centrage reprend la moitié de ce qu'on vient de donner. Relevé, même
+              instrument des deux côtés : +38 px pour 7 % demandés. Le gain est modeste ; ce
+              qui change, c'est qu'il ne peut plus TOMBER À ZÉRO — la marge vit hors de
+              `.cartes`, donc elle survit quand les cartes débordent.
+
+           ⚠️ CE TEMPLATE RESTE LE SEUL À 4 PLATS DE SON PLAFOND. À 5 plats à descriptifs —
+              atteignable, `dujour` n'a aucun plafond — la dernière bande touche le bord
+              AVEC OU SANS cette marge. Le plafond est la décision de fond, reportée après
+              mardi ; cette marge ne la remplace pas et n'y touche pas. */
         + ".titre{font-family:'Canela',Georgia,serif;font-weight:900;font-size:" + u(0.105)
-          + ';line-height:1.05;text-transform:lowercase}'
+          + ';line-height:1.05;text-transform:lowercase;margin-bottom:' + u(52 / 1080) + '}'
         + '.cartes{flex:1;display:flex;flex-direction:column;justify-content:center;gap:' + u(0.028) + '}'
         + '.c{background:' + c.blanc + ';border:' + u(0.0035) + ' solid ' + c.accent
           + ';padding:' + u(0.034) + ' ' + u(0.032) + '}'
