@@ -172,15 +172,14 @@
     haut:     0.050,   // × W — hauteur du logo. L'encre du texte qu'il remplace faisait
                        //       22,9 % de W de large et 2,96 % de haut (mesuré) : à largeur
                        //       égale le logo serait 2,5× plus haut, d'où un choix de MEP.
-    opacite:  0.70,    /* ⚠️ CHOISIE SUR UN SEUIL, PAS AU JUGÉ. L'opacité coupe le contraste,
-                          et le relevé le dit :
-                            texte remplacé (.45) ... CARTE 2,25  ·  INFOS 2,05
-                            logo à .62 ............. CARTE 3,06  ·  INFOS 2,81
-                            logo à .70 ............. CARTE 3,51  ·  INFOS 3,27
-                          Le seuil AA d'un grand caractère est 3,00. À .62 INFOS passait
-                          dessous ; à .70 les deux le franchissent, et la signature reste
-                          discrète. Un premier jet disait « .62 parce qu'un logotype plein
-                          pèse plus » — un raisonnement sans mesure. */
+    opacite:  1.00,    /* ⚠️ PLUS DE TRANSPARENCE — DÉCISION DE DA DU 14/09. L'opacité
+                          coupait le contraste ; à 1 le logo rend la couleur exacte du
+                          token. Relevés successifs, sur les templates typo :
+                            texte remplacé (.45) ... CARTE 2,25 · INFOS 2,05
+                            logo à .62 ............. CARTE 3,06 · INFOS 2,81
+                            logo à .70 ............. CARTE 3,51 · INFOS 3,27
+                            logo à 1,00 ............ 5,57 partout
+                          Table unique : ça vaut pour les six, sans exception. */
     ratio:    1326 / 424   // le gabarit des quatre variantes, identique
   };
 
