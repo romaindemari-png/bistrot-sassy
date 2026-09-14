@@ -943,6 +943,55 @@ exactement la famille de défauts que ce projet traque.
   sonde 4 (« qui a peint ») fait déjà ça pour les couleurs ; il manque l'équivalent pour
   le CONTENU.
 
+## 🔴 14/09/2026 — LA SIGNATURE DU THÈME PHOTO EST ILLISIBLE SUR UNE PHOTO CLAIRE
+
+**Elle échoue depuis M3, avant le logo.** Le texte « bistrot sassy » du thème photo donne
+**1,66 de contraste** sur une photo claire — relevé sur le rendu, pas calculé. Le logo
+**n'aggrave pas** : 1,68. Il hérite du défaut.
+
+**LA GÉOMÉTRIE, CALCULÉE À W = 1080.** Le voile monte de 0 à 237,6 px depuis le bas, en
+dégradé linéaire de `.78` à `0`. La signature vit à 59,4 px du bas :
+
+| | occupe | α du voile en bas | α en haut |
+|---|---|---|---|
+| le texte (`signTail` .026) | 59,4 → 87,5 px | .585 | .493 |
+| le logo (`MEP_LOGO.haut` .050) | 59,4 → 113,4 px | .585 | **.408** |
+
+Le logo reste **dans** le voile, mais plus haut — donc là où le voile est plus faible.
+
+**AUCUN RÉGLAGE SIMPLE N'Y SUFFIT**, chiffré au pire cas (haut de la signature, photo
+blanche) :
+
+| levier | contraste |
+|---|---|
+| rien | 1,49 |
+| logo à opacité 1,00 | 1,74 |
+| `voileA` 0,95 | 1,68 |
+| `voileH` 0,34 | 1,78 |
+| `voileA` 0,95 **et** opacité 1,00 | 2,06 |
+
+Du crème sur un bleu éclairci par du blanc, ce sont **deux valeurs claires** : la densité
+maximale du voile en bas ne change rien à sa faiblesse là où la signature se trouve.
+
+**LA CORRECTION MESURÉE : UN VOILE À BANDE SOLIDE.** Le voile tient `.78` jusqu'à un peu
+au-dessus de la signature, puis s'éteint — un dégradé à palier au lieu d'un dégradé pur.
+Avec le logo à `.85` : **3,44 relevé sur le rendu**. Sur une photo noire, 4,62.
+
+⚠️ **POURQUOI CE N'EST PAS FAIT** (décidé le 14/09, la veille du RDV) :
+- ça change **le décor de tous les thèmes photo, `event` compris, ET l'aperçu** —
+  `MEP_PHOTO` est partagée, c'est ce qui rend « aperçu == export » indéfectible. Le bas de
+  l'image deviendrait une bande bleue franche sur ~113 px au lieu d'un dégradé continu ;
+- l'opacité `.85` remonterait **aussi les quatre templates typo** (CARTE 3,51 → 4,46,
+  INFOS et ANNONCE 3,27 → 4,31, DUJOUR 3,30 → 4,30) : plus lisible, **moins discret** ;
+- ou bien il faut une exception pour PHOTO seul — et `MEP_LOGO` cesse d'être une table
+  unique, ce qu'on a construit exprès pour qu'aucun réglage ne puisse diverger.
+
+→ **PHOTO garde donc son TEXTE** pour l'instant : c'est le seul des six à ne pas porter le
+  logo. Inconséquence assumée, visible et documentée, plutôt qu'un changement de DA sur six
+  templates la veille d'une démonstration, pour un défaut antérieur au chantier.
+→ **À traiter mercredi**, avec la passe du backlog. Trois voies chiffrées ci-dessus : B
+  intégral, B avec exception, ou statu quo assumé.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
