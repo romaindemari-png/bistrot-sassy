@@ -358,6 +358,24 @@ body {
   user-select: none;
   -webkit-user-drag: none;
 }
+/* ⚠️ LE CADRAGE DES DEUX DEVANTURES, ET C'EST UNE MESURE, PAS UN GOÛT.
+   La carte du hero est PORTRAIT en desktop (640x900, rapport 0,711) mais PAYSAGE en
+   mobile (390x320, rapport 1,219). Les deux devantures sont en 0,802 :
+     desktop  -> `cover` rogne la LARGEUR : 88,6 % visible, les lettres de l'enseigne
+                 (x 14,5 % -> 91,5 %) passent entieres. Le Y n'a AUCUN effet ici.
+     mobile   -> `cover` rogne la HAUTEUR : 65,8 % visible. Avec le 50% 50% par defaut,
+                 la fenetre montre y 17,1 % -> 82,9 % — or l'enseigne occupe
+                 y 0,1 % -> 19,7 %. Il n'en restait que 2,6 % : LE NOM DISPARAISSAIT.
+   D'ou `50% 0`. Verifie sur la page : l'enseigne redevient lisible en mobile et le
+   desktop ne bouge pas d'un pixel.
+   ⚠️ SCOPE AUX DEUX CARTES, PAS AUX TROIS. La meme regle sur `card-0` fait remonter la
+      photo de plat : on y voit le pied du verre et la fourchette, l'assiette part en bas.
+   ⚠️ COUPLAGE ASSUME : ces selecteurs designent une PLACE (card-1, card-2), pas une
+      image. Reordonner `slider` dans _data/photos.json deplace le cadrage avec la place,
+      pas avec la photo. Les deux emplacements portent les deux devantures aujourd'hui ;
+      le jour ou l'un accueille autre chose, cette regle est a revoir. */
+#card-1 img,
+#card-2 img { object-position: 50% 0; }
 
 /* Stack click hint */
 .stack-hint {
