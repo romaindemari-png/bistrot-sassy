@@ -882,6 +882,67 @@ emplacements portaient les deux blobs.
   sont du poids d'images sur des fichiers déjà en ligne, et les deux se mesurent au réseau, pas
   sur le disque.
 
+## 🔴 14/09/2026 — LE CODE SURVEILLÉ PEUT AVEUGLER SA PROPRE SONDE
+
+*(nouvelle forme du motif « une sonde qui ment par omission » — celle-ci ne vient pas de
+la sonde)*
+
+Au passage du logo dans `dujour`, le détecteur de débordement a **baissé** : 203 → 165 px
+sur `carre`. Contre-intuitif — le logo est plus haut que le texte qu'il remplace, le
+chiffre devait monter.
+
+**LA CAUSE, ÉPROUVÉE ET NON RACONTÉE.** Le pied est devenu un div **VIDE à hauteur fixe**
+dans une colonne flex, et `flex-shrink` vaut **1 par défaut** : le navigateur avait le
+droit de le comprimer, alors qu'un div de texte ne descend pas sous sa ligne. Mesure
+directe, `dujour · carre` avec 3 plats à descriptifs (débordement léger) :
+
+| | hauteur du pied | débordement rapporté |
+|---|---|---|
+| **sans** `flex-shrink:0` | **28,3 px** — 52 % de sa taille | **0 px** |
+| **avec** `flex-shrink:0` | 54 px | **26 px** |
+
+**→ Le logo absorbait le débordement et rendait le détecteur aveugle.** Il annonçait 0 là
+où il y a 26, et 165 là où il y a 219.
+
+⚠️ **CE QUE ÇA AJOUTE À LA DOCTRINE.** Jusqu'ici le motif « une sonde qui ment par
+omission » désignait toujours un défaut **de la sonde** : elle ne couvrait qu'un format,
+elle mesurait un proxy commode, elle était muette par `contain:strict`. **Ici la sonde est
+juste ; c'est le code surveillé qui la désarme.** Une garde de mise en page — un
+`flex-shrink` implicite — a suffi à faire disparaître un symptôme que le garde-fou existait
+précisément pour voir.
+
+→ **La règle : quand une sonde baisse alors qu'elle devait monter, chercher qui ABSORBE.**
+  Un élément compressible, un `overflow` qui rogne, un `min-height` qui plafonne : tout ce
+  qui peut encaisser silencieusement le symptôme au lieu de le laisser paraître.
+→ Et la méthode qui a marché : **remesurer l'état d'avant dans les mêmes conditions**
+  (203 px reproduit) pour comparer deux mesures et non deux souvenirs, **puis** poser
+  l'hypothèse et la tester — `flex-shrink:0` a fait remonter le chiffre à 219, soit
+  exactement la hauteur du logo.
+
+## ⚠️ 14/09/2026 — UN CORPS VIDE DEVRAIT SE VOIR (fragilité de mes sondes)
+
+Trois fois dans la même journée, une sonde a employé **une mauvaise clé de slide** :
+
+| sonde | clé employée | clé attendue |
+|---|---|---|
+| options EVENT | — | *(correcte)* |
+| CARTE, 1ᵉʳ rendu | `nom` / `prix` | **`n` / `p`** |
+| DUJOUR, 2 rendus | `produits` | **`dishes`** |
+
+Chaque fois, `corps` **filtre sur `d.n`** et rend donc une liste **VIDE, sans le moindre
+message**. Le visuel produit a l'air correct : titre, tampon, habillage, signature — tout
+est là sauf le contenu. **Une sonde mal formée produit un rendu plausible**, et c'est
+exactement la famille de défauts que ce projet traque.
+
+⚠️ Ce n'est pas une fragilité du moteur : un template qui ne reçoit rien ne doit rien
+   inventer. C'est une fragilité **des sondes**, et elle se corrige de leur côté.
+
+→ **Piste, non traitée :** que le rasteriseur ou le banc de contrôle **compte ce qu'il a
+  peint** et le dise — nombre de lignes, de plats, de caractères rendus. Un rendu qui
+  annonce « 0 plat » à côté d'un slide qui en déclarait 4 se verrait immédiatement. La
+  sonde 4 (« qui a peint ») fait déjà ça pour les couleurs ; il manque l'équivalent pour
+  le CONTENU.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
