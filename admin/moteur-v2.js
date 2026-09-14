@@ -264,13 +264,20 @@
       + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:' + P + '}';
   }
 
-  /** Le médaillon du thème photo : le cercle bleu et le S crème dedans, centrés dans
-      l'image. Rend '' si aucun asset n'est disponible — auquel cas `signature()` remet
-      le texte, comme partout ailleurs. */
-  function medaillonCSS(A, W, H, zt) {
-    const src = A && A['logo:creme'];
-    if (!src) return '';
-    const c = window.CLIENT_TOKENS.primitives.color;
+  /** LA GÉOMÉTRIE DU MÉDAILLON, CALCULÉE UNE FOIS POUR DEUX LECTEURS : le template
+      d'export (`medaillonCSS`) et le décor en calques de l'aperçu
+      (`habillerApercuPhoto`). `(W, H, zt)` → `{ d, sw, sh, haut, gauche, sGauche, sHaut }`
+      en pixels de l'export ; l'aperçu n'a qu'à multiplier par son échelle.
+
+      ⚠️⚠️ C'EST CETTE FONCTION QUI EMPÊCHE LA FAUTE QUE LE MOTEUR EXISTE POUR EMPÊCHER.
+         Le 14/09, le médaillon a été posé dans le template SEUL : l'aperçu a continué
+         de peindre le logotype complet en bas (93,6 → 96,9 % de la hauteur) pendant que
+         l'export peignait le cercle au milieu (59,7 → 72,1 % en story). MESURÉ, pas
+         supposé. Le client aurait vu une image et publié une autre.
+         La cause n'était pas l'oubli — c'était que les deux côtés CALCULAIENT chacun
+         leur géométrie. Ils la LISENT maintenant au même endroit : un chiffre changé se
+         voit des deux côtés, ou d'aucun. Même raison d'être que `MEP_PHOTO`. */
+  function medaillonGeo(W, H, zt) {
     const d = W * MEP_LOGO.medDiam;                    // diamètre du cercle
     const sw = W * MEP_LOGO.medS;                      // largeur du S
     const sh = sw / MEP_LOGO.sRatio;                   // sa hauteur, par son rapport mesuré
@@ -291,22 +298,39 @@
       const tb = (zt.y + zt.h) * H;                    // le bas de la bande de texte
       if (tb > haut) haut = tb + W * MEP_LOGO.medEcart;
     }
-    return '.rond{position:absolute;left:' + ((W - d) / 2).toFixed(2) + 'px'
-         + ';top:' + haut.toFixed(2) + 'px'
-         + ';width:' + d.toFixed(2) + 'px;height:' + d.toFixed(2) + 'px'
-         + ';border-radius:50%;background:' + c.accent + '}'
-      + '.ess{position:absolute;left:' + ((W - sw) / 2).toFixed(2) + 'px'
-         + ';top:' + (haut + (d - sh) / 2).toFixed(2) + 'px'   // centré dans le cercle, où qu'il soit
-         + ';width:' + sw.toFixed(2) + 'px;height:' + sh.toFixed(2) + 'px'
-         + ';background:' + c.creme
-         /* ⚠️ LE MÊME FICHIER, CADRÉ SUR SON PREMIER GLYPHE. `mask-size` agrandit le logo
-            entier de 552,5 % et `mask-position: 0 0` en aligne le coin : seul le S tombe
-            dans la boîte. Aucun second asset, aucun octet de plus. */
-         + ";mask-image:url('" + src + "');mask-size:" + (100 * MEP_LOGO.sEchelle).toFixed(1) + '% auto'
+    return { d: d, sw: sw, sh: sh, haut: haut, gauche: (W - d) / 2,
+             sGauche: (W - sw) / 2, sHaut: haut + (d - sh) / 2 };
+  }
+
+  /** Le style du S masqué depuis `creme.png`, PARTAGÉ lui aussi : l'export l'embarque en
+      base64, l'aperçu le sert par son URL — le reste est identique, donc écrit une fois. */
+  function masqueDuS(src) {
+    const t = (100 * MEP_LOGO.sEchelle).toFixed(1) + '% auto';
+    /* ⚠️ LE MÊME FICHIER, CADRÉ SUR SON PREMIER GLYPHE. `mask-size` agrandit le logo
+       entier de 552,5 % et `mask-position: 0 0` en aligne le coin : seul le S tombe dans
+       la boîte. Aucun second asset, aucun octet de plus. */
+    return ";mask-image:url('" + src + "');mask-size:" + t
          + ';mask-repeat:no-repeat;mask-position:0 0'
-         + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:"
-         + (100 * MEP_LOGO.sEchelle).toFixed(1) + '% auto'
-         + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:0 0}';
+         + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:" + t
+         + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:0 0';
+  }
+
+  /** Le médaillon du thème photo : le cercle bleu et le S crème dedans. Rend '' si aucun
+      asset n'est disponible — auquel cas `signature()` remet le texte, comme partout. */
+  function medaillonCSS(A, W, H, zt) {
+    const src = A && A['logo:creme'];
+    if (!src) return '';
+    const c = window.CLIENT_TOKENS.primitives.color;
+    const g = medaillonGeo(W, H, zt);
+    return '.rond{position:absolute;left:' + g.gauche.toFixed(2) + 'px'
+         + ';top:' + g.haut.toFixed(2) + 'px'
+         + ';width:' + g.d.toFixed(2) + 'px;height:' + g.d.toFixed(2) + 'px'
+         + ';border-radius:50%;background:' + c.accent + '}'
+      + '.ess{position:absolute;left:' + g.sGauche.toFixed(2) + 'px'
+         + ';top:' + g.sHaut.toFixed(2) + 'px'      // centré dans le cercle, où qu'il soit
+         + ';width:' + g.sw.toFixed(2) + 'px;height:' + g.sh.toFixed(2) + 'px'
+         + ';background:' + c.creme
+         + masqueDuS(src) + '}';
   }
 
   /** Le corps de la signature : le logo s'il est là, le texte sinon. */
@@ -998,7 +1022,7 @@
   function habillerApercuPhoto(hote, theme, fmt) {
     if (!hote) return;
     const tpl = theme && theme.template && TEMPLATES[theme.template];
-    const vieux = hote.querySelectorAll('.v2-voile,.v2-sign');
+    const vieux = hote.querySelectorAll('.v2-voile,.v2-sign,.v2-rond,.v2-ess');
     const hab = hote.querySelector('.ig-habillage');
     if (!tpl || theme.type !== 'photo') {          // pas notre cas → on efface et on rend la main
       vieux.forEach(function (e) { e.remove(); });
@@ -1048,27 +1072,73 @@
       if (v) v.remove();                        // on retire celui qu'un autre thème a pu laisser
     }
 
-    /* La signature de l'aperçu : le LOGO pour `photo`, le texte pour le reste.
+    /* La signature de l'aperçu : le MÉDAILLON pour `photo`, le texte pour le reste.
        ⚠️ ICI LE LOGO PASSE PAR SON URL, pas par le base64 : on est dans le DOM vivant de
           l'admin, pas dans un SVG isolé — donc rien à embarquer, et l'image est déjà en
-          cache après le premier rendu. Même fichier, même dessin : aucune divergence.
-       ⚠️ La hauteur et le centrage sont ceux de MEP_LOGO et du template, à l'échelle près.
-          Un seul endroit décide de la taille du logo. */
+          cache après le premier rendu. Même fichier, même dessin. Et l'URL vient de
+          `CLIENT_TOKENS.logos.creme`, la même entrée que `listeAssets` embarque : elle
+          n'est pas réécrite en dur ici.
+       ⚠️⚠️ LA GÉOMÉTRIE N'EST PAS RECALCULÉE ICI, ELLE EST LUE dans `medaillonGeo` — la
+          même fonction que le template. C'est la leçon du 14/09 : le médaillon avait été
+          posé dans le template SEUL, et ce bloc a continué de peindre le logotype complet
+          en bas (93,6 → 96,9 % de la hauteur) pendant que l'export peignait le cercle au
+          milieu (59,7 → 72,1 % en story). MESURÉ. Le client aurait vu une image et publié
+          une autre — exactement la faute que ce moteur existe pour empêcher.
+          La cause n'était pas l'oubli : c'était que les deux côtés CALCULAIENT chacun leur
+          géométrie. Tant qu'ils la LISENT au même endroit, l'écart ne peut plus exister.
+       ⚠️ LE MÉDAILLON CÈDE LA PLACE AU TEXTE, et la condition est lue DANS LE DOM :
+          `#igText` est-il affiché ? C'est exactement ce que l'export décide de son côté
+          (`zt && txt`, plus `withText` pour la 1ʳᵉ slide) — mais lu sur ce qui est
+          RÉELLEMENT peint plutôt que re-dérivé, donc sans second jeu de conditions à
+          garder d'accord avec le premier. */
     if (estPhoto) {
-      const lw = 1080 * MEP_LOGO.haut * MEP_LOGO.ratio * e;
-      pose('v2-sign', 'z-index:5;bottom:' + px(M.signY)
-        + ';left:' + ((hote.clientWidth || 260) - lw) / 2 + 'px'
-        + ';width:' + lw.toFixed(2) + 'px;height:' + px(MEP_LOGO.haut)
+      const zt = (theme.formats && theme.formats[fmt] && theme.formats[fmt].zoneTexte) || null;
+      const elTexte = hote.querySelector('.ig-text');
+      const texteVisible = !!(elTexte && getComputedStyle(elTexte).display !== 'none');
+      /* H EN PIXELS D'EXPORT, ET LU À LA MÊME SOURCE QUE L'EXPORT : `rasteriser` fait
+         `H = round(W × hab.naturalHeight / hab.naturalWidth)`, donc c'est le PNG de
+         gabarit qui fixe la hauteur — et l'aperçu a ce même PNG sous la main.
+         ⚠️ Le rapport du CADRE ne ferait pas l'affaire : `clientWidth`/`clientHeight`
+            sont des entiers arrondis, et en portrait ils donnaient 1080×1347,73 au lieu
+            de 1080×1350 — 0,08 point d'écart avec le template, mesuré. Petit, mais c'est
+            un écart qui vient d'avoir lu autre chose que la source. Le cadre ne sert que
+            de repli, si le PNG n'est pas encore décodé. */
+      const Hx = (hab && hab.naturalWidth)
+        ? Math.round(1080 * hab.naturalHeight / hab.naturalWidth)
+        : 1080 * (hote.clientHeight || 1) / (hote.clientWidth || 1);
+      const g = medaillonGeo(1080, Hx, texteVisible ? zt : null);
+      /* ⚠️ LA POSITION EN POURCENTAGES, LA TAILLE EN PIXELS, et ce n'est pas un caprice.
+         Le cadre de l'aperçu n'est pas exactement au rapport du format : en story il fait
+         425 px de haut là où 9:16 en veut 423,1. Or `.ig-text` est posé en POURCENTAGES du
+         cadre (cf. `composeCustomPreview`), donc il suit cet écart. Un médaillon placé en
+         pixels à l'échelle de la LARGEUR ne le suivait pas : 0,26 point de dérive verticale,
+         mesurée — et surtout un jeu qui rognait l'air laissé sous la bande de texte.
+         En pourcentages, les deux calques subissent le même cadre et l'écart tombe à zéro
+         par construction. La TAILLE reste en pixels : en pourcentages de deux côtés
+         différents, le cercle deviendrait une ellipse dès que le cadre dérive. */
+      const pct = function (v, tot) { return (100 * v / tot).toFixed(4) + '%'; };
+      const ex = function (v) { return (v * e).toFixed(2) + 'px'; };   // export → aperçu
+      const url = (window.CLIENT_TOKENS.logos || {}).creme || '';
+      pose('v2-rond', 'z-index:5;left:' + pct(g.gauche, 1080) + ';top:' + pct(g.haut, Hx)
+        + ';width:' + ex(g.d) + ';height:' + ex(g.d)
+        + ';border-radius:50%;background:' + c.accent);
+      pose('v2-ess', 'z-index:6;left:' + pct(g.sGauche, 1080) + ';top:' + pct(g.sHaut, Hx)
+        + ';width:' + ex(g.sw) + ';height:' + ex(g.sh)
         + ';background:' + c.creme + ';opacity:' + MEP_LOGO.opacite
-        + ";mask-image:url('/assets/logos/creme.png');mask-size:contain"
-        + ';mask-repeat:no-repeat;mask-position:center'
-        + ";-webkit-mask-image:url('/assets/logos/creme.png');-webkit-mask-size:contain"
-        + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:center').textContent = '';
+        + masqueDuS(url)).textContent = '';
+      const vieuxSign = hote.querySelector('.v2-sign');
+      if (vieuxSign) vieuxSign.remove();      // le logotype qu'un autre thème a pu laisser
     } else {
       pose('v2-sign', 'z-index:5;left:' + px(M.signX) + ';bottom:' + px(M.signY)
         + ";font-family:'Elms',sans-serif;font-weight:500;font-size:" + px(M.signTail)
         + ';letter-spacing:.1em;text-transform:uppercase;color:' + c.creme + ';opacity:.7'
       ).textContent = 'bistrot sassy';
+      /* ⚠️ Et on retire le médaillon qu'un thème photo aurait laissé : `pose` RÉUTILISE
+         les calques en place, donc sans ça EVENT hériterait du cercle de PHOTO en passant
+         de l'un à l'autre. Symétrique exact du `.v2-voile` retiré plus haut. */
+      ['.v2-rond', '.v2-ess'].forEach(function (sel) {
+        const el = hote.querySelector(sel); if (el) el.remove();
+      });
     }
   }
 
@@ -1101,6 +1171,14 @@
       MEP_LOGO: MEP_LOGO,
       signatureCSS: signatureCSS,
       signature: signature,
+      /* ⚠️ `medaillonGeo` est exposée POUR QUE LE GARDE-FOU PUISSE COMPARER. C'est la
+         source unique de la géométrie du médaillon : le template et l'aperçu la lisent
+         tous les deux, et D2 s'en sert comme RÉFÉRENCE pour vérifier que les calques de
+         l'aperçu tombent au même endroit que le template. Sans cette clé, la sonde
+         devrait recopier le calcul — et une sonde qui recopie ce qu'elle mesure ne
+         mesure plus rien. */
+      medaillonGeo: medaillonGeo,
+      medaillonCSS: medaillonCSS,
       habillerApercuPhoto: habillerApercuPhoto
     }
   };
