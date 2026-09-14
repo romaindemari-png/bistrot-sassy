@@ -765,6 +765,68 @@ passent tous les deux au vert. Le serveur fautif était **le mien** — un `sock
   La requête en vol se lit en quelques lignes (`p.on('request')` / `requestfinished`, puis afficher
   ce qui reste après 8 s).
 
+## 📌 CHANTIER LOGO — CE QUI EST CONSTATÉ ET NON TRAITÉ (14/09/2026)
+
+**1 · Les logos s'écartent des tokens d'un bit, sur deux des quatre.**
+Relevé à la pipette sur l'encre opaque :
+
+| | encre du fichier | token de la charte | écart |
+|---|---|---|---|
+| `blanc.png` | `#FFFFFF` | `#FFFFFF` | — |
+| `jaune.png` | `#FFF08B` | `#FFF08B` | — |
+| `creme.png` | `#FBF2E2` | `#FAF1E2` | **R+1 V+1** |
+| `bleu.png` | `#2050E8` | `#2050E7` | **B+1** |
+
+Invisible à l'œil, et très probablement un arrondi d'export. On ne touche pas aux
+fichiers du client sur un bit. À rouvrir **seulement** si un jour on génère les logos
+depuis les tokens plutôt que l'inverse.
+
+**2 · 5,2 Mo récupérables sur les images DÉJÀ en ligne.**
+Trois PNG non compressés servent des photographies, et portent un canal alpha entièrement
+opaque (25 % d'octets inutiles) :
+
+| | PNG | webp q82 | |
+|---|---|---|---|
+| `galerie1.png` | 1 800 Ko | **76 Ko** | 4 % |
+| `galerie4.png` | 2 555 Ko | **152 Ko** | 6 % |
+| `hero1.png` | 976 Ko | **99 Ko** | 10 % |
+
+Total des images du site aujourd'hui : **5 857 Ko** (5 626 de fichiers + 231 de base64
+inline). Indépendant du chantier photos : c'est de l'existant.
+
+**3 · La piste `mask-image` pour les logos du moteur v2 — NON VÉRIFIÉE.**
+L'encre des logos est plate et leur alpha quasi binaire (3 valeurs distinctes). Un **seul**
+PNG employé en `mask-image`, coloré par un token, servirait donc les six templates pour
+17,4 Ko de base64 au lieu de 69,8 — ce qui garderait la charge par slide à 170 Ko, sous le
+repère de 180 Ko validé sur iPhone réel chez Georges.
+
+⚠️ **RÉSERVE, ET ELLE EST SÉRIEUSE : on ne sait pas si `mask-image` survit à la
+rasterisation dans un `foreignObject`.** C'est exactement la famille des trois pièges
+silencieux de ce chemin (polices non embarquées, `xmlns` manquant, XML strict) — un SVG
+refusé ne dit rien. **À éprouver avant d'y compter**, sur le banc de `controle-moteur.html`
+et pas en production.
+
+⚠️ Et le chiffre qui a fait écarter le branchement direct : **deux variantes déclarées
+mettent chaque slide à 188 Ko**, au-dessus du repère. Les six templates portent déjà
+« bistrot sassy » **en texte** en bas (`.pied` à opacité .45 sur les quatre typo, `.sign` à
+.7 sur photo ; EVENT n'en a aucun). Remplacer un texte propre par une image plus lourde
+n'a pas de gain établi. À rouvrir après le RDV.
+
+**4 · `.on-cream` n'a pas d'appel initial.**
+`index.html` ne bascule la classe que dans l'écouteur de scroll :
+
+```js
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('on-cream', window.scrollY > heroH() - 80);
+}, { passive: true });
+```
+
+Au **rechargement en milieu de page** — Safari restaure la position — la barre reste donc
+bleue jusqu'au premier scroll. **Antérieur au chantier logo**, et ça ne crée aucun défaut
+nouveau : le logo suit la même classe que le fond, donc il reste cohérent avec lui dans
+tous les cas. Un appel unique au `load` suffirait ; ce n'est pas une décision à prendre de
+notre initiative.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
