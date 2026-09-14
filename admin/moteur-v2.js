@@ -167,7 +167,33 @@
            + ';font-display:block}';          // ⚠️ block, PAS swap : aucun repli ne s'intercale
     }).join('')
       + '*{margin:0;padding:0;box-sizing:border-box}'
-      + '.page{position:relative;overflow:hidden;-webkit-font-smoothing:antialiased;font-kerning:normal}';
+      /* ⚠️⚠️ LE RESET REMET AUSSI LA TYPOGRAPHIE HÉRITABLE, ET C'EST UN CORRECTIF
+         D'INSTRUMENT AUTANT QUE DE RENDU. Ce socle est lu par DEUX mondes :
+           · l'EXPORT, dans un `foreignObject` — aucun `body` dont hériter, valeurs
+             initiales partout ;
+           · les SONDES, qui injectent ce même CSS dans un `<div>` d'une VRAIE page.
+         Le `body` de `admin/controle-moteur.html` déclare `font: 15px/1.55 …` — un
+         raccourci qui pose `line-height: 1.55`. Le reset ne remettait que les marges et
+         `box-sizing` : la hauteur de ligne fuyait donc dans l'hôte de `deborde()`.
+         ⚠️ CE QUE ÇA A COÛTÉ, MESURÉ : sur `sassy-dujour`, avec les 4 plats de
+            `_data/dujour.json`, `.prix` passait de 48 à 56,9 px et `.pastille` de 64,2 à
+            70,4 px. Le détecteur de débordement annonçait alors
+              carré ..... 282 px   là où l'export en a .... 256
+              portrait ... 12 px   là où l'export en a ...... 0
+            Autrement dit un ROUGE INEXISTANT sur un format vivant, et des chiffres
+            gonflés lus toute la journée du 14/09. L'instrument mesurait sa propre page.
+         ⚠️ DANS LE SVG C'EST UN NO-OP — il n'y a rien à hériter — donc l'export ne change
+            pas d'un pixel. VÉRIFIÉ : bandes de contenu des SIX templates × 3 formats,
+            18 rendus, avant/après → écart maximum 0,000 pt.
+         ⚠️ CE QUI N'EST PAS REMIS, ET POURQUOI : `color` et `font-family`. Les templates
+            posent `color` sur `.page` et comptent sur l'héritage pour tout leur texte ;
+            le remettre ici casserait les six. `font-family` est déclarée par chaque
+            élément qui porte du texte, donc rien n'en dépend — mais la remettre
+            n'apporterait rien et coûterait une divergence possible avec le défaut du SVG. */
+      + '.page{position:relative;overflow:hidden;-webkit-font-smoothing:antialiased;font-kerning:normal'
+        + ';line-height:normal;letter-spacing:normal;word-spacing:normal;text-indent:0'
+        + ';text-transform:none;font-style:normal;font-weight:400;font-size:medium'
+        + ';white-space:normal}';
   }
 
   /* ══════════════════════════════════════════════════════════════════════════════

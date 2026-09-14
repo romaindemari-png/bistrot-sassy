@@ -1150,6 +1150,116 @@ dépassement de `carre` a d'ailleurs déjà déplacé l'attention pendant une de
 **Décision de Romain le 14/09 :** retrait à faire, **après mardi**. Le point 4 se tranche
 avant les points 1 à 3.
 
+### 14/09/2026 — tous les chiffres de débordement de la journée étaient GONFLÉS
+
+Le `body` de `admin/controle-moteur.html` déclare `font: 15px/1.55 …` — un raccourci qui
+pose `line-height: 1.55`. Le reset de `socleCSS()` ne remettait que `margin`, `padding` et
+`box-sizing` : **la hauteur de ligne fuyait donc de la page du contrôle dans l'hôte DOM que
+`deborde()` injecte.** L'export, lui, vit dans un `foreignObject` — aucun `body` dont
+hériter, donc aucune fuite.
+
+Mesuré sur `sassy-dujour` avec les 4 plats de `_data/dujour.json` (le contenu vrai) :
+
+| | avec la fuite | l'export réel |
+|---|---|---|
+| `.prix` | 56,9 px | **48 px** |
+| `.pastille` | 70,4 px | **64,2 px** |
+| **`carre · sassy-dujour`** | 282 px annoncés | **256 px** |
+| **`portrait · sassy-dujour`** | 12 px annoncés | **0 px — aucun débordement** |
+
+**→ LES DEUX CORRECTIONS.** Le rouge `carre · sassy-dujour` reste réel mais vaut **256 px,
+pas 282** ; le rouge `portrait · sassy-dujour` **n'existait pas du tout**. Il est apparu au
+moment où on posait la marge sous le titre de DUJOUR, et on a failli reculer sur une
+correction juste à cause d'un instrument faux.
+
+⚠️ **L'INSTRUMENT MESURAIT SA PROPRE PAGE.** C'est la forme la plus coûteuse du motif
+« chiffre juste sous un mauvais nom » : le nombre était exact — 12 px de dépassement — mais
+dans un monde qui n'est pas celui du client. Une sonde qui injecte le CSS d'un template dans
+une vraie page hérite de la typographie de cette page ; il faut soit neutraliser
+l'héritage, soit mesurer sur le bitmap.
+
+**Corrigé le 14/09** : `socleCSS()` remet `line-height`, `letter-spacing`, `word-spacing`,
+`text-indent`, `text-transform`, `font-style`, `font-weight`, `font-size` et `white-space`
+sur `.page`. `color` et `font-family` sont volontairement laissés — les six templates posent
+`color` sur `.page` et comptent sur l'héritage.
+**Vérifié que l'export ne bouge pas :** bandes de contenu des SIX templates × 3 formats,
+18 rendus, avant/après → **écart maximum 0,000 pt**.
+
+⚠️ **CE QUI RESTE À FAIRE (après mardi) :** aucune sonde ne surveille cette classe de
+défaut. Il faudrait le symétrique de `D4` pour le chemin DOM — injecter le CSS d'un template
+dans un hôte à typographie HOSTILE et vérifier que la géométrie égale celle de l'export.
+Tant que ça n'existe pas, la règle est : **un chiffre de mise en page se lit sur le bitmap.**
+
+### 14/09/2026 — ⚠️ LA LEÇON LA PLUS CHÈRE DE LA JOURNÉE : on a reproduit ce qui existait à côté
+
+Le matin du 14/09, `signeGeo()` a été écrite pour que le signe du thème photo compte « en
+bas » **depuis la zone sûre** et non depuis le bord de l'image — parce que l'ancienne
+signature, posée à `W × signY` du bord, tombait 190 px **à l'intérieur** de la bande que
+l'interface d'Instagram recouvre en story.
+
+**Ce correctif existait dans `georges-maquette` depuis le 29/07/2026**, avec sa note :
+
+> `bottom: (Z.bas + P.respiration)` — et, sur l'ardoise :
+> *« `margin-top:auto` sur le logo le colle au BAS DU PADDING, pas au bas de l'image : la
+> zone réservée basse est donc respectée elle aussi. Sans ce second décalage, le logo se
+> serait retrouvé sous le champ de réponse d'Instagram — le même défaut que le titre, à
+> l'autre bout. »*
+
+Georges avait déjà publié un titre masqué, l'avait mesuré, corrigé, et **écrit pourquoi**.
+On a redérivé la même géométrie du site de Sassy, reproduit le même défaut, et repayé la
+même mesure. Idem pour l'air titre→liste : trois valeurs redérivées (7,0 % · 6,2 % · 0) dont
+la première **coupait le logo**, là où Georges a un rapport éprouvé en production.
+
+## → RÈGLE, pour le prochain fork ET pour la remontée au master (point 23)
+
+**LA GÉOMÉTRIE GÉNÉRIQUE SE REPREND DE GEORGES. ELLE NE SE REDÉRIVE PAS DU SITE.**
+
+Se **reprend** — c'est du générique, déjà éprouvé en production :
+- les **zones sûres par format** (`ZONE_SURE`), et le fait que tout ancrage bas les compte ;
+- l'**ancrage du pied** : `margin-top:auto` dans une colonne dont le padding inclut `Z.bas`,
+  ou `bottom: Z.bas + respiration` en absolu ;
+- les **rapports de marge** : `hautDePage`, `marge` latérale, `inset`, `ecartTitreListe`,
+  `respirationLogo` ;
+- la **largeur de rendu de l'aperçu** (cf. la note sur `canvasW` ci-dessous).
+
+Se **redérive** du site du client — c'est du bespoke, et seulement ça : les couleurs et leur
+alternance par section, les polices, les idiomes de ligne (filet, pointillé, pastille), la
+casse, la présence ou l'absence de grain, la composition propre à chaque thème.
+
+⚠️ **ET LE NOMMAGE FAIT PARTIE DE LA REPRISE.** `MEP_CARTE.ecartTitreListe` est **un nom
+dans une table** chez Georges. Chez Sassy la même valeur vivait **en dur dans trois règles
+CSS différentes**, avec trois nombres différents, dont aucun n'était comparable aux autres
+sans aller les lire un par un. Une valeur générique sans nom ne se compare pas, ne se
+remonte pas, et diverge sans que personne le voie.
+
+## → POINT 23 — LA PREMIÈRE CHOSE À TRANCHER, AVANT TOUT LE RESTE
+
+**Sassy rasterise son aperçu une SECONDE FOIS, à 540. Georges réduit le bitmap de
+l'export.** Ce n'est pas une divergence parmi d'autres : c'est celle dont découlent les
+autres.
+
+| | Georges | Sassy |
+|---|---|---|
+| aperçu | `rasteriseur(canvasW)` → **1080**, puis `drawImage` dans un canvas de 540 | `rasteriseur(540)` |
+| rendus par aperçu | **un** | **deux** |
+| « aperçu == export » | vrai **par construction** | vrai **par accord de deux calculs** |
+| une valeur absolue dans le moteur | sans danger | **divergence en puissance** |
+
+⚠️ **TOUT CE QUI A ÉTÉ CORRIGÉ L'APRÈS-MIDI DU 14/09 N'EXISTERAIT PAS AVEC SON
+ARCHITECTURE** — le `ZONE_SURE` en pixels absolus, les 19,53 points d'écart sur les quatre
+templates typo, le logo absent de l'aperçu en story, le titre « collé » qui ne l'était
+qu'à l'aperçu. Un seul rendu ne peut pas diverger de lui-même.
+
+Le correctif `zoneSure()` ferme le **cas** connu. L'architecture de Georges ferme la
+**classe** : elle rend la faute impossible au lieu de la rendre détectable. Et la sonde D4,
+écrite le même jour pour surveiller cet écart, deviendrait sans objet — un rendu unique n'a
+rien à comparer.
+
+⚠️ **CE QUE LE PASSAGE COÛTE, À MESURER AVANT DE TRANCHER :** l'aperçu rasteriserait à 1080
+au lieu de 540, soit **quatre fois plus de pixels** à chaque frappe du client. C'est le seul
+argument connu en faveur du 540 — et il n'a jamais été mesuré. À faire : le temps de
+rasterisation à 540 contre 1080 sur l'iPhone du client, pas sur un Mac.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens
