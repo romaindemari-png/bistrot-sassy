@@ -199,7 +199,23 @@
                             logo à .70 ............. CARTE 3,51 · INFOS 3,27
                             logo à 1,00 ............ 5,57 partout
                           Table unique : ça vaut pour les six, sans exception. */
-    ratio:    1326 / 424   // le gabarit des quatre variantes, identique
+    ratio:    1326 / 424,  // le gabarit des quatre variantes, identique
+
+    /* ── LE MÉDAILLON DU THÈME PHOTO ────────────────────────────────────────────
+       Le thème photo ne porte pas le logotype mais le S SEUL, dans un cercle bleu,
+       centré dans l'image. C'est le signe qui existe DÉJÀ ailleurs — le favicon et la
+       carte du S du hero sont ce même carré bleu au S crème : on ne l'invente pas.
+       ⚠️ LE S NE COÛTE AUCUN ASSET DE PLUS. Sa boîte occupe `x 0→240, y 0→331` du
+          fichier `creme.png` (mesuré), donc son origine est exactement (0,0) : un
+          `mask-size: 552.5%` (1326/240) avec `mask-position: 0 0` le cadre au pixel.
+          La charge par slide reste à 170,4 Ko, sous le repère iPhone de 180.
+          Un S en fichier séparé aurait coûté +3,6 Ko de base64 pour rien. */
+    medDiam:  0.22,        // × W — diamètre du cercle
+    medS:     0.115,       // × W — largeur du S à l'intérieur
+    sRatio:   240 / 331,   // le rapport de la boîte du S, mesuré sur creme.png
+    sEchelle: 1326 / 240,  // de combien agrandir le fichier pour n'en montrer que le S
+    medEcart: 0.030        /* × W — l'air laissé sous la bande de texte quand le médaillon
+                              doit lui céder la place. Cf. `medaillonCSS`. */
   };
 
   /* Le style du texte de signature, TEL QU'IL ÉTAIT avant le logo. Il ne sert plus qu'au
@@ -246,6 +262,51 @@
       + ";mask-image:url('" + src + "');mask-size:contain;mask-repeat:no-repeat;mask-position:" + P
       + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:contain"
       + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:' + P + '}';
+  }
+
+  /** Le médaillon du thème photo : le cercle bleu et le S crème dedans, centrés dans
+      l'image. Rend '' si aucun asset n'est disponible — auquel cas `signature()` remet
+      le texte, comme partout ailleurs. */
+  function medaillonCSS(A, W, H, zt) {
+    const src = A && A['logo:creme'];
+    if (!src) return '';
+    const c = window.CLIENT_TOKENS.primitives.color;
+    const d = W * MEP_LOGO.medDiam;                    // diamètre du cercle
+    const sw = W * MEP_LOGO.medS;                      // largeur du S
+    const sh = sw / MEP_LOGO.sRatio;                   // sa hauteur, par son rapport mesuré
+
+    /* ⚠️⚠️ QUAND NOTRE MARQUE RENCONTRE LE TEXTE DU CLIENT, C'EST LA MARQUE QUI BOUGE.
+       Centré dans l'image, le médaillon tombait EXACTEMENT sur la `zoneTexte` que
+       `sassy-photo` déclare au format story — mesuré : la bande de texte occupe
+       y 806→1114 px et le médaillon y 841→1079, soit 100 % du médaillon dans la bande
+       et 77 % de la bande sous le médaillon. Le texte du client passait derrière.
+       L'admin OFFRE ce champ (`#storyText`) : le recouvrir en silence serait le même
+       défaut que la « zone fantôme », à l'envers.
+       ⚠️ LA CONDITION PORTE SUR LA DONNÉE, PAS SUR LE FORMAT. On ne teste pas
+          « si story » — on teste « si une zoneTexte est déclarée et qu'elle recouvre ».
+          Le jour où un autre format en déclare une, la règle vaut déjà ; et le jour où
+          celle de story disparaît, le médaillon revient au centre tout seul. */
+    let haut = (H - d) / 2;                            // centré, le cas par défaut
+    if (zt) {
+      const tb = (zt.y + zt.h) * H;                    // le bas de la bande de texte
+      if (tb > haut) haut = tb + W * MEP_LOGO.medEcart;
+    }
+    return '.rond{position:absolute;left:' + ((W - d) / 2).toFixed(2) + 'px'
+         + ';top:' + haut.toFixed(2) + 'px'
+         + ';width:' + d.toFixed(2) + 'px;height:' + d.toFixed(2) + 'px'
+         + ';border-radius:50%;background:' + c.accent + '}'
+      + '.ess{position:absolute;left:' + ((W - sw) / 2).toFixed(2) + 'px'
+         + ';top:' + (haut + (d - sh) / 2).toFixed(2) + 'px'   // centré dans le cercle, où qu'il soit
+         + ';width:' + sw.toFixed(2) + 'px;height:' + sh.toFixed(2) + 'px'
+         + ';background:' + c.creme
+         /* ⚠️ LE MÊME FICHIER, CADRÉ SUR SON PREMIER GLYPHE. `mask-size` agrandit le logo
+            entier de 552,5 % et `mask-position: 0 0` en aligne le coin : seul le S tombe
+            dans la boîte. Aucun second asset, aucun octet de plus. */
+         + ";mask-image:url('" + src + "');mask-size:" + (100 * MEP_LOGO.sEchelle).toFixed(1) + '% auto'
+         + ';mask-repeat:no-repeat;mask-position:0 0'
+         + ";-webkit-mask-image:url('" + src + "');-webkit-mask-size:"
+         + (100 * MEP_LOGO.sEchelle).toFixed(1) + '% auto'
+         + ';-webkit-mask-repeat:no-repeat;-webkit-mask-position:0 0}';
   }
 
   /** Le corps de la signature : le logo s'il est là, le texte sinon. */
@@ -710,9 +771,19 @@
            Le centrage est calculé, pas obtenu par `transform` : on connaît W et la largeur
            du logo, donc `left` suffit — une propriété de moins dont dépendre dans un
            `foreignObject`. */
-        + '.sign{position:absolute;left:' + ((W - W * MEP_LOGO.haut * MEP_LOGO.ratio) / 2).toFixed(2) + 'px'
-          + ';bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px}'
-        + signatureCSS(A, '.sign', c.creme, W);
+        /* ⚠️ LE THÈME PHOTO NE PORTE PLUS LE LOGOTYPE, mais le S SEUL dans un cercle
+           bleu, CENTRÉ dans l'image — plus en bas. C'est le signe du favicon et de la
+           carte du S du hero, pas une invention. Sa géométrie est dans `MEP_LOGO`
+           (`medDiam`, `medS`), donc une seule table décide encore.
+           ⚠️ ET LE REPLI GARDE SA RÈGLE. Sans asset, `medaillonCSS` rend '' et
+              `signature()` remet le texte — mais un premier jet ne posait alors PLUS
+              AUCUNE règle `.sign` : le texte se serait affiché sans style et hors de sa
+              place, en haut à gauche de l'image. Les deux branches sont donc écrites. */
+        + ((A && A['logo:creme'])
+            ? medaillonCSS(A, W, H, zt && txt ? zt : null)
+            : '.sign{position:absolute;left:' + (W * MEP_PHOTO.signX).toFixed(2) + 'px'
+              + ';bottom:' + (W * MEP_PHOTO.signY).toFixed(2) + 'px;color:' + c.creme + '}'
+              + signatureCSS(A, '.sign', c.creme, W));
     },
     corps: function (A, W, H, fmt, Z, slide) {
       const src = (slide && slide.photo) || '';
@@ -726,7 +797,12 @@
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   (src ? '<img class="ph" src="' + src + '" alt=""/>' : '')
            +   (zt && txt ? '<div class="txt"><span>' + xml(txt) + '</span></div>' : '')
-           +   signature(A, 'sign')
+           /* Le médaillon : le cercle puis le S. Si aucun asset n'est disponible,
+              `medaillonCSS` rend '' et `signature()` remet le TEXTE — le repli du
+              chantier reste entier. */
+           +   ((A && A['logo:creme'])
+                 ? '<div class="rond"></div><div class="ess"></div>'
+                 : signature(A, 'sign'))
            + '</div>';
     }
   };
