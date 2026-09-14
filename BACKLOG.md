@@ -12,7 +12,7 @@
 - **Smooth scroll Lenis** — desktop uniquement (`innerWidth >= 768`), désactivé si `prefers-reduced-motion` ; couplé à `ScrollTrigger.update`.
 - **GSAP ScrollTrigger** branché : reveals au scroll (titres `.s-title`, labels `.s-label`), stagger photos (`#about`, `#galerie`), horaires (`.horaires-row`) + infos contact (`.ci-block`), révélation du bloc carte. **Hero reveal au load** (clip-path titre, pas de ScrollTrigger). Tout sous garde `!prefers-reduced-motion`.
 - **Section `#carte` refaite en ardoise littérale** : layout une colonne, leader dots (`.plat-dots`), tampon « cette semaine », auto-masquage des catégories vides. Rendu par `renderCarte()` dans `sassy-cms-loader.js` (injecté dans `#cms-carte`).
-- **Section `#events` masquée** (`display:none`), réactivable via `_data/config.json` (`blocs.optionnels`).
+- ~~**Section `#events` masquée** (`display:none`), réactivable via `_data/config.json`~~ — **FAUX, corrigé le 14/09/2026.** Elle n'était pas réactivable : le loader ne sait que masquer. Règle statique retirée d'`index.html`. Cf. la note du 14/09 « la section ÉVÉNEMENTS ».
 - **Marquee supprimé.**
 - **Année footer dynamique** (`#yr`).
 - **`<meta name="color-scheme" content="light">`** ajoutée.

@@ -984,8 +984,20 @@ footer {
 .events-empty { grid-column:1/-1; text-align:center; padding:60px 20px; color:#2050E7; opacity:0.4; font-family:'Canela',serif; font-size:1.4rem; }
 @media(max-width:700px){ #events{padding:60px 0 80px;} .events-header{flex-direction:column;gap:8px;padding:0 20px;margin-bottom:36px;} .events-grid{padding:0 20px;grid-template-columns:1fr;gap:16px;} }
 
-/* ── Bloc événements masqué (réactivable via config.json) ── */
-#events { display: none; }
+/* ── Bloc événements ──────────────────────────────────────────────────────────
+   ⚠️ IL Y AVAIT ICI `#events { display:none }`, ET SON COMMENTAIRE MENTAIT.
+   Il annonçait « réactivable via config.json » — or `sassy-cms-loader.js` ne sait
+   que MASQUER : `if (bloc.actif === false) → display:none`. Aucune branche pour
+   `actif === true`. L'interrupteur de LeLab écrivait donc `actif: true`, le loader
+   le lisait, et cette règle statique gagnait quand même. Mesuré le 14/09/2026 sur
+   la prod : `display: none`, AUCUN style inline, hauteur 0 px, alors que le config
+   servi disait `actif: true`.
+   La règle est retirée : l'état par défaut d'une section n'appartient plus au CSS.
+   ⚠️ Le loader ne remet toujours pas `display` pour un bloc actif — c'est le bout
+      A, séparé, parce qu'il change son contrat de repli. Sans la règle ci-dessus,
+      la section est visible par défaut, ce qui est le comportement sûr : on ne
+      masque que ce qui est explicitement désactivé.
+   ────────────────────────────────────────────────────────────────────────────── */
 
 /* ── Lenis (recommandé — évite le conflit avec scroll-behavior:smooth) ── */
 html.lenis, html.lenis body { height: auto; }
