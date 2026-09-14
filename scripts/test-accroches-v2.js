@@ -450,6 +450,159 @@ function ecartMax(mesure, ref) {
   return m;
 }
 
+/* ⚠️⚠️ LE SEUIL DE D4, ET POURQUOI CELUI-LÀ. Écart mesuré entre l'aperçu et l'export,
+   moteur sain, sur les 4 templates typo × 3 formats : 0,05 à 0,46 point. C'est du bruit de
+   rasterisation — antialiasing et arrondis d'une échelle à l'autre — et carré/portrait,
+   jamais touchés par le défaut, sont dans la même fourchette.
+   La faute que D4 doit attraper valait 19,53 points. 1,00 laisse donc un peu plus du double
+   du bruit constaté et reste 19× sous la faute. Un seuil est la distance entre le bruit
+   mesuré et la faute mesurée, jamais une tolérance qu'on desserre quand ça rougit. */
+const SEUIL_BITMAP = 1.00;
+
+/* Le code posé DANS LA PAGE pour D4 : un lecteur de bandes, et un mouchard sur le moteur.
+
+   `__bandes(src)` rend les BANDES DE CONTENU d'un bitmap — les suites de lignes qui portent
+   autre chose que la couleur du premier pixel (le fond d'aplat des templates typo) — en
+   POURCENTAGES de la hauteur. C'est la seule unité dans laquelle deux rendus d'échelles
+   différentes sont comparables.
+
+   ⚠️⚠️ LE MOUCHARD EST CE QUI REND CETTE SONDE HONNÊTE. On ne RECOPIE pas les largeurs de
+      rendu : l'aperçu est à 540, codé en dur dans la fonction d'aperçu du master, et
+      l'export lit CLIENT_TOKENS.render.canvasW. Deux nombres écrits à deux endroits, donc
+      deux nombres qui peuvent bouger séparément — et une sonde qui les recopierait
+      mesurerait son propre accord avec elle-même. Elle ÉCOUTE donc le moteur et apprend de
+      lui la largeur ET la slide que l'admin vient d'employer, puis rejoue l'export avec
+      CETTE slide. Si les largeurs changent un jour, la sonde suit sans être modifiée.
+   ⚠️ Le mouchard n'ajoute rien au moteur : il enveloppe la fabrique, côté test seulement. */
+const CODE_D4 = [
+  '(function(){',
+  '  window.__bandes = function (src) {',
+  '    return new Promise(function (ok) {',
+  '      var im = new Image();',
+  '      im.onload = function () {',
+  '        var H = im.naturalHeight, w = im.naturalWidth;',
+  '        var cv = document.createElement("canvas"); cv.width = w; cv.height = H;',
+  '        var cx = cv.getContext("2d"); cx.drawImage(im, 0, 0);',
+  '        var d = cx.getImageData(0, 0, w, H).data;',
+  '        var f = [d[0], d[1], d[2]];',
+  '        var b = [], deb = null;',
+  '        for (var y = 0; y < H; y++) {',
+  '          var n = 0;',
+  '          for (var x = 0; x < w; x += 2) {',
+  '            var o = (y * w + x) * 4;',
+  '            if (Math.abs(d[o]-f[0]) + Math.abs(d[o+1]-f[1]) + Math.abs(d[o+2]-f[2]) > 30) n++;',
+  '          }',
+  '          if (n > 0 && deb === null) deb = y;',
+  '          else if (n === 0 && deb !== null) { if (y - deb > 2) b.push([deb, y]); deb = null; }',
+  '        }',
+  '        if (deb !== null) b.push([deb, H]);',
+  '        ok({ H: H, W: w, bandes: b.map(function (p) {',
+  '          return [ +(100*p[0]/H).toFixed(2), +(100*p[1]/H).toFixed(2) ]; }) });',
+  '      };',
+  '      im.onerror = function () { ok(null); };',
+  '      im.src = src;',
+  '    });',
+  '  };',
+  '  var vrai = window.MOTEUR_V2.rasteriseur;',
+  '  window.__appels = [];',
+  '  window.MOTEUR_V2.rasteriseur = function (theme) {',
+  '    var f = vrai(theme);',
+  '    if (!f) return f;',
+  '    return function (W, hab, slide, fmt) {',
+  '      window.__appels.push({ W: W, fmt: fmt, slide: slide, hab: hab });',
+  '      return f(W, hab, slide, fmt);',
+  '    };',
+  '  };',
+  '})()'
+].join('\n');
+
+/** D4 — LE BITMAP DE L'APERÇU CONTRE CELUI DE L'EXPORT, pour les quatre templates typo
+    dans les formats QUE L'ADMIN OFFRE — portrait et story, soit 8 cas ; `#fmtRow` ne porte
+    pas de bouton carré. Elle parcourt quand même les trois pour que l'écart entre ce que
+    `themes.json` déclare et ce que l'interface propose reste VISIBLE dans la sortie.
+    Ouvre son propre admin : il lui faut un mouchard posé AVANT que l'admin n'appelle le
+    moteur, et un studio propre à chaque thème.
+
+    ⚠️ LE CONTENU EMPLOYÉ EST CELUI QUE L'ADMIN PRÉREMPLIT — on ne fabrique rien. La leçon
+       du contenu « hostile » inatteignable vaut ici aussi : un rendu comparé sur des
+       données que l'interface ne produit pas ne prouve rien sur ce que le client publie.
+       `remplir()` s'en charge pour infos/annonce ; carte et dujour arrivent déjà peuplés. */
+async function mesurerD4() {
+  const { nav, p } = await ouvrirAdmin();
+  await p.evaluate(CODE_D4);
+  const lignes = [];
+  for (const id of ['sassy-carte', 'sassy-dujour', 'sassy-infos', 'sassy-annonce']) {
+    for (const fmt of ['carre', 'portrait', 'story']) {
+      const e = await entrerStudio(p, id, fmt);
+      /* ⚠️ « NON OFFERT PAR L'ADMIN », PAS « ABSENT DU THÈME » — le premier libellé de cette
+         ligne disait le second et c'était faux : `themes.json` déclare `carre` pour les SIX
+         thèmes, mais `#fmtRow` ne porte que deux boutons, `portrait` et `story`. Aucun
+         client ne peut produire un carré. C'est ce qui fait du rouge `carre · sassy-dujour`
+         un rouge sur format MORT, et cette fois c'est mesuré et non supposé.
+         ⚠️ Et D4 ne cherche pas à le tester quand même : la leçon du contenu « hostile »
+            inatteignable vaut pour les formats. Comparer deux rendus d'un format que
+            l'interface n'offre pas ne dit rien de ce que le client publie. */
+      if (!e || !e.ok || e.fmt !== fmt) { lignes.push({ id, fmt, nonOffert: true }); continue; }
+      await remplir(p, id);
+      await ouvrirVolet(p); await dodo(700);
+      /* ⚠️ IL FAUT DÉCLENCHER UN RENDU, et c'est ce qui manquait au premier jet : ouvrir
+         le volet ne repeint pas l'aperçu typo — `paintCartePreview` part de `renderStudio`.
+         Sans ce coup de pouce, D4 rougissait en disant « le moteur n'a pas été appelé »,
+         c'est-à-dire qu'elle mesurait son propre défaut de pilotage et pas le rendu. La
+         sonde D1 juste au-dessus fait exactement ce geste, pour la même raison. */
+      await p.evaluate(() => { window.__appels = [];
+        if (typeof renderStudio === 'function') renderStudio(); });
+      await dodo(1400);
+      const r = await p.evaluate(async () => {
+        const cv = document.getElementById('igCarteCv');
+        const a = window.__appels;
+        if (!cv || !a.length) return { rate: !cv ? 'aucun canvas d\'aperçu' : 'le moteur n\'a pas été appelé' };
+        /* Le DERNIER appel est celui qui a peint le canvas visible. On en reprend la slide
+           et le gabarit pour rejouer l'export : même contenu, autre échelle. */
+        const d = a[a.length - 1];
+        const W = window.CLIENT_TOKENS.render.canvasW;
+        const bAp = await window.__bandes(cv.toDataURL('image/jpeg', 0.92));
+        const u = await window.MOTEUR_V2._interne.rasteriser(
+          window.MOTEUR_V2._interne.TEMPLATES[currentCustomTheme.template], W, d.hab, d.slide, d.fmt);
+        const bEx = await window.__bandes(u);
+        return { wAp: d.W, wEx: W, fmtAp: d.fmt, ap: bAp, ex: bEx };
+      });
+      if (r.rate) { lignes.push({ id, fmt, rate: r.rate, ok: false }); continue; }
+      const n = Math.min(r.ap.bandes.length, r.ex.bandes.length);
+      let m = 0;
+      for (let i = 0; i < n; i++) m = Math.max(m,
+        Math.abs(r.ap.bandes[i][0] - r.ex.bandes[i][0]),
+        Math.abs(r.ap.bandes[i][1] - r.ex.bandes[i][1]));
+      const memeCompte = r.ap.bandes.length === r.ex.bandes.length;
+      lignes.push({ id, fmt, wAp: r.wAp, wEx: r.wEx, hAp: r.ap.H, hEx: r.ex.H,
+        nAp: r.ap.bandes.length, nEx: r.ex.bandes.length, ecart: +m.toFixed(2),
+        dernierAp: r.ap.bandes[r.ap.bandes.length - 1] || null,
+        dernierEx: r.ex.bandes[r.ex.bandes.length - 1] || null,
+        /* ⚠️ LE COMPTE DE BANDES COMPTE AUTANT QUE L'ÉCART. Le symptôme le plus grave du
+           14/09 n'était pas un décalage : c'était le LOGO ABSENT de l'aperçu. Un élément
+           qui disparaît ne produit aucun écart de position — il produit une bande de
+           moins. Comparer les écarts seuls aurait manqué le pire. */
+        ok: memeCompte && m <= SEUIL_BITMAP });
+    }
+  }
+  await nav.close();
+  dire('  aperçu (canvas de l\'admin) contre export (rejoué avec LA MÊME slide) :');
+  for (const l of lignes) {
+    if (l.nonOffert) { dire('    · ' + (l.id + ' · ' + l.fmt).padEnd(24)
+      + 'non offert par l\'admin (aucun bouton #fmtRow) — hors périmètre'); continue; }
+    if (l.rate)   { dire('    ' + (l.id + ' · ' + l.fmt).padEnd(26) + '✗ ' + l.rate); continue; }
+    dire('    ' + (l.ok ? '✓ ' : '✗ ') + (l.id + ' · ' + l.fmt).padEnd(24)
+      + l.wAp + '×' + l.hAp + ' contre ' + l.wEx + '×' + l.hEx
+      + '   bandes ' + l.nAp + '/' + l.nEx
+      + '   écart max ' + l.ecart.toFixed(2) + ' pt (seuil ' + SEUIL_BITMAP.toFixed(2) + ')');
+    if (!l.ok && l.nAp !== l.nEx)
+      dire('      '.padEnd(26) + '  ⚠ PAS LE MÊME NOMBRE DE BANDES : un élément manque d\'un côté'
+         + '   dernière bande  aperçu ' + (l.dernierAp ? l.dernierAp.join(' → ') : '—')
+         + '   export ' + (l.dernierEx ? l.dernierEx.join(' → ') : '—'));
+  }
+  return lignes;
+}
+
 /* ══════════════════ SONDE D ══════════════════════════════════════════════════ */
 async function sondeD() {
   dire('\n━━ D · APERÇU == EXPORT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -607,6 +760,7 @@ async function sondeD() {
 
   const photo = calques.filter(c => c.id !== 'sassy-sans-moteur');
   const sans = calques.find(c => c.id === 'sassy-sans-moteur');
+  const d4 = await mesurerD4();
   verdict('D1 · l\'aperçu typo passe par le rasteriseur', typo.every(t => t.rast > 0));
   /* ⚠️ LES DEUX SENS COMPTENT. Le module masquait l'habillage par
      `removeProperty('display')` — or la feuille de l'admin déclare
@@ -676,6 +830,24 @@ async function sondeD() {
   verdict('D2 · le décor tombe où le template l\'annonce, et dans la zone sûre', d2);
   if (emp.saute) dire('  · D3 · pas de rendu périmé affiché                     sans objet (aucun moteur)');
   else verdict('D3 · pas de rendu périmé affiché', emp.hFinal === emp.hRecent);
+  /* ⚠️⚠️ D4 EXISTE PARCE QUE LA SECTION S'APPELAIT « APERÇU == EXPORT » SANS LE MESURER.
+     Pour les quatre templates typo, D1 vérifiait seulement que le rasteriseur avait été
+     APPELÉ — pas que les deux bitmaps disent la même chose. C'est ce trou qui a laissé
+     vivre la divergence d'échelle du 14/09 : `ZONE_SURE` en pixels absolus, l'aperçu
+     rendu à 540 et l'export à 1080, 19,53 points d'écart et le logo carrément absent de
+     l'aperçu en story. Réintroduit, le défaut laissait le garde-fou à 9 verts sur 9.
+     ⚠️ Un titre de section n'est pas une garantie. Celui-ci en est une maintenant. */
+  /* ⚠️⚠️ UN CAS SAUTÉ NE COMPTE PAS COMME RÉUSSI, et le premier jet de ce verdict faisait
+     l'inverse : les lignes « non offert » portaient `ok: true` et entraient dans le
+     `every`. D4 aurait donc pu verdir en ne mesurant plus rien — le motif de la journée,
+     pour la cinquième fois, cette fois écrit de ma main dans la sonde censée le corriger.
+     Le verdict compte donc les cas RÉELLEMENT mesurés et exige le compte attendu : le jour
+     où l'admin cesse d'offrir un format, D4 rougit au lieu de mesurer moins en silence. */
+  const mesures = d4.filter(r => !r.nonOffert);
+  const ATTENDU_D4 = 8;   // 4 templates typo × { portrait, story } — le carré n'est pas offert
+  verdict('D4 · le bitmap de l\'aperçu == celui de l\'export (' + mesures.length + '/'
+          + ATTENDU_D4 + ' cas mesurés)',
+          mesures.length === ATTENDU_D4 && mesures.every(r => r.ok));
 }
 
 (async () => {
