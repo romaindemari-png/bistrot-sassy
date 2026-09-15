@@ -1329,6 +1329,91 @@ journée a passée son temps à corriger — une affirmation dont le mécanisme 
 `display: none`. C'est mesurable en une passe sur `document.styleSheets`, comme le diagnostic
 du 14/09 l'a fait à la main.
 
+### 15/09/2026 — quatre constats : la section événements et la navigation (NON TRAITÉS)
+
+Deux sur le rendu des événements (1 et 2), deux sur la barre de navigation trouvés en
+ajoutant l'entrée « événements » aux deux menus (3 et 4). Les quatre sont **pré-existants** ;
+3 et 4 sont vérifiés au `git stash` contre l'état d'avant ce chantier.
+
+**1 · Le script inline d'`index.html` injecte la saisie client en `innerHTML` sans
+l'échapper.**
+
+Le rendu des cartes d'événements est un `<script>` inline en fin de `#events`, distinct de
+`sassy-cms-loader.js`. Il construit son propre HTML :
+
+```js
+'<h3 class="event-name">' + e.titre + '</h3>'
++ (e.description ? '<p class="event-desc">' + e.description + '</p>' : '')
+'<img class="event-photo" src="' + e.photo + '" alt="' + e.titre + '" …/>'
+```
+
+Ni `titre`, ni `description`, ni `photo` ne passent par un échappement. **C'est de la saisie
+client** — l'éditeur « Gérer mes événements » de LeLab écrit directement dans
+`_data/events.json`.
+
+⚠️ **LE LOADER A ÉTÉ DURCI POUR ÇA LE 11/09** (`4451602` — « echapper TOUTE donnee client
+injectee en innerHTML »), **et ce script n'en a pas bénéficié** parce qu'il ne passe pas par
+le loader. Un durcissement qui ne couvre pas tous les chemins d'injection n'en couvre aucun.
+
+Conséquences concrètes : un titre contenant `<` casse la carte ; un titre contenant `"` sort
+de l'attribut `alt` et peut poser un attribut arbitraire sur l'`<img>`. Le contenu de
+démonstration du 15/09 a été écrit **sans guillemet droit ni chevron** pour cette raison —
+c'est un contournement, pas une correction.
+
+→ **À traiter** : réutiliser la fonction d'échappement du loader, ou déplacer ce rendu dans
+le loader. ⚠️ Et **chercher les autres `innerHTML`** qui reçoivent de la saisie client : si
+celui-ci a été manqué, il peut en rester.
+
+**2 · `text-transform: lowercase` sur `.event-name` mange les capitales des noms propres.**
+
+Mesuré sur le contenu de démonstration : « les vins de **C**assis » s'affiche « les vins de
+cassis », et « le trio de la **P**laine » devient « la plaine ». La règle est volontaire —
+c'est l'idiome de DA du site, le même que `événements`, `la carte`, `horaires`.
+
+→ **Décision de DA à trancher à froid, par Romain** : soit on l'assume (les noms propres
+passent en bas de casse comme le reste, c'est cohérent et c'est un parti pris), soit on
+exempte les noms propres — ce qui demande alors un moyen de les marquer dans la saisie, donc
+une complication de l'éditeur pour le client. ⚠️ Ne rien changer sans cette décision : la
+règle s'applique aussi à `.s-title`, `.event-name` n'est pas un cas isolé.
+
+**3 · `.btn-a` n'est défini NULLE PART — le « réserver » du menu mobile est du texte nu.**
+
+`grep -n "\.btn-a" index.html` → **aucun résultat**. La classe est posée sur l'entrée
+« réserver » du menu mobile (`class="ml btn-a"`, avec un `style` en ligne qui ne donne que
+`margin-top` et `padding`), et **rien ne la style**. L'entrée s'affiche donc comme les
+autres liens, sans son fond de bouton — alors que son jumeau desktop, `.nav-cta`, a bien son
+pastille jaune.
+
+⚠️ **PRÉ-EXISTANT, VÉRIFIÉ AU `git stash`** : identique avant l'ajout de l'entrée
+« événements » du 15/09. Ce n'est pas une régression.
+⚠️ **MAIS C'EST VISIBLE SUR L'ÉCRAN MONTRÉ AU CLIENT** — le menu mobile est le premier geste
+d'un visiteur sur téléphone, et l'action principale y est indistinguable des liens de
+navigation. C'est une classe posée sans mécanisme derrière, la même famille que le
+`#events { display:none }` « réactivable via config.json » et que l'interrupteur du plat du
+jour : **une affirmation sans mécanisme**, en CSS cette fois.
+→ Correction probable : une règle `.btn-a` qui reprend le fond jaune et le rayon de
+`.nav-cta`, ou remplacer la classe par `.nav-cta` si son style convient en mobile. **À
+mesurer avant** : `.nav-cta` porte des dimensions pensées pour la barre, pas pour un menu
+plein écran.
+
+**4 · `sTo()` amène TOUTES les sections à `top: 0` en mobile — 68 px passent sous la barre.**
+
+Mesuré à 390 px sur **les sept entrées** du menu, sans exception :
+
+| entrée | `top` après le clic | barre fixe |
+|---|---|---|
+| about · carte · galerie · horaires · events · contact · reservation | **0 px** | **68 px** |
+
+Le haut de chaque section est donc recouvert par le `#nav` fixe. En desktop le même geste
+laisse `top: 80 px` — dégagé. Le défaut est **uniforme et pré-existant** : il ne vient pas de
+l'entrée « événements » ajoutée le 15/09, vérifié entrée par entrée.
+
+→ Un décalage de la hauteur du `#nav` dans `sTo()` le règle pour les sept d'un coup.
+⚠️ **À mesurer avant d'écrire** : `sTo` cohabite avec Lenis (smooth scroll désactivé sous
+768 px et sous `prefers-reduced-motion`), donc il y a **deux chemins de défilement** et le
+décalage doit valoir pour les deux. Ne pas corriger l'un en croyant les avoir faits tous les
+deux — c'est le motif du 14/09 sur l'aperçu à 540.
+
 ## Rappels techniques (learnings)
 - Moteur studio 4 étapes : ne pas toucher `goStep`/`slideToStep`/`adjustStepsHeight`/`currentStep`.
 - **Instagram : l'API est `graph.instagram.com`, JAMAIS `graph.facebook.com`.** Les tokens

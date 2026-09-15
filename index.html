@@ -1065,6 +1065,13 @@ html.lenis, html.lenis body { height: auto; }
     <li><a href="javascript:void(0)" onclick="sTo('carte')">la carte</a></li>
     <li><a href="javascript:void(0)" onclick="sTo('galerie')">galerie</a></li>
     <li><a href="javascript:void(0)" onclick="sTo('horaires')">horaires</a></li>
+    <!-- ⚠️ L'ORDRE DU MENU SUIT L'ORDRE DES SECTIONS : #events vit entre #horaires et
+         #contact, l'entrée est donc ici. Elle manquait — la section existait, se
+         rendait, et AUCUN chemin n'y menait : le menu passait de « horaires » à
+         « contact » en l'enjambant. `grep -c "sTo('events')"` rendait 0 le 15/09/2026.
+         Une section injoignable depuis la navigation est une section que le client ne
+         voit pas, même quand tout le reste est juste. -->
+    <li><a href="javascript:void(0)" onclick="sTo('events')">événements</a></li>
     <li><a href="javascript:void(0)" onclick="sTo('contact')">contact</a></li>
   </ul>
   <div class="nav-cta-wrap">
@@ -1082,6 +1089,7 @@ html.lenis, html.lenis body { height: auto; }
   <a href="javascript:void(0)" onclick="sTo('carte')"       class="ml">la carte</a>
   <a href="javascript:void(0)" onclick="sTo('galerie')"     class="ml">galerie</a>
   <a href="javascript:void(0)" onclick="sTo('horaires')"    class="ml">horaires</a>
+  <a href="javascript:void(0)" onclick="sTo('events')"      class="ml">événements</a>
   <a href="javascript:void(0)" onclick="sTo('contact')"     class="ml">contact</a>
   <a href="javascript:void(0)" onclick="sTo('reservation')" class="ml btn-a" style="margin-top:1rem;padding:.7rem 2rem;">r&#233;server</a>
 </div>
