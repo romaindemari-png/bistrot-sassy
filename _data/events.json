@@ -1,16 +1,23 @@
 [
   {
-    "date": "2026-06-25",
-    "heure": "19:30",
-    "titre": "soirée jazz",
-    "description": "Une soirée entre amis autour du jazz manouche avec le quartet Milosc.",
+    "date": "2026-09-25",
+    "heure": "19:00",
+    "titre": "les vins de Cassis",
+    "description": "Six cuvées du vignoble d’à côté, le vigneron raconte, on goûte et on note.",
     "photo": ""
   },
   {
-    "date": "2026-06-21",
+    "date": "2026-10-03",
     "heure": "20:00",
-    "titre": "fête de la musique",
-    "description": "On fête la musique comme il se doit — terrasse ouverte, planches apéro et bonne humeur.",
+    "titre": "concert — le trio de la Plaine",
+    "description": "Guitare, contrebasse et une voix. Deux sets sur la terrasse, planches entre les deux.",
+    "photo": ""
+  },
+  {
+    "date": "2026-10-16",
+    "heure": "19:30",
+    "titre": "la saison des coquillages",
+    "description": "On ouvre la saison comme il se doit — plateau du jour, citron, pain de campagne.",
     "photo": ""
   }
 ]
