@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Charte LeLab — contrôle</title>
+<!--
+  ══════════════════════════════════════════════════════════════════════════
+  PAGE DE CONTRÔLE DE LA CHARTE DE L'APP — bout 1 de la refonte (LELAB-DESIGN.md §1, §3)
+  ══════════════════════════════════════════════════════════════════════════
+  Montre les fondations, rien d'autre : tokens dans les deux chromies, polices, grain, flous, et un
+  exemplaire de chaque état. Elle ne dépend d'aucun global de l'admin et ne touche à aucune donnée.
+  Mesures (contraste WCAG, poids) : node scripts/mesure-charte.js <port>
+  Ouvrir : /admin/charte.html
+  ══════════════════════════════════════════════════════════════════════════
+-->
+<link rel="stylesheet" href="/admin/charte.css">
+<style>
+*{box-sizing:border-box;margin:0}
+body{min-height:100vh;background:var(--fond);color:var(--texte);font:400 16px/1.5 var(--sans);
+  -webkit-text-size-adjust:100%;text-size-adjust:100%}
+.page{position:relative;z-index:2;max-width:560px;margin:0 auto;padding:28px 16px 64px;
+  display:flex;flex-direction:column;gap:22px}
+
+.surtitre{font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--texte-2)}
+.accueil{font:400 54px/.93 var(--serif);letter-spacing:-.028em}
+.corps{font-size:16px;color:var(--texte)}
+.corps-2{font-size:14px;color:var(--texte-2)}
+
+.tuiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tuile{aspect-ratio:1;border-radius:24px;padding:16px;display:flex;flex-direction:column;justify-content:space-between}
+.tuile .t-sur{font:500 10px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase}
+.tuile .t-titre{font:400 33px/.95 var(--serif);letter-spacing:-.02em}
+.tuile--a-jour{background:var(--papier);color:var(--encre)}
+.tuile--a-jour .t-sur{color:var(--papier-2)}
+.tuile--a-voir{background:var(--a-voir);color:var(--a-voir-texte)}
+.tuile--a-voir .t-sur{color:var(--a-voir-texte-2)}
+.tuile--masquee{border:1.5px dashed var(--contour);color:var(--texte)}
+.tuile--masquee .t-sur{color:var(--texte-2)}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font:500 13px/1 var(--sans);padding:9px 14px;border-radius:999px}
+.chip--en-ligne{background:var(--en-ligne);color:var(--encre)}
+
+.pill{display:flex;align-items:center;justify-content:center;height:58px;border-radius:999px;
+  font:600 16px/1 var(--sans);padding:0 24px;cursor:pointer;width:100%}
+.pill--plein{background:var(--a-voir);color:var(--a-voir-texte);border:0}
+/* Contour : la couleur du texte à 22 % (spec §4, chips), DÉRIVÉE du token. Repli sans color-mix : --contour. */
+.pill--contour{background:transparent;color:var(--texte);border:1.5px solid var(--contour);
+  border-color:color-mix(in srgb,var(--texte) 22%,transparent)}
+
+.bascule{align-self:flex-start;display:flex;align-items:center;gap:10px;min-height:44px;padding:0;
+  background:none;border:0;color:var(--texte);font:500 14px/1 var(--sans);cursor:pointer}
+.bascule .piste{width:44px;height:26px;border-radius:999px;border:1.5px solid var(--contour);position:relative}
+.bascule .piste::after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;
+  background:var(--texte);transition:transform .2s}
+.bascule[aria-checked="true"] .piste::after{transform:translateX(18px)}
+@media (prefers-reduced-motion:reduce){.bascule .piste::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="flou-violet" aria-hidden="true"></div>
+<div class="flou-jaune" aria-hidden="true"></div>
+<div class="grain-fond" aria-hidden="true"></div>
+
+<main class="page">
+  <button type="button" class="bascule" id="bascule" role="switch" aria-checked="true">
+    <span class="piste" aria-hidden="true"></span><span>Nuit</span>
+  </button>
+
+  <p class="surtitre">Ce que vos clients liront</p>
+  <h1 class="accueil">Bonsoir.<br>Votre site est à jour.</h1>
+
+  <div class="chips"><span class="chip chip--en-ligne">En ligne</span></div>
+
+  <div class="tuiles">
+    <div class="tuile tuile--a-jour grain-papier"><span class="t-sur">À jour</span><span class="t-titre">La carte</span></div>
+    <div class="tuile tuile--a-voir grain-papier"><span class="t-sur">À voir</span><span class="t-titre">Les horaires</span></div>
+    <div class="tuile tuile--masquee"><span class="t-sur">Masquée</span><span class="t-titre">Rien à venir</span></div>
+  </div>
+
+  <p class="corps">Modifiez un plat et le bouton s’allume. Rien ne part sans ce bouton.</p>
+  <p class="corps-2">En ligne 30 secondes après.</p>
+
+  <button type="button" class="pill pill--plein grain-papier">Publier l’ardoise</button>
+  <button type="button" class="pill pill--contour">Tout est en ligne</button>
+</main>
+
+<script>
+/* L'interrupteur pose data-chromie. Sans choix, la page suit le téléphone (prefers-color-scheme) :
+   l'état affiché part donc de la chromie EFFECTIVE, pas d'un défaut supposé. */
+(function(){
+  const html = document.documentElement, b = document.getElementById('bascule');
+  const nuit = () => html.dataset.chromie ? html.dataset.chromie === 'nuit'
+                                          : !matchMedia('(prefers-color-scheme: light)').matches;
+  const maj = () => b.setAttribute('aria-checked', String(nuit()));
+  b.addEventListener('click', () => { html.dataset.chromie = nuit() ? 'jour' : 'nuit'; maj(); });
+  maj();
+})();
+</script>
+</body>
+</html>
