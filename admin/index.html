@@ -2700,6 +2700,32 @@ function appliquerRoute(){
   applyScreen(ecran || 'dashboard');
 }
 
+/* ═══ LE HASH QUI CHANGE SANS RECHARGEMENT ═══════════════════════════════════════════════════════
+   Le routeur n'était lu qu'au boot : un #studio/2 tapé depuis l'étape 5 changeait l'URL et laissait
+   l'écran à l'étape 5 (26/10). L'écoute rejoue appliquerRoute, le MÊME chemin que le refresh.
+   ⚠️ PAS DE BOUCLE, ET C'EST MESURÉ (test-routage, cas d) : ecrireRoute passe par replaceState, qui
+      ne déclenche pas `hashchange`. Ne JAMAIS remplacer replaceState par une affectation à
+      location.hash dans ecrireRoute : l'écouteur se ré-alimenterait à chaque goStep.
+   ⚠️ LA GARDE D'ÉDITION, AVANT TOUT. appliquerRoute ouvre ses écrans par applyScreen / openEdit,
+      SANS la garde de showScreen : un hash tapé dans un éditeur modifié aurait jeté la saisie sans un
+      mot. On remet l'URL de l'éditeur (le client y est toujours), on demande, et on ne rejoue la cible
+      qu'une fois la sortie confirmée (test-routage, cas e).
+   ⚠️ Porte de login fermée → on se tait : le boot et handleAuthHash décident seuls. Un jeton dans le
+      fragment, lui, est déjà ignoré par appliquerRoute. */
+window.addEventListener('hashchange', () => {
+  if (!document.body.classList.contains('authed')) return;
+  if (typeof enEditionModifiee === 'function' && enEditionModifiee()){
+    const cible = location.hash;
+    ecrireRoute('edit/' + currentSection);
+    demanderSortieEdition(() => {
+      try { history.replaceState(null, '', location.pathname + location.search + cible); } catch (e){}
+      appliquerRoute();
+    });
+    return;
+  }
+  appliquerRoute();
+});
+
 /* ── Liens d'invitation / récupération (fragment #invite_token / #recovery_token) ──
    L'auth custom (sans widget) doit intercepter ces tokens : sinon le lien reçu par mail
    affiche la porte de login normale et le compte reste inactivable. */

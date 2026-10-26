@@ -230,6 +230,77 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       fails.push(`STUDIO/ #${h} laisse « ${r.hash || '(vide)'} » dans la barre d'adresse alors que le client est à l'étape 1 — une URL qui ment, et qu'il peut mettre en favori`);
   }
 
+  /* ── (d) LE HASH CHANGE SANS RECHARGEMENT — #studio/2 depuis l'étape 5 ──
+     Le client tape ou corrige l'URL, la page ne recharge pas (navigation SAME-DOCUMENT). Le 26/10,
+     l'URL disait #studio/2 et l'écran montrait l'étape 5 : le hash n'était lu qu'au boot, aucun
+     écouteur `hashchange`. ⚠️ `location.hash = …` est EXACTEMENT ce geste (événement natif, pas un
+     appel à appliquerRoute) : appeler le routeur à la main prouverait le routeur, pas l'écoute. */
+  await studioVierge();
+  await p.evaluate(() => goStep(5));
+  await wait(SETTLE);
+  const d0 = await etatStudio();
+  if (d0.step !== 5 || d0.hash !== '#studio/5') fails.push(`setup/ impossible d'atteindre l'étape 5 (étape ${d0.step}, ${d0.hash}) — le cas (d) ne prouverait rien`);
+  /* PAS DE BOUCLE, ET C'EST UNE PROPRIÉTÉ DU NAVIGATEUR QU'ON MESURE, PAS QU'ON SUPPOSE :
+     ecrireRoute passe par replaceState, qui ne déclenche PAS `hashchange`. Si c'était faux, l'écouteur
+     rejouerait le routeur à chaque goStep, qui réécrirait le hash, qui le rejouerait… */
+  const viaReplace = await p.evaluate(() => new Promise(res => {
+    let n = 0; const f = () => n++;
+    window.addEventListener('hashchange', f);
+    ecrireRoute('studio/3'); ecrireRoute('studio/5');
+    setTimeout(() => { window.removeEventListener('hashchange', f); res(n); }, 200);
+  }));
+  if (viaReplace !== 0) fails.push(`STUDIO/ replaceState a déclenché ${viaReplace} hashchange — l'écouteur bouclerait avec ecrireRoute`);
+  const d1 = await p.evaluate(() => new Promise(res => {
+    let n = 0; const f = () => n++;
+    window.addEventListener('hashchange', f);
+    location.hash = 'studio/2';                              // le geste du client
+    setTimeout(() => {
+      window.removeEventListener('hashchange', f);
+      res({
+        step: currentStep, hash: location.hash, evenements: n,
+        visible: [...document.querySelectorAll('#studio-unlocked .step-block')]
+          .filter(b => getComputedStyle(b).display !== 'none').map(b => b.dataset.stepId).join(','),
+        inFinal: document.body.classList.contains('in-final'),
+      });
+    }, 900);
+  }));
+  if (d1.step !== 2 || d1.visible !== 'type' || d1.inFinal)
+    fails.push(`STUDIO/ #studio/2 tapé depuis l'étape 5 SANS rechargement → étape ${d1.step}, écran visible « ${d1.visible} », in-final=${d1.inFinal}. L'URL dit 2, l'écran montre autre chose : c'est le bug du 26/10`);
+  if (d1.hash !== '#studio/2')
+    fails.push(`STUDIO/ après #studio/2 tapé, l'URL est devenue « ${d1.hash} »`);
+  if (d1.evenements !== 1)
+    fails.push(`STUDIO/ ${d1.evenements} hashchange pour UN geste — le routeur s'est ré-alimenté (boucle)`);
+
+  /* ── (e) …ET L'ÉCOUTE NE PERCE PAS LA GARDE D'ÉDITION ──
+     Rejouer appliquerRoute sur un hashchange ouvre une porte de plus : #accueil tapé dans un éditeur
+     modifié appellerait applyScreen DIRECT (sans la garde de showScreen), #edit/autre appellerait
+     openEdit qui reconstruit l'écran — la saisie non publiée disparaîtrait sans un mot. La garde
+     DOIT demander, et l'URL doit rester celle de l'écran tant que le client n'a pas tranché. */
+  const cleE = cartes[0].edit;
+  await arriverSur('edit/' + cleE);
+  await p.evaluate(() => {
+    const champ = document.querySelector('#edit-body input, #edit-body textarea');
+    if (champ){ champ.value += ' ZZ'; champ.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+  const e1 = await p.evaluate(() => new Promise(res => {
+    location.hash = 'accueil';
+    setTimeout(() => res({
+      ecran: [...document.querySelectorAll('.screen.active')].map(s => s.id).join(','),
+      hash: location.hash,
+      question: (document.getElementById('quitConfirm') || { style: {} }).style.display === 'flex',
+    }), 600);
+  }));
+  if (e1.ecran !== 'screen-edit' || !e1.question)
+    fails.push(`EDIT/ #accueil tapé dans un éditeur MODIFIÉ → écran « ${e1.ecran} », question posée : ${e1.question}. La saisie non publiée doit être protégée, quel que soit le chemin de sortie`);
+  if (e1.hash !== '#edit/' + cleE)
+    fails.push(`EDIT/ pendant la question, l'URL dit « ${e1.hash} » alors que le client est toujours dans l'éditeur — une URL qui ment`);
+  const e2 = await p.evaluate(() => new Promise(res => {
+    confirmerSortieEdition();
+    setTimeout(() => res({ ecran: [...document.querySelectorAll('.screen.active')].map(s => s.id).join(','), hash: location.hash }), 600);
+  }));
+  if (e2.ecran !== 'screen-dashboard' || e2.hash !== '#accueil')
+    fails.push(`EDIT/ sortie confirmée → écran « ${e2.ecran} », URL « ${e2.hash} » au lieu de l'accueil — le client a tranché, il doit arriver où il l'a demandé`);
+
 
   // ── 3. UN HASH PORTEUR DE JETON N'ACTIVE JAMAIS LE ROUTEUR ─────────────────────────────────
   /* Les quatre familles qu'Identity et l'OAuth Instagram font arriver dans le fragment. Le routeur
