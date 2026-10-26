@@ -6,15 +6,24 @@
       Seuils : 4,5:1 (texte courant), 3:1 (≥ 24 px). Les seuils ne bougent pas ; une nuance qui
       échoue se corrige dans la nuance.
       ⚠️ LE FOND D'UN TEXTE N'EST PAS LE TOKEN SEUL. Sur le fond de l'app passent deux flous et le
-         grain ; sur un papier, le grain est en multiply PAR-DESSUS le texte. On retient le PIRE des
-         cas composés (en sRGB, comme le navigateur fusionne) :
+         grain ; sur une surface (papier, à voir), le grain est posé PAR-DESSUS le texte. On retient le
+         PIRE des cas composés (en sRGB, comme le navigateur fusionne) :
            fond nu · + flou violet au cœur · + flou jaune au cœur · + les deux (seulement si leurs
-           disques se superposent, mesuré en 0.) · chacun + le grain
-         et, sur une surface grainée, le pixel noir du grain posé sur le côté qui perd du contraste.
-         Le cœur d'un flou est pris à son opacité pleine : c'est une borne, le flou réel est plus doux.
+           disques se superposent, mesuré en 0.) · chacun + le grain au 1er ET au 99e centile de la tuile
+         et, sur une surface grainée, ces deux valeurs posées sur le texte, sur la surface, ou sur les
+         deux. Le cœur d'un flou est pris à son opacité pleine : c'est une borne.
+      ⚠️ LE GRAIN SE JUGE AU 1er / 99e CENTILE, PLUS AU PIXEL EXTRÊME (décidé le 26/10). Le bruit est
+         gaussien et borné à 40–215 : les pixels aux bornes sont 28 sur 16 384, soit 0,17 % de la
+         tuile — des points isolés, à 2 px physiques, jamais une plage. 0,17 % des pixels ne font pas
+         un fond de texte : juger le contraste sur eux, c'était dimensionner toute la palette sur des
+         poussières. Le centile garde 98 % de la tuile dans la mesure et écarte les poussières.
+      ⚠️ TOUT EST LU DANS LA PAGE : tuile (background-image calculé), opacité, mode de fusion, et les
+         pixels de la tuile eux-mêmes (canvas). Changer le CSS change la mesure, sans toucher ce script.
+   1bis. LUMINANCE MOYENNE DES SURFACES : avec grain, à ±1,5 % au plus de la même surface sans grain
+      (moyenne sur TOUS les pixels de la tuile). Un grain doit texturer, pas éclaircir ni salir.
    2. LES DEUX COPIES DU BLOC JOUR (attribut / prefers-color-scheme) doivent donner les mêmes tokens.
    3. LES POLICES : Instrument chargées depuis le dépôt, aucune requête Google Fonts.
-   4. LES POIDS : grain.png, chaque woff2, et le total transféré par la page (cache coupé).
+   4. LES POIDS : les deux tuiles de grain (≤ 20 Ko chacune), chaque woff2, et le total transféré par la page (cache coupé).
 
    USAGE :  python3 -m http.server 8080   puis   node scripts/mesure-charte.js 8080
    PRÉREQUIS : puppeteer-core + un Chrome installé.
@@ -35,6 +44,15 @@ const rgb = s => { const m = s.match(/[\d.]+/g).map(Number); return { c: m.slice
 const sur = (base, coul, a) => base.map((b, i) => b * (1 - a) + coul[i] * a);              // coul posée à l'opacité a
 const lum = c => { const l = c.map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; };
 const ratio = (a, b) => { const [h, l] = [lum(a), lum(b)].sort((x, y) => y - x); return (h + 0.05) / (l + 0.05); };
+/* Les modes de fusion employés (W3C Compositing 1), canal par canal, puis l'opacité du calque. */
+const MODES = {
+  'normal':     (cb, cs) => cs,
+  'multiply':   (cb, cs) => cb * cs,
+  'screen':     (cb, cs) => cb + cs - cb * cs,
+  'soft-light': (cb, cs) => cs <= 0.5 ? cb - (1 - 2 * cs) * cb * (1 - cb)
+                                      : cb + (2 * cs - 1) * ((cb <= 0.25 ? ((16 * cb - 12) * cb + 4) * cb : Math.sqrt(cb)) - cb),
+};
+const fondu = (c, g, grain) => c.map(cb => cb * (1 - grain.a) + MODES[grain.mode](cb, g) * grain.a);
 const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
 
 (async () => {
@@ -71,20 +89,51 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   });
   console.log(`\n(flous : cœurs ${chevauchement ? 'SUPERPOSABLES → cas « les deux flous » compté' : 'jamais superposés à 390 px → cas « les deux flous » écarté'})`);
 
+  /* Les pixels d'une tuile, lus par le navigateur (canal R : la tuile est en niveaux de gris). */
+  const tuiles = {};
+  const pixels = async url => {
+    if (!tuiles[url]) tuiles[url] = await p.evaluate(u => new Promise((ok, ko) => {
+      const im = new Image();
+      im.onload = () => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+        const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+        const d = x.getImageData(0, 0, c.width, c.height).data, out = [];
+        for (let i = 0; i < d.length; i += 4) out.push(d[i] / 255);
+        ok(out); };
+      im.onerror = () => ko(new Error('tuile illisible : ' + u));
+      im.src = u;
+    }), url);
+    return tuiles[url];
+  };
+  const grainDe = async g => {
+    if (!g || !g.url) return null;
+    const px = await pixels(g.url);
+    const tri = [...px].sort((a, b) => a - b);
+    return { ...g, px, bas: tri[Math.floor(tri.length * 0.01)], haut: tri[Math.floor(tri.length * 0.99)], fichier: g.url.replace(/^.*\//, '') };
+  };
+
   // ── 1. CONTRASTE ────────────────────────────────────────────────────────────
-  const lignes = [];
+  const lignes = [], lignesLum = [];
   for (const chromie of ['nuit', 'jour']){
     const releve = await p.evaluate(ch => {
       document.documentElement.dataset.chromie = ch;
       const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
       const couleur = el => getComputedStyle(el).backgroundColor;
+      /* Un calque de grain : sa tuile, son opacité, son mode — tels que calculés. null s'il n'y en a pas. */
+      const grainCalque = st => {
+        const m = /url\("?([^")]+)"?\)/.exec(st.backgroundImage || '');
+        return m ? { url: m[1], a: parseFloat(st.opacity), mode: st.mixBlendMode } : null;
+      };
       const flou = sel => { const e = document.querySelector(sel), s = getComputedStyle(e); return { coul: s.backgroundColor, a: parseFloat(s.opacity) }; };
       const textes = [...document.querySelectorAll('main *')].filter(el =>
         [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && el.closest('[aria-hidden="true"]') === null);
       return {
         fond: couleur(document.body),
         flous: [flou('.flou-violet'), flou('.flou-jaune')],
-        grainFond: { a: parseFloat(getComputedStyle(document.querySelector('.grain-fond')).opacity), mode: v('--grain-fond-mode') },
+        grainFond: grainCalque(getComputedStyle(document.querySelector('.grain-fond'))),
+        surfaces: ['.tuile--a-jour', '.tuile--a-voir'].map(sel => {
+          const e = document.querySelector(sel);
+          return { nom: sel, couleur: couleur(e), grain: grainCalque(getComputedStyle(e, '::after')) };
+        }),
         items: textes.map(el => {
           let s = el, surface = null;
           while (s && s !== document.body){ const bg = couleur(s); if (!/rgba\(0, 0, 0, 0\)|transparent/.test(bg)){ surface = s; break; } s = s.parentElement; }
@@ -93,8 +142,7 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
             nom: (el.className ? '.' + String(el.className).split(' ')[0] : el.tagName.toLowerCase()) + ' « ' + el.textContent.trim().slice(0, 24) + ' »',
             texte: st.color, taille: parseFloat(st.fontSize),
             surface: surface ? couleur(surface) : null,
-            grainPapier: !!(surface && surface.classList.contains('grain-papier')),
-            grainA: surface && surface.classList.contains('grain-papier') ? parseFloat(getComputedStyle(surface, '::after').opacity) : 0,
+            grain: surface ? grainCalque(getComputedStyle(surface, '::after')) : null,
           };
         }),
       };
@@ -102,25 +150,36 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
 
     const fond = rgb(releve.fond).c;
     const [fv, fj] = releve.flous.map(f => ({ c: rgb(f.coul).c, a: f.a }));
-    const gF = releve.grainFond;
-    const grainSurFond = c => gF.mode === 'screen' ? sur(c, [1, 1, 1], gF.a) : sur(c, [0, 0, 0], gF.a);
+    const gF = await grainDe(releve.grainFond);
+    const extremes = g => g ? [['grain p1', g.bas], ['grain p99', g.haut]] : [];   // centiles, cf. l'en-tête
     const fondsComposes = [
       ['fond nu', fond],
       ['+ flou violet', sur(fond, fv.c, fv.a)],
       ['+ flou jaune', sur(fond, fj.c, fj.a)],
     ].concat(chevauchement ? [['+ les deux flous', sur(sur(fond, fv.c, fv.a), fj.c, fj.a)]] : [])
-     .flatMap(([n, c]) => [[n, c], [n + ' + grain', grainSurFond(c)]]);
+     .flatMap(([n, c]) => [[n, c], ...extremes(gF).map(([e, v]) => [n + ' + ' + e, fondu(c, v, gF)])]);
+
+    /* 1bis. Luminance moyenne : fond, et chaque surface grainée. */
+    const lumMoy = (c, g) => g.px.reduce((s, v) => s + lum(fondu(c, v, g)), 0) / g.px.length;
+    const verifLum = (nom, c, g) => {
+      if (!g) return;
+      const l0 = lum(c), ec = (lumMoy(c, g) - l0) / l0 * 100, ok = Math.abs(ec) <= 1.5;
+      if (!ok) echecs++;
+      lignesLum.push(`| ${chromie} | ${nom} | ${hex(c)} | ${g.fichier} · ${g.mode} · ${g.a} | ${ec >= 0 ? '+' : ''}${ec.toFixed(2)} % | ${ok ? '✅' : '❌'} |`);
+    };
+    verifLum('fond', fond, gF);
+    for (const sf of releve.surfaces) verifLum(sf.nom, rgb(sf.couleur).c, await grainDe(sf.grain));
 
     for (const it of releve.items){
       const t = rgb(it.texte).c;
       let cas;
       if (it.surface){
         const s = rgb(it.surface).c;
-        cas = [['surface', t, s]];
-        if (it.grainPapier){
-          const k = 1 - it.grainA;                                   // pixel noir du grain en multiply
-          cas.push(['grain sur la surface', t, s.map(x => x * k)], ['grain sur le texte', t.map(x => x * k), s]);
-        }
+        const g = await grainDe(it.grain);
+        const variantes = c => [['', c], ...extremes(g).map(([e, v]) => [e, fondu(c, v, g)])];
+        cas = [];
+        for (const [et, tt] of variantes(t)) for (const [es, ss] of variantes(s))
+          cas.push([[es && es + ' sur la surface', et && et + ' sur le texte'].filter(Boolean).join(', ') || 'surface', tt, ss]);
       } else {
         cas = fondsComposes.map(([n, c]) => [n, t, c]);
       }
@@ -136,11 +195,15 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   console.log('| chromie | élément | taille | texte | fond (token) | ratio nominal | pire cas composé | seuil | |');
   console.log('|---|---|---|---|---|---|---|---|---|');
   lignes.forEach(l => console.log(l));
+  console.log('\n## Luminance moyenne des surfaces avec grain (tolérance ±1,5 %)\n');
+  console.log('| chromie | surface | couleur | grain | écart | |');
+  console.log('|---|---|---|---|---|---|');
+  lignesLum.forEach(l => console.log(l));
 
   // ── 2. LES DEUX COPIES DU BLOC JOUR ─────────────────────────────────────────
   const TOKENS = ['--fond', '--papier', '--encre', '--texte', '--texte-2', '--a-voir', '--a-voir-texte', '--a-voir-texte-2', '--en-ligne',
                   '--violet-encre', '--papier-2', '--filet', '--contour',
-                  '--flou-violet', '--flou-violet-alpha', '--flou-jaune', '--flou-jaune-alpha', '--grain-fond-mode'];
+                  '--flou-violet', '--flou-violet-alpha', '--flou-jaune', '--flou-jaune-alpha', '--grain-fond-tuile', '--grain-a-voir-tuile'];
   const lire = () => p.evaluate(T => { const cs = getComputedStyle(document.documentElement); return T.map(t => cs.getPropertyValue(t).trim()); }, TOKENS);
   await p.evaluate(() => { document.documentElement.dataset.chromie = 'jour'; });
   const jourAttr = await lire();
@@ -162,11 +225,16 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   // ── 3. POLICES ──────────────────────────────────────────────────────────────
   const polices = await p.evaluate(() => [...document.fonts].map(f => `${f.family.replace(/"/g, '')} ${f.weight} ${f.style} : ${f.status}`));
   const google = Object.values(urls).filter(u => /fonts\.(googleapis|gstatic)\.com/.test(u));
-  const nonChargees = polices.filter(l => !/loaded$/.test(l));
+  const nonChargees = polices.filter(l => /unloaded$/.test(l));
   console.log('\n## Polices\n');
   polices.forEach(l => console.log('- ' + l));
   console.log(`- requêtes Google Fonts : ${google.length ? '❌ ' + google.join(', ') : '✅ aucune'}`);
   if (google.length) echecs++;
+  /* ⚠️ « error » N'EST PAS « unloaded ». Une graisse que la page n'emploie pas reste « unloaded » (normal) ;
+     une graisse demandée qui n'a pas pu se charger est « error » — le texte part alors en police de
+     repli sans un mot. La sonde doit rougir. */
+  const enErreur = polices.filter(l => /error$/.test(l));
+  if (enErreur.length){ echecs += enErreur.length; console.log(`- ❌ en erreur : ${enErreur.join(' · ')}`); }
   // ⚠️ Une graisse déclarée mais pas utilisée dans la page reste « unloaded » : ce n'est pas un échec.
   if (nonChargees.length) console.log(`- non chargées (aucun texte ne les emploie ici) : ${nonChargees.length}`);
 
@@ -175,18 +243,20 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   console.log('| fichier | sur disque | transféré par la page |');
   console.log('|---|---|---|');
   const transfert = Object.keys(poids).map(id => ({ url: urls[id], o: poids[id] }));
-  const fichiers = ['assets/grain.png', ...fs.readdirSync(path.join(RACINE, 'assets/fonts')).filter(f => /^instrument-.*\.woff2$/.test(f)).map(f => 'assets/fonts/' + f)];
+  const fichiers = ['assets/grain.png', 'assets/grain-sombre.png', ...fs.readdirSync(path.join(RACINE, 'assets/fonts')).filter(f => /^instrument-.*\.woff2$/.test(f)).map(f => 'assets/fonts/' + f)];
   for (const f of fichiers){
     const t = transfert.find(x => x.url.endsWith('/' + f));
     console.log(`| ${f} | ${fs.statSync(path.join(RACINE, f)).size} o | ${t ? t.o + ' o' : 'non chargé'} |`);
   }
-  const grain = fs.statSync(path.join(RACINE, 'assets/grain.png')).size;
-  if (grain > 12 * 1024){ echecs++; console.log(`❌ grain.png ${grain} o > 12 Ko`); }
+  for (const t of ['assets/grain.png', 'assets/grain-sombre.png']){
+    const o = fs.statSync(path.join(RACINE, t)).size;
+    if (o > 20 * 1024){ echecs++; console.log(`❌ ${t} ${o} o > 20 Ko`); }
+  }
   transfert.filter(x => !fichiers.some(f => x.url.endsWith('/' + f))).forEach(x => console.log(`| ${x.url.replace(/^https?:\/\/[^/]+\//, '')} | — | ${x.o} o |`));
   const total = transfert.reduce((s, x) => s + x.o, 0);
   console.log(`| **total chargé par la page** | | **${total} o (${(total / 1024).toFixed(1)} Ko), ${transfert.length} requêtes** |`);
 
   await b.close();
   if (echecs){ console.error(`\n❌ CHARTE — ${echecs} échec(s)\n`); process.exit(1); }
-  console.log('\n✅ CHARTE — aucun couple sous son seuil, chromies cohérentes, polices locales, grain sous 12 Ko.\n');
+  console.log('\n✅ CHARTE — aucun couple sous son seuil, chromies cohérentes, polices locales, luminance des surfaces préservée, grain sous 20 Ko par tuile.\n');
 })();

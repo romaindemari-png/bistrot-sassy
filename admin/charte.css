@@ -23,10 +23,10 @@
   --papier:#F4EFE6;
   --encre:#1A1917;
   --texte:#F4EFE6;
-  --texte-2:#D2CFC8;          /* mesuré 26/10 : #B9B4AA tombait à 2,58:1 sur le cœur du flou violet → 4,51:1 avec le flou à .28 */
+  --texte-2:#CDC9C2;          /* mesuré 26/10 : #B9B4AA tombait sous 4,5:1 sur le cœur du flou violet + grain → 4,51:1 (flou .28, grain au centile) */
   --a-voir:#CAB4FF;
   --a-voir-texte:#1A1917;
-  --a-voir-texte-2:#3F3368;    /* texte secondaire sur --a-voir : spec #4A3C7A, foncé au seuil (4,51:1) */
+  --a-voir-texte-2:#3A2F60;    /* texte secondaire sur --a-voir : spec #4A3C7A, foncé au seuil sous le grain à .50 (4,55:1) */
   --en-ligne:#FFF28C;
   --violet-encre:#5B3FB8;
   --papier-2:#5D574F;          /* mesuré 26/10 : était #6B655B, 3,67:1 sous le grain. --papier-3 SUPPRIMÉ : le tertiaire se dit par la taille ou l'italique */
@@ -36,7 +36,10 @@
   /* Réglages de matière par chromie — des RÉFÉRENCES aux tokens, jamais une couleur. */
   --flou-violet:var(--a-voir);    --flou-violet-alpha:.28;   /* .40 dans la v1 de la spec : trop pour --texte-2 */
   --flou-jaune:var(--en-ligne);   --flou-jaune-alpha:.14;
-  --grain-fond-mode:screen;
+  /* Tuile de grain par surface : la SOMBRE (moyenne 116) sur les surfaces sombres, la claire ailleurs —
+     le soft-light éclaircit un fond sombre si le bruit est centré sur 128 (cf. scripts/gen-grain.py). */
+  --grain-fond-tuile:url('/assets/grain-sombre.png');
+  --grain-a-voir-tuile:url('/assets/grain.png');
 
   --serif:'Instrument Serif',Georgia,serif;
   --sans:'Instrument Sans',system-ui,sans-serif;
@@ -47,14 +50,15 @@
 html[data-chromie="jour"]{
   --fond:#CAB4FF;
   --texte:#1A1917;
-  --texte-2:#2B2347;          /* mesuré 26/10 : était #4A3C7A, 2,92:1 sur le flou */
+  --texte-2:#2B2347;          /* mesuré 26/10 : #4A3C7A tombait à 2,92:1 sur le flou → 4,57:1 sous le grain (centile) */
   --a-voir:#1A1917;
   --a-voir-texte:#F4EFE6;
   --a-voir-texte-2:#CAB4FF;    /* sur l'ENCRE : le violet de marque, 7,11:1 au pire grain */
   --contour:rgba(26,25,23,.4);
   --flou-violet:var(--violet-encre); --flou-violet-alpha:.30;
   --flou-jaune-alpha:.45;
-  --grain-fond-mode:multiply;
+  --grain-fond-tuile:url('/assets/grain.png');
+  --grain-a-voir-tuile:url('/assets/grain-sombre.png');
   color-scheme:light;
 }
 /* ── TOKENS — JOUR, suivi du téléphone (aucun choix posé). ⚠️ COPIE DU BLOC CI-DESSUS, à l'identique. ── */
@@ -69,19 +73,25 @@ html[data-chromie="jour"]{
     --contour:rgba(26,25,23,.4);
     --flou-violet:var(--violet-encre); --flou-violet-alpha:.30;
     --flou-jaune-alpha:.45;
-    --grain-fond-mode:multiply;
+    --grain-fond-tuile:url('/assets/grain.png');
+    --grain-a-voir-tuile:url('/assets/grain-sombre.png');
     color-scheme:light;
   }
 }
 
-/* ── GRAIN — une tuile PNG répétée (scripts/gen-grain.py), jamais un filtre SVG par élément ── */
+/* ── GRAIN — tuiles PNG 8 bits répétées (scripts/gen-grain.py), jamais un filtre SVG par élément ──
+   ⚠️ SOFT-LIGHT PARTOUT : un gris à 128 n'y change rien, le bruit texture sans déplacer la luminance
+      moyenne de la surface (±1,5 % max, mesuré par scripts/mesure-charte.js). Multiply et screen, eux,
+      ne savaient qu'assombrir ou qu'éclaircir.
+   ⚠️ 128 px CSS, la taille de la tuile : jamais étirée. */
 .grain-fond{position:fixed;inset:0;z-index:1;pointer-events:none;
-  background:url('/assets/grain.png') repeat;opacity:.10;mix-blend-mode:var(--grain-fond-mode)}
-/* ⚠️ isolation:isolate sur la surface : le multiply ne doit fusionner qu'avec SON papier, pas avec le fond
+  background:var(--grain-fond-tuile) repeat;background-size:128px;opacity:.55;mix-blend-mode:soft-light}
+/* ⚠️ isolation:isolate sur la surface : la fusion ne doit se faire qu'avec SA couleur, pas avec le fond
    et les flous qui sont derrière (cf. TECH.md, mix-blend-mode). */
-.grain-papier{position:relative;isolation:isolate}
-.grain-papier::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-  background:url('/assets/grain.png') repeat;opacity:.14;mix-blend-mode:multiply}
+.grain-papier,.grain-a-voir{position:relative;isolation:isolate}
+.grain-papier::after,.grain-a-voir::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:url('/assets/grain.png') repeat;background-size:128px;opacity:.50;mix-blend-mode:soft-light}
+.grain-a-voir::after{background-image:var(--grain-a-voir-tuile)}
 
 /* ── FLOUS — deux par écran, dérive lente ── */
 .flou-violet,.flou-jaune{position:fixed;z-index:0;pointer-events:none;border-radius:50%;
