@@ -853,9 +853,6 @@ body.in-final .mini-preview{display:none;}
   body.in-final.final-story .fp-uname,
   body.in-final.final-story .fp-more{color:#fff;}                   /* nom + ··· lisibles sur l'image */
 }
-/* Desktop : le post complet vit dans le panneau de droite (aperçu live) → on masque la card bakée (doublon).
-   Le panneau droit affiche avatar + @pseudo RÉELS + visuel + icônes + légende. */
-@media(min-width:961px){ .final-post .fp-card{display:none;} }
 /* ── LA TÊTE DU STUDIO NE PORTE PLUS QUE LA SORTIE (« ← Accueil »), et elle n'existe qu'en MOBILE ──
    ⚠️ ELLE TENAIT PAR ACCIDENT. Deux règles se répondaient sans le dire :
         .compose-head:has(#igStatusStudio:empty){display:none}   (desktop : masquer la tête vidée)
@@ -4584,8 +4581,9 @@ async function renderFinalPost(){
   const dots = document.getElementById('fpDots');
   const dotsHTML = n => n > 1 ? Array.from({ length: n }, (_, i) => '<span class="fp-dot' + (i === 0 ? ' on' : '') + '"></span>').join('') : '';
   if (dots) dots.innerHTML = dotsHTML(count);
-  // Bake du visuel : uniquement pour la card mobile. Desktop → card masquée, le panneau droit (live) fait foi.
-  if (window.matchMedia && window.matchMedia('(min-width:961px)').matches) return;
+  /* Bake du visuel, AUX DEUX LARGEURS. ⚠️ Il était sauté au-dessus de 960 px (card masquée, « le
+     panneau droit fait foi ») : la colonne de l'étape 5 tombait à 28 px, l'écran final était VIDE
+     en desktop (mesuré le 26/10). */
   const media = document.getElementById('fpMedia');
   media.classList.toggle('multi', count > 1);
   const tok = ++finalPostToken;
