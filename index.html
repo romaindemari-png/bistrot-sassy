@@ -964,11 +964,16 @@ footer {
 }
 
 /* ══ EVENTS ══ */
-#events { background:#FAF1E2; padding:80px 0 100px; }
-.events-header { display:flex; align-items:baseline; justify-content:space-between; max-width:1100px; margin:0 auto 56px; padding:0 40px; }
+/* ⚠️ À L'IDIOME DU SITE, PAS À SON PROPRE JEU. Les sept autres sections écrivent
+   `max-width:none; padding:6rem 0` et un `.X-inner` à `max-width:1200px; padding:0 2.5rem`.
+   #events avait 1100px, 40px en dur, 80/100 de padding et un `#FAF1E2` littéral : son titre
+   tombait donc 50 px À DROITE de la ligne du site — mesuré le 15/09/2026 à 1280 px, 130 px
+   contre 80 px pour about, galerie, horaires et contact. C'est ça, le « bloc centré ». */
+#events { background: var(--cream); max-width: none; padding: 6rem 0; }
+.events-header { display:flex; align-items:baseline; justify-content:space-between; max-width:1200px; margin:0 auto 56px; padding:0 2.5rem; }
 .events-title { font-family:'Canela',serif; font-size:clamp(2.2rem,5vw,3.8rem); font-weight:700; color:#2050E7; line-height:1; text-transform:lowercase; }
 .events-subtitle { font-size:0.82rem; letter-spacing:0.14em; text-transform:uppercase; color:#2050E7; opacity:0.5; font-weight:500; }
-.events-grid { max-width:1100px; margin:0 auto; padding:0 40px; display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; }
+.events-grid { max-width:1200px; margin:0 auto; padding:0 2.5rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; }
 .event-card { background:#fff; border:2px solid #2050E7; overflow:hidden; display:flex; flex-direction:column; transition:transform 0.2s,box-shadow 0.2s; }
 .event-card:hover { transform:translateY(-4px); box-shadow:6px 6px 0 #2050E7; }
 .event-photo { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
@@ -982,7 +987,12 @@ footer {
 .event-name { font-family:'Canela',serif; font-size:1.3rem; font-weight:700; color:#2050E7; line-height:1.2; margin-bottom:8px; text-transform:lowercase; }
 .event-desc { font-size:0.82rem; color:#2050E7; opacity:0.7; line-height:1.55; flex:1; }
 .events-empty { grid-column:1/-1; text-align:center; padding:60px 20px; color:#2050E7; opacity:0.4; font-family:'Canela',serif; font-size:1.4rem; }
-@media(max-width:700px){ #events{padding:60px 0 80px;} .events-header{flex-direction:column;gap:8px;padding:0 20px;margin-bottom:36px;} .events-grid{padding:0 20px;grid-template-columns:1fr;gap:16px;} }
+/* ⚠️ NI LE PADDING VERTICAL NI LA MARGE LATÉRALE NE SONT RÉDUITS ICI. #events était la
+   SEULE section du site à le faire — 60/80 contre 96/96 partout ailleurs, et 20 px de
+   marge contre 40 — donc la seule à ne pas s'aligner sur ses voisines en mobile. Mesuré.
+   Ne restent que les deux règles réellement propres au mobile : le bandeau de tête passe
+   en colonne, la grille passe à une colonne. */
+@media(max-width:700px){ .events-header{flex-direction:column;gap:8px;margin-bottom:36px;} .events-grid{grid-template-columns:1fr;gap:16px;} }
 
 /* ── Bloc événements ──────────────────────────────────────────────────────────
    ⚠️ IL Y AVAIT ICI `#events { display:none }`, ET SON COMMENTAIRE MENTAIT.
@@ -1064,14 +1074,16 @@ html.lenis, html.lenis body { height: auto; }
     <li><a href="javascript:void(0)" onclick="sTo('about')">l&#39;esprit</a></li>
     <li><a href="javascript:void(0)" onclick="sTo('carte')">la carte</a></li>
     <li><a href="javascript:void(0)" onclick="sTo('galerie')">galerie</a></li>
-    <li><a href="javascript:void(0)" onclick="sTo('horaires')">horaires</a></li>
-    <!-- ⚠️ L'ORDRE DU MENU SUIT L'ORDRE DES SECTIONS : #events vit entre #horaires et
-         #contact, l'entrée est donc ici. Elle manquait — la section existait, se
-         rendait, et AUCUN chemin n'y menait : le menu passait de « horaires » à
-         « contact » en l'enjambant. `grep -c "sTo('events')"` rendait 0 le 15/09/2026.
-         Une section injoignable depuis la navigation est une section que le client ne
-         voit pas, même quand tout le reste est juste. -->
+    <!-- ⚠️⚠️ L'ORDRE DU MENU SUIT L'ORDRE DES SECTIONS DANS LE DOCUMENT, et il n'y a pas
+         d'autre règle : #events est passé AVANT #horaires le 15/09/2026, l'entrée est donc
+         passée avant elle ici et dans le menu mobile. Un menu dont l'ordre ne suit plus
+         celui des sections fait remonter le visiteur quand il croit descendre.
+         ⚠️ L'entrée « événements » MANQUAIT tout court jusqu'au 15/09 : la section
+            existait, se rendait, et AUCUN chemin n'y menait — `grep -c "sTo('events')"`
+            rendait 0. Une section injoignable depuis la navigation est une section que le
+            client ne voit pas, même quand tout le reste est juste. -->
     <li><a href="javascript:void(0)" onclick="sTo('events')">événements</a></li>
+    <li><a href="javascript:void(0)" onclick="sTo('horaires')">horaires</a></li>
     <li><a href="javascript:void(0)" onclick="sTo('contact')">contact</a></li>
   </ul>
   <div class="nav-cta-wrap">
@@ -1088,8 +1100,8 @@ html.lenis, html.lenis body { height: auto; }
   <a href="javascript:void(0)" onclick="sTo('about')"       class="ml">l&#39;esprit</a>
   <a href="javascript:void(0)" onclick="sTo('carte')"       class="ml">la carte</a>
   <a href="javascript:void(0)" onclick="sTo('galerie')"     class="ml">galerie</a>
-  <a href="javascript:void(0)" onclick="sTo('horaires')"    class="ml">horaires</a>
   <a href="javascript:void(0)" onclick="sTo('events')"      class="ml">événements</a>
+  <a href="javascript:void(0)" onclick="sTo('horaires')"    class="ml">horaires</a>
   <a href="javascript:void(0)" onclick="sTo('contact')"     class="ml">contact</a>
   <a href="javascript:void(0)" onclick="sTo('reservation')" class="ml btn-a" style="margin-top:1rem;padding:.7rem 2rem;">r&#233;server</a>
 </div>
@@ -1248,6 +1260,34 @@ html.lenis, html.lenis body { height: auto; }
 </section>
 
 
+<!-- ==== EVENTS ==== -->
+<section id="events">
+  <div class="events-header">
+    <h2 class="events-title">événements</h2>
+    <span class="events-subtitle">à venir</span>
+  </div>
+  <div class="events-grid" id="events-grid"></div>
+</section>
+<script>
+(function(){
+  var M=['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  function render(evts){
+    var g=document.getElementById('events-grid');
+    if(!g)return;
+    var now=new Date();now.setHours(0,0,0,0);
+    var f=evts.filter(function(e){return new Date(e.date)>=now;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    if(!f.length){g.innerHTML='<div class="events-empty">Prochains événements bientôt annoncés ✦</div>';return;}
+    g.innerHTML=f.map(function(e){
+      var d=new Date(e.date);
+      var ph=e.photo?'<img class="event-photo" src="'+e.photo+'" alt="'+e.titre+'" loading="lazy"/>':'<div class="event-photo-placeholder">✦</div>';
+      return '<article class="event-card">'+ph+'<div class="event-body"><div class="event-date-badge"><span class="event-date-day">'+d.getDate()+'</span><div class="event-date-info"><span class="event-date-monthyear">'+M[d.getMonth()]+' '+d.getFullYear()+'</span>'+(e.heure?'<span class="event-date-heure">'+e.heure+'</span>':'')+'</div></div><h3 class="event-name">'+e.titre+'</h3>'+(e.description?'<p class="event-desc">'+e.description+'</p>':'')+'</div></article>';
+    }).join('');
+  }
+  fetch('/_data/events.json').then(function(r){return r.ok?r.json():Promise.reject();}).then(function(d){render(Array.isArray(d)?d:[]);}).catch(function(){render([]);});
+})();
+</script>
+
+
 <!-- ============================
      HORAIRES
 ============================ -->
@@ -1282,33 +1322,6 @@ html.lenis, html.lenis body { height: auto; }
 <!-- ============================
      CONTACT
 ============================ -->
-<!-- ==== EVENTS ==== -->
-<section id="events">
-  <div class="events-header">
-    <h2 class="events-title">événements</h2>
-    <span class="events-subtitle">à venir</span>
-  </div>
-  <div class="events-grid" id="events-grid"></div>
-</section>
-<script>
-(function(){
-  var M=['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
-  function render(evts){
-    var g=document.getElementById('events-grid');
-    if(!g)return;
-    var now=new Date();now.setHours(0,0,0,0);
-    var f=evts.filter(function(e){return new Date(e.date)>=now;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    if(!f.length){g.innerHTML='<div class="events-empty">Prochains événements bientôt annoncés ✦</div>';return;}
-    g.innerHTML=f.map(function(e){
-      var d=new Date(e.date);
-      var ph=e.photo?'<img class="event-photo" src="'+e.photo+'" alt="'+e.titre+'" loading="lazy"/>':'<div class="event-photo-placeholder">✦</div>';
-      return '<article class="event-card">'+ph+'<div class="event-body"><div class="event-date-badge"><span class="event-date-day">'+d.getDate()+'</span><div class="event-date-info"><span class="event-date-monthyear">'+M[d.getMonth()]+' '+d.getFullYear()+'</span>'+(e.heure?'<span class="event-date-heure">'+e.heure+'</span>':'')+'</div></div><h3 class="event-name">'+e.titre+'</h3>'+(e.description?'<p class="event-desc">'+e.description+'</p>':'')+'</div></article>';
-    }).join('');
-  }
-  fetch('/_data/events.json').then(function(r){return r.ok?r.json():Promise.reject();}).then(function(d){render(Array.isArray(d)?d:[]);}).catch(function(){render([]);});
-})();
-</script>
-
 <section id="contact">
   <div class="contact-inner">
     <div>
