@@ -2182,10 +2182,11 @@ function prefillDepuisBlocProduits(cle){
     if (!list) return;
     const produits = Array.isArray(sassyData[cle]) ? sassyData[cle] : [];
     const dispo = produits.filter(p => p && p.nom && p.dispo !== false);
-    const rows = dispo.map(p => studioDishRowHTML(p.nom, p.prix || '')).join('');
-    // POINT 5 (liste PLATE, ex. fournée) : « Prix » UNE fois en tête de colonne — comme les listes à
-    // catégories. Sans ça, une liste plate perdait toute étiquette de prix.
-    list.innerHTML = dispo.length ? (DISH_FLAT_HEAD + rows) : rows;
+    /* 🐛 « Prix » en tête de colonne lisait DISH_FLAT_HEAD, constante RETIRÉE au bout 5 (f0e66d7) avec l'usage
+       laissé en place : choisir un sujet `produits` (le plat du jour, la fournée) levait une ReferenceError et le
+       studio s'arrêtait là — c'était le rouge de test-themes. La liste n'est plus montrée (le studio LIT les
+       plats, bout 8) : plus d'en-tête à poser. */
+    list.innerHTML = dispo.map(p => studioDishRowHTML(p.nom, p.prix || '')).join('');
     refreshStudioDishesState();
   };
 }
