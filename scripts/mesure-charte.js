@@ -140,8 +140,39 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
       };
       const flou = sel => { const e = document.querySelector(sel), s = getComputedStyle(e); return { coul: s.backgroundColor, a: parseFloat(s.opacity) }; };
       const visible = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
-      const textes = [...document.querySelectorAll(ZONE.split(',').map(z => z.trim() + ' *').join(','))].filter(el =>
+      const dansZone = [...document.querySelectorAll(ZONE.split(',').map(z => z.trim() + ' *').join(','))];
+      const textes = dansZone.filter(el =>
         [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && el.closest('[aria-hidden="true"]') === null && visible(el));
+      /* ⚠️ LES CHAMPS AUSSI (bout 5) : dans la feuille, le texte que lit le client est la VALEUR d'un champ, pas un
+         nœud texte — et un champ vide montre son placeholder. Les ignorer, c'était ne rien mesurer de la feuille. */
+      const champs = dansZone.filter(el => el.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),textarea')
+        && visible(el) && (el.value.trim() || el.placeholder));
+      /* ⚠️ LES FONDS SEMI-TRANSPARENTS SE COMPOSENT (bout 5) : la ligne active de la feuille est un --a-voir à
+         28 % posé SUR le papier. Prendre ce fond pour opaque faussait le contraste. On remonte en empilant les
+         couches jusqu'au premier fond opaque, et on compose (sRGB). Lit rgb(a) ET color(srgb …) (color-mix). */
+      const lireCouleur = str => {
+        let m = str.match(/color\(srgb\s+([\d.e-]+)\s+([\d.e-]+)\s+([\d.e-]+)(?:\s*\/\s*([\d.e-]+))?\)/);
+        if (m) return { c: [+m[1], +m[2], +m[3]], a: m[4] === undefined ? 1 : +m[4] };
+        m = (str.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number);
+        return { c: m.slice(0, 3).map(v => v / 255), a: m[3] === undefined ? 1 : m[3] };
+      };
+      const surfaceDe = el => {
+        const couches = []; let s = el;
+        while (s && s !== document.body){
+          const k = lireCouleur(couleur(s));
+          if (k.a > 0){ couches.push(k); if (k.a >= 1){
+            let c = couches[couches.length - 1].c;
+            for (let i = couches.length - 2; i >= 0; i--) c = c.map((v, j) => v * (1 - couches[i].a) + couches[i].c[j] * couches[i].a);
+            return { el: s, rgb: 'rgb(' + c.map(v => Math.round(v * 255)).join(', ') + ')' };
+          } }
+          s = s.parentElement;
+        }
+        return null;
+      };
+      const grainDeLEl = (el, surf) => {
+        const g = surf && (surf.el.matches('.grain-papier,.grain-a-voir') ? surf.el : el.closest('.grain-papier,.grain-a-voir'));
+        return g && g.contains(surf.el) || (g && g === surf.el) ? grainCalque(getComputedStyle(g, '::after')) : null;
+      };
       return {
         /* Le fond de la page : celui de <body>, ou — s'il est transparent — celui de <html>. ⚠️ Depuis le 27/10
            le --fond de l'admin vit sur <html> SEUL (un fond sur <body> recouvrait les flous). Lire <body>
@@ -153,15 +184,17 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
           const e = document.querySelector(sel);
           return { nom: sel, couleur: couleur(e), grain: grainCalque(getComputedStyle(e, '::after')) };
         }),
-        items: textes.map(el => {
-          let s = el, surface = null;
-          while (s && s !== document.body){ const bg = couleur(s); if (!/rgba\(0, 0, 0, 0\)|transparent/.test(bg)){ surface = s; break; } s = s.parentElement; }
-          const st = getComputedStyle(el);
+        items: [...textes.map(el => ({ el, txt: el.textContent.trim(), couleurTexte: getComputedStyle(el).color })),
+                ...champs.map(el => el.value.trim()
+                  ? { el, txt: el.value.trim(), couleurTexte: getComputedStyle(el).color }
+                  : { el, txt: 'placeholder : ' + el.placeholder, couleurTexte: getComputedStyle(el, '::placeholder').color })
+        ].map(({ el, txt, couleurTexte }) => {
+          const surf = surfaceDe(el);
           return {
-            nom: (el.className ? '.' + String(el.className).split(' ')[0] : el.tagName.toLowerCase()) + ' « ' + el.textContent.trim().slice(0, 24) + ' »',
-            texte: st.color, taille: parseFloat(st.fontSize),
-            surface: surface ? couleur(surface) : null,
-            grain: surface ? grainCalque(getComputedStyle(surface, '::after')) : null,
+            nom: (el.className ? '.' + String(el.className).split(' ')[0] : el.tagName.toLowerCase()) + ' « ' + txt.slice(0, 24) + ' »',
+            texte: couleurTexte, taille: parseFloat(getComputedStyle(el).fontSize),
+            surface: surf ? surf.rgb : null,
+            grain: surf ? grainDeLEl(el, surf) : null,
           };
         }),
       };
@@ -221,7 +254,7 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
 
   // ── 2. LES DEUX COPIES DU BLOC JOUR ─────────────────────────────────────────
   const TOKENS = ['--fond', '--papier', '--encre', '--texte', '--texte-2', '--a-voir', '--a-voir-texte', '--a-voir-texte-2', '--en-ligne',
-                  '--violet-encre', '--papier-2', '--filet', '--contour',
+                  '--violet-encre', '--papier-2', '--filet', '--contour', '--surlignage',
                   '--flou-violet', '--flou-violet-alpha', '--flou-jaune', '--flou-jaune-alpha', '--grain-fond-tuile', '--grain-a-voir-tuile'];
   const lire = () => p.evaluate(T => { const cs = getComputedStyle(document.documentElement); return T.map(t => cs.getPropertyValue(t).trim()); }, TOKENS);
   await p.evaluate(() => { document.documentElement.dataset.chromie = 'jour'; });

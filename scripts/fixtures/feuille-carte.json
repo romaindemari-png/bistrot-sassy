@@ -1,0 +1,37 @@
+{
+  "entrees": [
+    {
+      "nom": "Salade de saison",
+      "description": "Avocat, mangue, sésame grillé, sauce ponzu maison",
+      "prix": "7€"
+    },
+    {
+      "nom": "Burrata crémeuse",
+      "description": "Tomates confites, basilic frais, huile d'olive de Provence",
+      "prix": "9€"
+    },
+    {
+      "nom": "Verrine du marché",
+      "description": "Légumes de saison, fromage frais, herbes fraîches",
+      "prix": "7€"
+    }
+  ],
+  "plats": [],
+  "desserts": [
+    {
+      "nom": "Fondant chocolat",
+      "description": "Cœur coulant, glace vanille bourbon, éclats de noisette",
+      "prix": "7€"
+    },
+    {
+      "nom": "Crème brûlée",
+      "description": "Recette traditionnelle, caramel croustillant",
+      "prix": "6€"
+    },
+    {
+      "nom": "Tarte du moment",
+      "description": "Selon inspiration du chef — changeante chaque semaine",
+      "prix": "6€"
+    }
+  ]
+}

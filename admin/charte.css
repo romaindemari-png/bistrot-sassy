@@ -32,6 +32,10 @@
   --papier-2:#5D574F;          /* mesuré 26/10 : était #6B655B, 3,67:1 sous le grain. --papier-3 SUPPRIMÉ : le tertiaire se dit par la taille ou l'italique */
   --filet:rgba(26,25,23,.14);
   --contour:rgba(244,239,230,.3);
+  /* La ligne en cours d'édition dans une feuille : le violet de marque à 35 % sur le papier, IDENTIQUE dans les
+     deux chromies (défini ici seulement, jamais redéfini en jour). Une SÉLECTION, pas un état : il ne dérive
+     pas de --a-voir (qui, le jour, est l'encre). */
+  --surlignage:rgba(202,180,255,.35);
 
   /* Réglages de matière par chromie — des RÉFÉRENCES aux tokens, jamais une couleur. */
   --flou-violet:var(--a-voir);    --flou-violet-alpha:.28;   /* .40 dans la v1 de la spec : trop pour --texte-2 */
