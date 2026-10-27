@@ -22,7 +22,7 @@ function detectImageType(buf){
 }
 
 // POST /.netlify/functions/upload-image  (Authorization: Bearer <jwt Identity>)
-//   { target:'slider'|'galerie', dataBase64 }  → upload (la suppression de l'ancienne est gérée côté client après save)
+//   { target:'slider'|'galerie'|'evenements', dataBase64 }  → upload (la suppression de l'ancienne est gérée côté client après save)
 //   { action:'delete', key }                   → suppression seule
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -53,7 +53,7 @@ export const handler = async (event) => {
 
     // — Upload —
     const { target, dataBase64 } = body;
-    if (!['slider', 'galerie', 'studio'].includes(target) || !dataBase64) {
+    if (!['slider', 'galerie', 'evenements', 'studio'].includes(target) || !dataBase64) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Paramètres manquants' }) };
     }
 

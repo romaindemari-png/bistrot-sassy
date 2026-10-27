@@ -54,9 +54,9 @@ execFileSync('sips', ['-Z', '240', '-s', 'format', 'jpeg', FX('photo.png'), '--o
 /* ── Le serveur de la sonde ─────────────────────────────────────────────────────────────────────── */
 const TYPES = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.png':'image/png',
   '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.woff2':'font/woff2', '.svg':'image/svg+xml' };
-const etat = { public: SOURCE, apresEnvoi: null, relectures: 0, saves: [], envois: 0, suppressions: [], journal: [] };
+const etat = { public: SOURCE, apresEnvoi: null, relectures: 0, saves: [], envois: 0, suppressions: [], journal: [], echec: false };
 const note = quoi => etat.journal.push({ t: Date.now(), quoi });
-function reinit(){ Object.assign(etat, { public: SOURCE, apresEnvoi: null, relectures: 0, saves: [], envois: 0, suppressions: [], journal: [] }); }
+function reinit(){ Object.assign(etat, { public: SOURCE, apresEnvoi: null, relectures: 0, saves: [], envois: 0, suppressions: [], journal: [], echec: false }); }
 const cdn = new Map();
 const serveur = http.createServer((q, r) => {
   const u = new URL(q.url, 'http://x');
@@ -73,6 +73,7 @@ const serveur = http.createServer((q, r) => {
   if (u.pathname === '/.netlify/functions/upload-image') return corps().then(b => {
     const j = JSON.parse(b || '{}');
     if (j.action === 'delete'){ etat.suppressions.push(j.key); note('delete ' + j.key); r.writeHead(200); return r.end('{"success":true}'); }
+    if (etat.echec){ r.writeHead(500, { 'Content-Type': 'application/json' }); return r.end('{"error":"sonde : 500"}'); }
     const cle = `photos/${j.target}/sonde-${++etat.envois}.jpg`; note('envoi ' + cle);
     r.writeHead(200, { 'Content-Type': 'application/json' });
     r.end(JSON.stringify({ success: true, url: '/.netlify/functions/serve-image?key=' + encodeURIComponent(cle), key: cle }));
@@ -227,6 +228,17 @@ async function sansSaut(nom, p, geste){
         `suppressions : ${etat.suppressions.join(', ') || 'aucune'} · ${etat.saves.length} écriture(s)`);
       await c.close();
     }
+
+    /* ── Une photo publiée dont le remplacement échoue : le bouton le dit (pas « Tout est en ligne »), rien ne part ── */
+    reinit(); etat.echec = true;
+    { const { ctx: c, p: q } = await page(390, 1);
+      const g = await celluleDe(q, '/galerie2.jpeg');
+      await choisir(q, `.f-ph[data-id="${g}"] [data-action="remplacer"]`, FX('photo.png'));
+      for (let i = 0; i < 100 && (await q.evaluate(id => (document.querySelector(`.f-ph[data-id="${id}"] .cp`) || {}).dataset.etat, g)) !== 'echec'; i++) await pause(40);
+      const bt = await q.evaluate(() => ({ t: document.getElementById('btnFeuille').textContent, d: document.getElementById('btnFeuille').disabled }));
+      await q.evaluate(() => saveSection()); await pause(200);
+      verdict('remplacement en échec : « Une photo pas encore partie »', bt.t === 'Une photo pas encore partie' && bt.d && !etat.saves.length, `« ${bt.t} » ${bt.d ? 'non cliquable' : 'CLIQUABLE'} · ${etat.saves.length} écriture(s)`);
+      await c.close(); }
 
     /* ── 4. Aller-retour, saut du bouton ──────────────────────────────────────────────────── */
     reinit();

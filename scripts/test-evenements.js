@@ -13,11 +13,19 @@
       : vendredi prochain). Les autres clés (photo) sont restituées ; le nouvel événement n'a pas de photo.
    2. « À venir » est triée par date ; « Passés » est REPLIÉE et compte ses événements.
    3. Un événement sans titre (ou sans date) ne part pas : la ligne le dit, le bouton compte, rien n'est envoyé.
-   4. La date se lit en toutes lettres, en serif, hors de la ligne active ; « Photo : bientôt ici » sur la
-      ligne active d'un événement sans photo.
+   4. La date se lit en toutes lettres, en serif, hors de la ligne active ; sur la ligne active d'un événement
+      sans photo, le composant photo vide (« + Ajouter une photo », 7c-3).
    5. La tuile dit « Rien à venir » dès la publication qui retire tout ce qui était à venir.
    6. ALLER-RETOUR : publier sans rien changer réécrit le fichier à l'octet.
    7. Quitter avec des changements déclenche la garde (#quitConfirm).
+   8. LES PHOTOS (7c-3), sur la copie scripts/fixtures/evenements-photos-source.json (une photo Blobs publiée
+      sur « les vins de Cassis » et sur le concert, une photo du dépôt sur les coquillages) : remplacer celle
+      du concert, retirer celle des coquillages, « Tout retirer » les passés, ajouter « soirée jazz » avec une
+      photo puis la remplacer. Le JSON envoyé est EXACTEMENT scripts/fixtures/evenements-photos-attendu.json.
+      upload-image est intercepté, les suppressions Blobs ESPIONNÉES : la photo de la séance remplacée part
+      tout de suite ; vins.jpg et concert.jpg (publiées) seulement après « C'est en ligne » ; galerie3.jpeg
+      (dépôt) jamais. Rien n'est écrit avant Publier ; l'aller-retour de cette copie est à l'octet ; cibles ≥
+      44 px ; le bouton ne saute pas quand on retire une photo.
 
    ⚠️ ROUGE sur le code d'avant le bout 7b (ancien formulaire de liste : pas de feuille).
    USAGE :  node <serveur statique> . 8080   puis   node scripts/test-evenements.js 8080
@@ -28,6 +36,13 @@ const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Conte
 const BASE   = `http://localhost:${PORT}/admin/`;
 const SOURCE = fs.readFileSync(path.join(__dirname, 'fixtures', 'evenements-source.json'), 'utf8');
 const ATTENDU = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'evenements-attendu.json'), 'utf8'));
+const SOURCE_PH  = fs.readFileSync(path.join(__dirname, 'fixtures', 'evenements-photos-source.json'), 'utf8');
+const ATTENDU_PH = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'evenements-photos-attendu.json'), 'utf8'));
+const FX = n => path.join(__dirname, 'fixtures', 'photos', n);
+if (!['photo-tournee.jpg', 'photo.png'].every(n => fs.existsSync(FX(n)))){   // photos de test : ignorées par git
+  console.log('Photos de test manquantes → génération par scripts/gen-photos-test.py…');
+  require('child_process').execFileSync('python3', [path.join(__dirname, 'gen-photos-test.py')], { stdio: 'inherit' });
+}
 const pause = ms => new Promise(r => setTimeout(r, ms));
 let puppeteer;
 try { puppeteer = require('puppeteer-core'); } catch (e){ console.error('puppeteer-core manquant → npm install'); process.exit(2); }
@@ -35,10 +50,11 @@ try { puppeteer = require('puppeteer-core'); } catch (e){ console.error('puppete
 const fails = [], lignes = [];
 const verdict = (nom, ok, detail) => { lignes.push(`| ${nom} | ${detail} | ${ok ? '✅' : '❌'} |`); if (!ok) fails.push(`${nom} : ${detail}`); };
 let b;
-async function page(largeur = 390){
+async function page(largeur = 390, source = SOURCE){
   const ctx = await b.createBrowserContext();
   const p = await ctx.newPage();
   await p.setViewport({ width: largeur, height: 900, isMobile: largeur < 900 });
+  await p.evaluateOnNewDocument(() => { window.__LELAB_TEMPS = 0.02; });   // Publier : la confirmation en ~0,2 s
   /* L'horloge figée : new Date() et Date.now() rendent le 1er octobre 2026, 10 h (heure locale). */
   await p.evaluateOnNewDocument(() => {
     const FIGE = new Date(2026, 9, 1, 10, 0, 0).getTime(), D = Date;
@@ -46,14 +62,29 @@ async function page(largeur = 390){
     window.Date = DateFigee;
   });
   const envois = [];
+  /* Le fichier public : la copie, puis, deux relectures après un save-data, ce qui a été envoyé (« en ligne »).
+     upload-image : envoi → clé photos/evenements/sonde-N.jpg ; { action:'delete' } → espionné. */
+  const espion = { public: source, apres: null, relectures: 0, n: 0, suppressions: [], journal: [], echec: false };
   await p.setRequestInterception(true);
   p.on('request', r => {
     const u = r.url();
-    if (/\/_data\/events\.json(\?.*)?$/.test(u)) return r.respond({ status: 200, contentType: 'application/json', body: SOURCE });
-    if (u.includes('/.netlify/functions/save-data')){ envois.push(JSON.parse(r.postData() || '{}')); return r.respond({ status: 200, contentType: 'application/json', body: '{"success":true}' }); }
+    if (/\/_data\/events\.json(\?.*)?$/.test(u)){
+      if (espion.apres && ++espion.relectures >= 3){ espion.public = espion.apres; espion.apres = null; espion.journal.push({ t: Date.now(), quoi: 'en ligne' }); }
+      return r.respond({ status: 200, contentType: 'application/json', body: espion.public });
+    }
+    if (u.includes('/.netlify/functions/save-data')){ const j = JSON.parse(r.postData() || '{}'); envois.push(j);
+      if (j.section === 'events'){ espion.apres = JSON.stringify(j.data, null, 2) + '\n'; espion.relectures = 0; }
+      return r.respond({ status: 200, contentType: 'application/json', body: '{"success":true}' }); }
+    if (u.includes('/.netlify/functions/upload-image')){ const j = JSON.parse(r.postData() || '{}');
+      if (j.action === 'delete'){ espion.suppressions.push(j.key); espion.journal.push({ t: Date.now(), quoi: 'delete ' + j.key }); return r.respond({ status: 200, contentType: 'application/json', body: '{"success":true}' }); }
+      if (espion.echec) return r.respond({ status: 500, contentType: 'application/json', body: '{"error":"sonde : 500"}' });
+      const cle = `photos/${j.target}/sonde-${++espion.n}.jpg`;
+      return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, url: '/.netlify/functions/serve-image?key=' + encodeURIComponent(cle), key: cle }) }); }
+    if (u.includes('/.netlify/functions/serve-image') || u.includes('/.netlify/images'))
+      return r.respond({ status: 200, contentType: 'image/png', body: fs.readFileSync(FX('photo-tournee.jpg')) });
     r.continue();
   });
-  return { ctx, p, envois };
+  return { ctx, p, envois, espion };
 }
 async function ouvrir(p){
   await p.goto(BASE + '#edit/events', { waitUntil: 'networkidle0' });
@@ -144,10 +175,10 @@ async function gestes(){
   verdict('« Tout retirer »', retire.length === 1 && retire.every(Boolean), `${retire.filter(Boolean).length}/${retire.length} retiré(s), annulable`);
   /* Ajouter : vendredi prochain par défaut */
   await clic(p, '.f-ajouter');
-  const neuf = await p.evaluate(() => { const li = document.activeElement.closest('.f-ev'); return li ? { id: li.dataset.id, date: li.querySelector('.f-date').value, photo: (li.querySelector('.f-ev-photo') || {}).textContent,
-    photoVue: !!li.querySelector('.f-ev-photo') && getComputedStyle(li.querySelector('.f-ev-photo')).display !== 'none' } : null; });
+  const neuf = await p.evaluate(() => { const li = document.activeElement.closest('.f-ev'); const a = li && li.querySelector('.f-ev-photo [data-action="ajouter"]');
+    return li ? { id: li.dataset.id, date: li.querySelector('.f-date').value, photo: a ? a.textContent : '', photoVue: !!a && a.getClientRects().length > 0 } : null; });
   verdict('nouvel événement : vendredi prochain', !!neuf && neuf.date === '2026-10-02', neuf ? neuf.date : 'aucune ligne active');
-  verdict('« Photo : bientôt ici » sur la ligne', !!neuf && neuf.photoVue && neuf.photo === 'Photo : bientôt ici', neuf ? `« ${neuf.photo} »${neuf.photoVue ? '' : ' (MASQUÉ)'}` : '—');
+  verdict('la ligne active propose une photo', !!neuf && neuf.photoVue && neuf.photo === '+ Ajouter une photo', neuf ? `« ${neuf.photo} »${neuf.photoVue ? '' : ' (MASQUÉ)'}` : '—');
   /* 3. Sans titre : bloqué */
   const bloque = await etat(p);
   await p.evaluate(() => saveSection()); await pause(150);
@@ -200,13 +231,87 @@ async function allerRetour(){
   await ctx.close();
 }
 
+/* 8. Les photos des événements (7c-3) */
+async function photos(){
+  const { ctx, p, envois, espion } = await page(390, SOURCE_PH);
+  if (!await ouvrir(p)){ verdict('photos · feuille ouverte', false, 'pas de feuille'); return ctx.close(); }
+  const choisir = async (sel, fichier) => { await p.$eval(sel, el => el.scrollIntoView({ block: 'center' }));
+    const [ch] = await Promise.all([p.waitForFileChooser({ timeout: 4000 }), p.click(sel)]); await ch.accept([fichier]); };
+  const attendre = async n => { for (let i = 0; i < 200 && espion.n < n; i++) await pause(40); await pause(250); };
+  const activer = async id => { await clic(p, `.f-ev[data-id="${id}"] [data-champ="titre"]`); };
+  /* Au repos : la vignette seule (le concert a une photo), rien sur une ligne sans photo. */
+  const idCon = await idDe(p, 'concert — le trio de la Plaine'), idCoq = await idDe(p, 'la saison des coquillages');
+  const repos = await p.evaluate(id => { const li = document.querySelector(`.f-ev[data-id="${id}"]`); const vu = e => !!e && e.getClientRects().length > 0;
+    return { cadre: vu(li.querySelector('.cp-cadre')), actions: vu(li.querySelector('.cp-actions')) }; }, idCon);
+  verdict('photos · au repos : la vignette seule', repos.cadre && !repos.actions, `vignette ${repos.cadre ? 'visible' : 'ABSENTE'}, actions ${repos.actions ? 'VISIBLES' : 'masquées'}`);
+  /* Remplacer la photo du concert ; retirer celle des coquillages (fichier du dépôt) */
+  await activer(idCon); await choisir(`.f-ev[data-id="${idCon}"] [data-action="remplacer"]`, FX('photo.png')); await attendre(1);
+  await activer(idCoq); await clic(p, `.f-ev[data-id="${idCoq}"] [data-action="retirer"]`);
+  /* Tout retirer les passés (les vins de Cassis, photo Blobs publiée) */
+  await clic(p, '.f-passes-titre'); await pause(80); await clic(p, '.f-tout-retirer'); await pause(80);
+  /* Un nouvel événement : titre, une photo, puis une autre (la première, de la séance, part tout de suite) */
+  await clic(p, '.f-ajouter'); await p.keyboard.type('soirée jazz');
+  const idJazz = await idDe(p, 'soirée jazz');
+  await choisir(`.f-ev[data-id="${idJazz}"] [data-action="ajouter"]`, FX('photo-tournee.jpg')); await attendre(2);
+  await activer(idJazz); await choisir(`.f-ev[data-id="${idJazz}"] [data-action="remplacer"]`, FX('photo.png')); await attendre(3);
+  await activer(idJazz);
+  const cibles = await p.evaluate(() => [...document.querySelectorAll('#feuille .f-ev [data-action]')].filter(e => e.getClientRects().length)
+    .map(e => ({ a: e.dataset.action, h: e.getBoundingClientRect().height })));
+  const petites = cibles.filter(c => c.h < 44);
+  verdict('photos · cibles ≥ 44 px', cibles.length > 0 && !petites.length, petites.length ? petites.map(c => `${c.a} ${c.h.toFixed(0)} px`).join(', ') : `${cibles.length} cibles, toutes ≥ 44 px`);
+  verdict('photos · zéro écriture avant Publier', envois.length === 0, `${envois.length} appel(s) à save-data`);
+  verdict('photos · photo de la séance remplacée : supprimée tout de suite', espion.suppressions.join() === 'photos/evenements/sonde-2.jpg', `suppressions : ${espion.suppressions.join(', ') || 'aucune'}`);
+  const n0 = espion.suppressions.length;
+  const bt = await p.evaluate(() => ({ t: document.getElementById('btnFeuille').textContent, d: document.getElementById('btnFeuille').disabled }));
+  verdict('photos · Publier disponible', !bt.d, `« ${bt.t} »`);
+  await clic(p, '#btnFeuille');
+  for (let i = 0; i < 100 && !envois.length; i++) await pause(40);
+  const e = envois[0], exact = !!e && JSON.stringify(e.data) === JSON.stringify(ATTENDU_PH);
+  verdict('photos · JSON envoyé == evenements-photos-attendu.json', exact, e ? (exact ? 'identique, clé par clé et dans l’ordre' : 'DIFFÉRENT :\n' + JSON.stringify(e.data, null, 1)) : 'RIEN n’a été envoyé');
+  await pause(60);
+  const avantPreuve = espion.suppressions.slice(n0);
+  for (let i = 0; i < 100 && !espion.journal.some(j => j.quoi === 'en ligne'); i++) await pause(40);
+  await pause(500);
+  const tEn = (espion.journal.find(j => j.quoi === 'en ligne') || {}).t;
+  const apres = espion.journal.filter(j => /^delete /.test(j.quoi) && j.t >= tEn).map(j => j.quoi.slice(7)).sort();
+  verdict('photos · publiées remplacées ou retirées : supprimées à « C’est en ligne »', !avantPreuve.length && apres.join() === 'photos/evenements/concert.jpg,photos/evenements/vins.jpg',
+    `avant la preuve : ${avantPreuve.join(', ') || 'aucune'} · après : ${apres.join(', ') || 'aucune'}`);
+  verdict('photos · aucun fichier du dépôt supprimé', espion.suppressions.every(k => /^photos\//.test(k)), `suppressions : ${espion.suppressions.join(', ')}`);
+  await ctx.close();
+  /* Une photo en échec : le bouton le dit, et rien ne part */
+  { const { ctx: c, p: q, envois: ev, espion: es } = await page(390, SOURCE_PH); await ouvrir(q);
+    es.echec = true;
+    const id = await idDe(q, 'concert — le trio de la Plaine');
+    await clic(q, `.f-ev[data-id="${id}"] [data-champ="titre"]`);
+    await q.$eval(`.f-ev[data-id="${id}"] [data-action="remplacer"]`, el => el.scrollIntoView({ block: 'center' }));
+    const [ch] = await Promise.all([q.waitForFileChooser({ timeout: 4000 }), q.click(`.f-ev[data-id="${id}"] [data-action="remplacer"]`)]); await ch.accept([FX('photo.png')]);
+    for (let i = 0; i < 100 && !(await q.evaluate(i => (document.querySelector(`.f-ev[data-id="${i}"] .cp`) || {}).dataset.etat === 'echec', id)); i++) await pause(40);
+    const bt = await q.evaluate(() => ({ t: document.getElementById('btnFeuille').textContent, d: document.getElementById('btnFeuille').disabled }));
+    await q.evaluate(() => saveSection()); await pause(200);
+    verdict('photos · « Une photo pas encore partie »', bt.t === 'Une photo pas encore partie' && bt.d && ev.length === 0, `« ${bt.t} » ${bt.d ? 'non cliquable' : 'CLIQUABLE'} · ${ev.length} envoi(s)`);
+    await c.close(); }
+  /* Aller-retour de la copie aux photos ; le bouton ne saute pas quand on retire une photo */
+  { const { ctx: c, p: q, envois: ev } = await page(390, SOURCE_PH); await ouvrir(q);
+    await q.evaluate(() => saveSection()); await pause(300);
+    const ecrit = ev[0] && JSON.stringify(ev[0].data, null, 2) + '\n';
+    verdict('photos · aller-retour à l’octet', ecrit === SOURCE_PH, ev[0] ? (ecrit === SOURCE_PH ? `${SOURCE_PH.length} octets identiques` : 'DIFFÉRENT') : 'rien envoyé');
+    await c.close(); }
+  for (const L of [390, 1280]){
+    const { ctx: c, p: q } = await page(L, SOURCE_PH); await ouvrir(q);
+    const id = await idDe(q, 'la saison des coquillages');
+    await clic(q, `.f-ev[data-id="${id}"] [data-champ="titre"]`);
+    await sansSaut(`photos ${L}`, q, () => clic(q, `.f-ev[data-id="${id}"] [data-action="retirer"]`));
+    await c.close();
+  }
+}
+
 (async () => {
   b = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--lang=fr-FR'] });
   const sauts = [390, 1280].map(L => async () => { const { ctx, p } = await page(L); await ouvrir(p);
     const id = await idDe(p, 'concert — le trio de la Plaine');
     await sansSaut(`événements ${L}`, p, async () => { await clic(p, `.f-ev[data-id="${id}"] [data-champ="titre"]`); await p.keyboard.press('End'); await p.keyboard.type('!'); });
     await ctx.close(); });
-  for (const f of [gestes, tuile, allerRetour, ...sauts]) await f().catch(e => fails.push('exception : ' + e.message));
+  for (const f of [gestes, tuile, allerRetour, ...sauts, photos]) await f().catch(e => fails.push('exception : ' + e.message));
   await b.close();
   console.log('\n═══ LA FEUILLE DES ÉVÉNEMENTS ═══\n\n| Contrôle | Mesuré | |\n|---|---|---|\n' + lignes.join('\n'));
   if (fails.length){ console.log('\n❌ ' + fails.length + ' échec(s) :\n  - ' + fails.join('\n  - ')); process.exit(1); }

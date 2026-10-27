@@ -1,0 +1,23 @@
+[
+  {
+    "date": "2026-10-03",
+    "heure": "20:00",
+    "titre": "concert — le trio de la Plaine",
+    "description": "Guitare, contrebasse et une voix. Deux sets sur la terrasse, planches entre les deux.",
+    "photo": "/.netlify/functions/serve-image?key=photos%2Fevenements%2Fsonde-1.jpg"
+  },
+  {
+    "date": "2026-10-16",
+    "heure": "19:30",
+    "titre": "la saison des coquillages",
+    "description": "On ouvre la saison comme il se doit — plateau du jour, citron, pain de campagne.",
+    "photo": ""
+  },
+  {
+    "date": "2026-10-02",
+    "heure": "",
+    "titre": "soirée jazz",
+    "description": "",
+    "photo": "/.netlify/functions/serve-image?key=photos%2Fevenements%2Fsonde-3.jpg"
+  }
+]

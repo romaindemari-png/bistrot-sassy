@@ -666,8 +666,11 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .f-date{flex:1;min-width:0;}
 .f-heure{width:7.5em;flex-shrink:0;}
 .f-ev-titre{width:100%;font:400 20px/1.2 var(--serif);}
-.f-ev-photo{display:none;padding:2px 2px 6px;font:400 13px/1.3 var(--sans);color:var(--papier-2);}
-.f-ligne--active .f-ev-photo{display:block;}
+.f-ev-photo{max-width:240px;padding:4px 2px 2px;}
+/* Au repos : la vignette seule si la ligne a une photo (rien si elle n'en a pas) ; un envoi ou un échec se voit. */
+.f-ev:not(.f-ligne--active) .f-ev-photo .cp[data-etat="vide"],
+.f-ev:not(.f-ligne--active) .f-ev-photo .cp-actions,
+.f-ev:not(.f-ligne--active) .f-ev-photo .cp-message{display:none;}
 .f-vide{margin:0;padding:12px;font:400 16px/1.4 var(--sans);color:var(--papier-2);}
 .f-ajouter--info{padding-left:12px;}
 .f-passes{margin-top:22px;}
@@ -7022,8 +7025,8 @@ const EDITEURS_INFOS = {
       date, heure, titre, description — sans photo. Les clés d'un événement existant (dont `photo`, que la
       feuille ne modifie pas avant 7c) sont restituées. Une heure qu'on n'a pas touchée est rendue telle
       quelle, même si <input type="time"> ne sait pas l'afficher. Publier sans rien changer réécrit le
-      fichier à l'octet (test-evenements). */
-let evtF = null;   // { lignes: [{ id, origine, date, heure, titre, description, retire, neuf }], base, passesOuverts }
+      fichier à l'octet (test-evenements). La photo (7c-3) : le composant photo, cf. monterPhotoEvenement. */
+let evtF = null;   // { lignes: [{ id, origine, date, heure, titre, description, retire, neuf, photoUrl, photoRetiree, photoEtat }], base, passesOuverts, session, cases }
 let evtSeq = 0;
 function isoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function vendrediProchain(maintenant){
@@ -7043,15 +7046,22 @@ function modeleEvenements(liste){
   const lignes = (Array.isArray(liste) ? liste : []).map(e => ({ id: ++evtSeq, origine: e,
     date: typeof e.date === 'string' ? e.date : '', heure: typeof e.heure === 'string' ? e.heure : '',
     titre: typeof e.titre === 'string' ? e.titre : '', description: typeof e.description === 'string' ? e.description : '',
-    retire: false, neuf: false }));
-  const base = Object.fromEntries(lignes.map(l => [l.id, { date: l.date, heure: l.heure, titre: l.titre, description: l.description }]));
-  return { lignes, base, passesOuverts: false };
+    retire: false, neuf: false, photoUrl: typeof e.photo === 'string' ? e.photo : '', photoRetiree: false, photoEtat: e.photo ? 'pleine' : 'vide' }));
+  const base = Object.fromEntries(lignes.map(l => [l.id, { date: l.date, heure: l.heure, titre: l.titre, description: l.description, photo: l.photoUrl }]));
+  /* session : les clés Blobs envoyées pendant la séance (7c-3) ; cases : le composant photo de chaque ligne, gardé
+     d'un rendu à l'autre (une date changée re-range les lignes : un envoi en cours ne doit pas se perdre). */
+  return { lignes, base, passesOuverts: false, session: new Set(), cases: {} };
 }
+/* La photo telle qu'elle sera publiée : '' si retirée (le format des événements sans photo). */
+const photoPubliee = l => l.photoRetiree ? '' : l.photoUrl;
 function lireEvenements(){
   return evtF.lignes.filter(l => !l.retire).map(l => {
-    if (l.neuf) return { date: l.date, heure: l.heure, titre: l.titre, description: l.description };
+    const photo = photoPubliee(l);
+    if (l.neuf) return photo ? { date: l.date, heure: l.heure, titre: l.titre, description: l.description, photo }
+                             : { date: l.date, heure: l.heure, titre: l.titre, description: l.description };
     const o = { ...l.origine };
     for (const k of ['date', 'heure', 'titre', 'description']) if (k in o || l[k]) o[k] = l[k];
+    if ('photo' in o || photo) o.photo = photo;
     return o;
   });
 }
@@ -7060,14 +7070,17 @@ function changementsEvenements(){
     if (l.neuf) return n + (l.retire ? 0 : 1);
     if (l.retire) return n + 1;
     const b = evtF.base[l.id];
-    return n + (['date', 'heure', 'titre', 'description'].some(k => l[k] !== b[k]) ? 1 : 0);
+    // une photo en cours d'envoi ou en échec est un changement : le bouton doit le dire, pas « Tout est en ligne »
+    return n + (['date', 'heure', 'titre', 'description'].some(k => l[k] !== b[k]) || photoPubliee(l) !== b.photo || photoEvEnCours(l) ? 1 : 0);
   }, 0);
 }
 function manqueEvenement(l){
   const d = !l.date.trim(), t = !l.titre.trim();
   return d && t ? 'Il manque la date et le titre' : d ? 'Il manque la date' : t ? 'Il manque le titre' : '';
 }
-function evenementsACompleter(){ return evtF ? evtF.lignes.filter(l => !l.retire && manqueEvenement(l)).length : 0; }
+/* Rien ne part tant qu'une photo d'événement est en cours d'envoi ou en échec, ni sans date ou sans titre. */
+const photoEvEnCours = l => !l.retire && (l.photoEtat === 'envoi' || l.photoEtat === 'echec');
+function evenementsACompleter(){ return evtF ? evtF.lignes.filter(l => !l.retire && (manqueEvenement(l) || photoEvEnCours(l))).length : 0; }
 const estPasse = l => !!l.date && l.date < isoLocal(new Date());
 function ligneEvenementHTML(l){
   const titre = l.titre.trim() || 'cet événement';
@@ -7086,7 +7099,7 @@ function ligneEvenementHTML(l){
       </div>
       <input class="f-champ f-ev-titre" data-champ="titre" value="${_eA(l.titre)}" placeholder="Titre de l’événement" aria-label="Titre de l’événement" autocomplete="off">
       <textarea class="f-champ f-desc" data-champ="description" rows="1" placeholder="Ajouter une précision" aria-label="Précision sur ${_eA(titre)}">${_eT(l.description)}</textarea>
-      ${(l.neuf || !(l.origine && l.origine.photo)) ? '<span class="f-ev-photo">Photo : bientôt ici</span>' : ''}
+      <div class="f-ev-photo" data-photo="${l.id}"></div>
       <span class="f-manque">${_eT(manque)}</span>
     </div>
     <button type="button" class="f-retirer" data-action="retirer" aria-label="Retirer ${_eA(titre)}">${SVG_CROIX}</button>
@@ -7114,12 +7127,38 @@ function rendreEvenements(focus){
       <ul class="f-lignes">${passes.map(ligneEvenementHTML).join('')}</ul>
     </details>` : ''}`;
   racine.querySelectorAll('.f-desc').forEach(autoGrowTextarea);
+  racine.querySelectorAll('.f-ev-photo[data-photo]').forEach(slot => monterPhotoEvenement(evtF, +slot.dataset.photo, slot));
   if (focus){
     const el = racine.querySelector(`.f-ligne[data-id="${focus.id}"] [data-champ="${focus.champ || 'titre'}"]`)
             || racine.querySelector(`.f-ligne[data-id="${focus.id}"] .f-annuler`);
     if (el) el.focus();
   }
 }
+/* La photo d'un événement (7c-3) : le composant de 7c-1, au cadrage du site (16:9). Mêmes règles que la feuille
+   Photos : la photo part dans Blobs au choix ; une image de la séance abandonnée est supprimée tout de suite ; une
+   image publiée remplacée ou retirée ne l'est qu'à « C'est en ligne » (apres / enLigne) ; jamais un fichier du dépôt. */
+function monterPhotoEvenement(m, id, slot){
+  const l = m.lignes.find(x => x.id === id); if (!l) return;
+  if (m.cases[id]){ slot.appendChild(m.cases[id]); return; }
+  const wrap = document.createElement('div'); m.cases[id] = wrap; slot.appendChild(wrap);
+  creerCasePhoto(wrap, { cible: 'evenements', url: l.photoUrl, ratio: '16 / 9', alt: l.titre, jeton: getToken, surChange: v => {
+    if (v.cle){ if (evtF !== m){ supprimerBlob(v.cle); return; } m.session.add(v.cle); }   // envoi fini après une sortie : orpheline évitée
+    if (evtF !== m) return;
+    l.photoEtat = v.etat;
+    if (v.retiree && m.session.has(blobKeyFromUrl(v.url))){
+      /* Une photo de la séance qu'on retire : elle n'a jamais été en ligne → elle s'en va, la case redevient vide
+         (la photo publiée d'avant, s'il y en avait une, sera bien retirée : photoUrl vide). */
+      l.photoUrl = ''; l.photoRetiree = false; l.photoEtat = 'vide';
+      delete m.cases[id]; wrap.remove(); monterPhotoEvenement(m, id, slot);
+    } else { l.photoUrl = v.url || ''; l.photoRetiree = v.retiree; }
+    nettoyerSessionEvenements(m); etatFeuille();
+  } });
+}
+function nettoyerSessionEvenements(m){
+  const vivantes = new Set(m.lignes.map(l => blobKeyFromUrl(l.photoUrl)).filter(Boolean));
+  [...m.session].forEach(k => { if (!vivantes.has(k)){ m.session.delete(k); supprimerBlob(k); } });
+}
+const clesPhotosEvenements = liste => new Set((Array.isArray(liste) ? liste : []).map(e => blobKeyFromUrl(e && e.photo)).filter(Boolean));
 function ecouterEvenements(racine){
   ecouterSurlignage(racine);
   /* La date en toutes lettres est la porte du champ date : la toucher (ou y arriver au clavier) active la ligne,
@@ -7162,10 +7201,13 @@ function ecouterEvenements(racine){
   });
   racine.addEventListener('toggle', e => { if (e.target.matches('.f-passes')) evtF.passesOuverts = e.target.open; }, true);
   racine.addEventListener('click', e => {
+    /* ⚠️ Le composant photo a ses propres actions (ajouter, retirer, annuler…) : MÊMES NOMS que celles de la ligne.
+       Sans cette garde, « Retirer » la photo retirait l'événement, « + Ajouter une photo » ajoutait un événement. */
+    if (e.target.closest('.cp')) return;
     const b = e.target.closest('[data-action]'); if (!b) return;
     const act = b.dataset.action;
     if (act === 'ajouter'){
-      const l = { id: ++evtSeq, origine: {}, date: vendrediProchain(), heure: '', titre: '', description: '', retire: false, neuf: true };
+      const l = { id: ++evtSeq, origine: {}, date: vendrediProchain(), heure: '', titre: '', description: '', retire: false, neuf: true, photoUrl: '', photoRetiree: false, photoEtat: 'vide' };
       evtF.lignes.push(l);
       rendreEvenements({ id: l.id, champ: 'titre' }); etatFeuille();
       return;
@@ -7202,19 +7244,31 @@ function editeurEvenements(bloc){
     pret: () => !!evtF,
     vider(){ evtF = null; },
     init(racine){ evtF = modeleEvenements(sassyData[bloc.cle]); ecouterEvenements(racine); rendreEvenements(); },
-    annuler(){ evtF = modeleEvenements(sassyData[bloc.cle]); rendreEvenements(); },
+    /* Annuler mes changements, sortie confirmée : les photos envoyées pendant la séance n'ont jamais été montrées. */
+    annuler(){ if (evtF) [...evtF.session].forEach(supprimerBlob); evtF = modeleEvenements(sassyData[bloc.cle]); rendreEvenements(); },
+    abandonner(){ if (evtF) [...evtF.session].forEach(supprimerBlob); evtF = null; },
     changements: () => changementsEvenements(),
     aCompleter: () => evenementsACompleter(),
     lire: () => lireEvenements(),
     rendre: () => rendreEvenements(),
-    /* « Rien à venir » sur la tuile se met à jour dès l'envoi : les tuiles relisent sassyData. */
+    /* « Rien à venir » sur la tuile se met à jour dès l'envoi : les tuiles relisent sassyData.
+       Photos (7c-3) : celles de la séance non retenues partent tout de suite ; les publiées qui disparaissent (remplacées,
+       retirées, ou d'un événement retiré — « Tout retirer » compris) partent à « C'est en ligne » (enLigne). */
     apres(data, visible){
+      const nouvelles = clesPhotosEvenements(data), anciennes = clesPhotosEvenements(sassyData[bloc.cle]);
+      if (evtF) [...evtF.session].forEach(k => { if (!nouvelles.has(k)) supprimerBlob(k); });
+      this.aSupprimerEnLigne = [...anciennes].filter(k => !nouvelles.has(k));
       sassyData[bloc.cle] = data;
       if (typeof renderSiteCards === 'function') renderSiteCards();
       if (visible){ evtF = modeleEvenements(data); rendreEvenements(); }
     },
+    enLigne(){ const a = this.aSupprimerEnLigne || []; this.aSupprimerEnLigne = []; return () => a.forEach(supprimerBlob); },
     get repos(){ return this.cadre.repos; },
-    manque: m => [m + ' événement' + (m > 1 ? 's' : '') + ' à compléter', 'Il manque une date ou un titre : rien ne part tant qu’un événement n’en a pas.'],
+    manque: m => {
+      const p = evtF ? evtF.lignes.filter(photoEvEnCours).length : 0;
+      if (p) return [p === 1 ? 'Une photo pas encore partie' : p + ' photos pas encore parties', 'Attendez la fin de l’envoi, ou réessayez la photo en échec.'];
+      return [m + ' événement' + (m > 1 ? 's' : '') + ' à compléter', 'Il manque une date ou un titre : rien ne part tant qu’un événement n’en a pas.'];
+    },
   };
 }
 
@@ -7277,7 +7331,8 @@ function changementsPhotos(){
     const items = photosF.parties[pt.cle];
     items.forEach(i => {
       if (!i.origine){ if (!i.retiree) n++; return; }
-      if (i.retiree || i.url !== i.origine.image) n++;
+      // une photo en cours d'envoi ou en échec est un changement : le bouton doit le dire, pas « Tout est en ligne »
+      if (i.retiree || i.url !== i.origine.image || i.etat === 'envoi' || i.etat === 'echec') n++;
     });
     const restants = items.filter(i => i.origine && !i.retiree).map(i => i.id);
     if (restants.join() !== photosF.base[pt.cle].filter(id => restants.includes(id)).join()) n++;
