@@ -45,6 +45,11 @@ const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Conte
 const BASE   = `http://localhost:${PORT}/admin/`;
 const wait   = ms => new Promise(r => setTimeout(r, ms));
 const SETTLE = 450;   // > le fondu d'écran (150 ms) + le layout posé
+/* ⚠️ BOUT 3 (coquille) : l'écran d'accueil distinct est retiré. L'ACCUEIL EST « MON SITE », son adresse
+   est #site. Les anciennes adresses (#accueil, #dashboard, #monsite) y mènent et sont RÉÉCRITES en #site
+   — un favori ou un lien de mail déjà enregistré ne casse pas, et l'URL ne garde pas une adresse morte. */
+const ACCUEIL_ECRAN = 'screen-monsite';
+const ACCUEIL_HASH  = '#site';
 
 let puppeteer;
 try { puppeteer = require('puppeteer-core'); }
@@ -100,12 +105,20 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   }
 
   // ── 1. CHAQUE ROUTE MÈNE À SON ÉCRAN ───────────────────────────────────────────────────────
-  for (const [hash, ecranAttendu] of [['accueil', 'screen-dashboard'], ['monsite', 'screen-monsite']]){
-    const r = await arriverSur(hash);
-    if (r.ecran !== ecranAttendu)
-      fails.push(`ROUTE/ #${hash} ouvre « ${r.ecran} » au lieu de « ${ecranAttendu} » — un refresh ne ramène pas le client où il était`);
-    if (r.hash !== '#' + hash)
-      fails.push(`ROUTE/ #${hash} : l'URL est devenue « ${r.hash || '(vide)'} » — le hash doit survivre à l'écran qu'il désigne`);
+  {
+    const r = await arriverSur('site');
+    if (r.ecran !== ACCUEIL_ECRAN)
+      fails.push(`ROUTE/ #site ouvre « ${r.ecran} » au lieu de « ${ACCUEIL_ECRAN} » — un refresh ne ramène pas le client où il était`);
+    if (r.hash !== ACCUEIL_HASH)
+      fails.push(`ROUTE/ #site : l'URL est devenue « ${r.hash || '(vide)'} » — le hash doit survivre à l'écran qu'il désigne`);
+  }
+  /* Les ANCIENNES adresses : elles mènent à Mon site et l'URL est réécrite en #site. Le hash vide aussi. */
+  for (const ancien of ['accueil', 'dashboard', 'monsite', '']){
+    const r = await arriverSur(ancien);
+    if (r.ecran !== ACCUEIL_ECRAN)
+      fails.push(`ROUTE/ l'ancienne adresse « #${ancien} » ouvre « ${r.ecran} » au lieu de Mon site — un lien déjà enregistré est cassé`);
+    if (r.hash !== ACCUEIL_HASH)
+      fails.push(`ROUTE/ l'ancienne adresse « #${ancien} » laisse « ${r.hash || '(vide)'} » au lieu de « ${ACCUEIL_HASH} » — une adresse qui n'existe plus reste dans la barre`);
   }
   for (const c of cartes){
     const r = await arriverSur('edit/' + c.edit);
@@ -126,9 +139,9 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     const pourquoi = nonEdit
       ? ` — « ${nonEdit.label} » porte bien cette clé mais n'est PAS éditable : la route ne doit pas ouvrir un éditeur pour elle`
       : ' — un hash invalide doit retomber sur l\'accueil, jamais sur un écran fantôme';
-    if (r.ecran !== 'screen-dashboard')
+    if (r.ecran !== ACCUEIL_ECRAN)
       fails.push(`ROUTE/ #${h} ouvre « ${r.ecran} »${pourquoi}`);
-    if (r.hash !== '#accueil')
+    if (r.hash !== ACCUEIL_HASH)
       fails.push(`ROUTE/ #${h} laisse « ${r.hash || '(vide)'} » dans la barre d'adresse alors que le client est sur l'accueil — une URL qui ment, et qu'il peut mettre en favori`);
   }
 
@@ -298,7 +311,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     confirmerSortieEdition();
     setTimeout(() => res({ ecran: [...document.querySelectorAll('.screen.active')].map(s => s.id).join(','), hash: location.hash }), 600);
   }));
-  if (e2.ecran !== 'screen-dashboard' || e2.hash !== '#accueil')
+  if (e2.ecran !== ACCUEIL_ECRAN || e2.hash !== ACCUEIL_HASH)   // #accueil tapé = une ANCIENNE adresse → #site
     fails.push(`EDIT/ sortie confirmée → écran « ${e2.ecran} », URL « ${e2.hash} » au lieu de l'accueil — le client a tranché, il doit arriver où il l'a demandé`);
 
 
@@ -338,9 +351,9 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   await wait(SETTLE);
   if (apresLogout.authed)
     fails.push('LOGOUT/ le corps porte encore « authed » après customLogout — la porte de login ne se referme pas');
-  if (apresLogout.hash !== '#accueil')
+  if (apresLogout.hash !== ACCUEIL_HASH)
     fails.push(`LOGOUT/ le hash reste « ${apresLogout.hash} » après la déconnexion → le relogin rouvrira cet éditeur. customLogout efface DÉJÀ le brouillon (clearStudioDraft) : effacer le travail mais restaurer la position, c'est le même geste qui se contredit`);
-  if (apresLogout.ecran !== 'screen-dashboard')
+  if (apresLogout.ecran !== ACCUEIL_ECRAN)
     fails.push(`LOGOUT/ l'écran « ${apresLogout.ecran} » reste actif derrière la porte de login après la déconnexion — une nouvelle session doit commencer à l'accueil`);
 
   /* Et le relogin le prouve pour de bon : c'est CE parcours que le client fait, pas l'inspection du
@@ -352,7 +365,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     return [...document.querySelectorAll('.screen.active')].map(s => s.id).join(',') || '(aucun)';
   });
   await wait(SETTLE);
-  if (apresRelogin !== 'screen-dashboard')
+  if (apresRelogin !== ACCUEIL_ECRAN)
     fails.push(`LOGOUT/ après déconnexion PUIS relogin, le client atterrit sur « ${apresRelogin} » au lieu de l'accueil — une session neuve ne reprend pas la position de la précédente`);
 
   await b.close();

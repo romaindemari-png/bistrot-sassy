@@ -26,13 +26,18 @@
    4. LES POIDS : les deux tuiles de grain (≤ 20 Ko chacune), chaque woff2, et le total transféré par la page (cache coupé).
 
    USAGE :  python3 -m http.server 8080   puis   node scripts/mesure-charte.js 8080
+            node scripts/mesure-charte.js 8080 /admin/ "#screen-monsite, .barre"   ← la coquille de l'admin
+      Page et zone en paramètres : la page de contrôle par défaut, ou l'admin (bypass dev localhost).
+      Seuls les textes VISIBLES de la zone sont mesurés (les écrans masqués de l'admin sont dans le DOM).
    PRÉREQUIS : puppeteer-core + un Chrome installé.
    ═══════════════════════════════════════════════════════════════════════════ */
 const fs = require('fs');
 const path = require('path');
 const PORT   = process.argv[2] || '8080';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const URL    = `http://localhost:${PORT}/admin/charte.html`;
+const PAGE   = process.argv[3] || '/admin/charte.html';
+const ZONE   = process.argv[4] || 'main';
+const URL    = `http://localhost:${PORT}${PAGE}`;
 const RACINE = path.join(__dirname, '..');
 
 let puppeteer;
@@ -68,6 +73,12 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   await p.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
   await p.goto(URL, { waitUntil: 'networkidle0' });
   await p.evaluate(() => document.fonts.ready);
+  /* L'admin écrit sa phrase d'accueil APRÈS le chargement des données : on attend qu'elle soit posée. */
+  if (PAGE !== '/admin/charte.html') await p.waitForFunction(() => document.body.classList.contains('authed') && !!document.querySelector('#avatarInit') && document.querySelector('#avatarInit').textContent.trim() !== '', { timeout: 15000 });
+  /* ⚠️ TRANSITIONS COUPÉES PENDANT LA MESURE. On bascule la chromie puis on lit aussitôt : un élément qui
+     porte `transition: color` rend encore sa couleur d'AVANT. Mesuré le 26/10 sur .lelab-site-link :
+     #CDC9C2 (nuit) lu à 0 ms en jour, #2B2347 à 400 ms → un faux ❌ à 1,11:1. On mesure l'état final. */
+  await p.addStyleTag({ content: '*,*::before,*::after{transition:none!important}' });
   let echecs = 0;
 
   /* ── 0. LES DEUX FLOUS SE SUPERPOSENT-ILS ? MESURÉ, PAS SUPPOSÉ ──
@@ -114,7 +125,7 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   // ── 1. CONTRASTE ────────────────────────────────────────────────────────────
   const lignes = [], lignesLum = [];
   for (const chromie of ['nuit', 'jour']){
-    const releve = await p.evaluate(ch => {
+    const releve = await p.evaluate((ch, ZONE) => {
       document.documentElement.dataset.chromie = ch;
       const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
       const couleur = el => getComputedStyle(el).backgroundColor;
@@ -124,13 +135,14 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
         return m ? { url: m[1], a: parseFloat(st.opacity), mode: st.mixBlendMode } : null;
       };
       const flou = sel => { const e = document.querySelector(sel), s = getComputedStyle(e); return { coul: s.backgroundColor, a: parseFloat(s.opacity) }; };
-      const textes = [...document.querySelectorAll('main *')].filter(el =>
-        [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && el.closest('[aria-hidden="true"]') === null);
+      const visible = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+      const textes = [...document.querySelectorAll(ZONE.split(',').map(z => z.trim() + ' *').join(','))].filter(el =>
+        [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && el.closest('[aria-hidden="true"]') === null && visible(el));
       return {
         fond: couleur(document.body),
         flous: [flou('.flou-violet'), flou('.flou-jaune')],
         grainFond: grainCalque(getComputedStyle(document.querySelector('.grain-fond'))),
-        surfaces: ['.tuile--a-jour', '.tuile--a-voir'].map(sel => {
+        surfaces: ['.tuile--a-jour', '.tuile--a-voir'].filter(sel => document.querySelector(sel)).map(sel => {
           const e = document.querySelector(sel);
           return { nom: sel, couleur: couleur(e), grain: grainCalque(getComputedStyle(e, '::after')) };
         }),
@@ -146,7 +158,7 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
           };
         }),
       };
-    }, chromie);
+    }, chromie, ZONE);
 
     const fond = rgb(releve.fond).c;
     const [fv, fj] = releve.flous.map(f => ({ c: rgb(f.coul).c, a: f.a }));

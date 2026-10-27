@@ -66,8 +66,11 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     };
   });
   /* Repart d'un écran neutre SANS passer par showScreen (applyScreen direct = pas de timer armé) :
-     aucune course d'un cas ne fuit vers le suivant. */
-  const reset = async () => { await p.evaluate(() => applyScreen('dashboard')); await wait(SETTLE); };
+     aucune course d'un cas ne fuit vers le suivant.
+     ⚠️ BOUT 3 : l'écran d'accueil distinct ('dashboard') est retiré — Mon site EST l'accueil. Le point
+        neutre est donc Mon site. (applyScreen('dashboard') y retombe aussi, mais par le repli : un test
+        qui nomme un écran mort ne doit pas passer par chance.) */
+  const reset = async () => { await p.evaluate(() => applyScreen('monsite')); await wait(SETTLE); };
 
   // ── A. NON-RÉGRESSION : un showScreen seul bascule, et le fondu se referme ──────────────────
   await reset();

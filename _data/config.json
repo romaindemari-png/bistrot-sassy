@@ -4,7 +4,8 @@
   "commerce": {
     "nom": "Bistrot Sassy",
     "type": "restaurant",
-    "slug": "bistrot-sassy"
+    "slug": "bistrot-sassy",
+    "prenom": ""
   },
   "blocs": {
     "socle": {

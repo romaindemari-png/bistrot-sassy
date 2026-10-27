@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="dark light">
 <title>LeLab — Interface client</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- La charte de l'app (LELAB-DESIGN §1, §3) : tokens nuit/jour, Instrument en woff2, grain, flous.
+     ⚠️ AVANT le <style> de l'admin : l'ancien CSS des écrans pas encore refaits garde la main sur eux. -->
+<link rel="stylesheet" href="/admin/charte.css">
+
 <script>
   document.addEventListener('DOMContentLoaded', function(){
     if (handleAuthHash()) return;   // lien d'invitation / récupération → écran "définir le mot de passe"
@@ -31,12 +32,6 @@
   --blanc:       #FFFFFF;
   --card-bg:     rgba(255,255,255,.66);   /* legacy — reste pour la bannière de reprise */
   --surface:     #f4f1ec;                 /* surface des cards, À PLAT : une crème claire, pas un blanc posé */
-  /* ⚠️ La largeur de la SIDEBAR est un TOKEN : le pied CTA s'y adosse (left:var(--sidebar-w)).
-     Elle passe à 0 sous 720 px, là où la sidebar disparaît — et le pied reprend toute la largeur.
-     C'était LE BUG : le pied devenait fixed;left:0 dès 960 px, alors que la sidebar tient jusqu'à
-     720 px. Entre les deux, il passait DESSOUS. Une valeur écrite deux fois finit toujours par
-     diverger : elle n'est plus écrite qu'une seule. */
-  --sidebar-w:   252px;
   --gris-bg:     #FAFAF8;   /* surfaces, pas du texte */
   --gris-card:   #F4F4F2;
 
@@ -116,9 +111,12 @@
   --sp-5: 20px; --sp-6: 24px; --sp-8: 32px;
 
   /* ── Typographie — une pile par rôle (--titre était un doublon de --font-admin) ── */
-  --font-admin:  'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  /* Instrument Sans (charte.css) : Bricolage et Inter retirés avec le lien Google Fonts (bout 3).
+     ⚠️ Instrument Sans n'a que 400/500/600 : les 700/800 des écrans pas encore refaits tombent sur
+        la 600, sans faux gras (une 600 compte déjà comme graisse forte). Ils changent à leur bout. */
+  --font-admin:  'Instrument Sans', system-ui, sans-serif;
   --titre:       var(--font-admin);
-  --corps:       'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  --corps:       'Instrument Sans', system-ui, sans-serif;
 }
 
 /* ── ADMIN REDESIGN — GRILLE DE CARDS (Phase 5) ── */
@@ -181,10 +179,6 @@
   transition: color .15s;
 }
 .lelab-site-link:hover { color: var(--ink); }
-/* Variante ACCUEIL : ferré à gauche comme le reste de l'écran (le salut, les tuiles, les stats).
-   Centré, il se serait lu comme une conclusion ; à gauche, il se lit comme une ligne de plus. */
-.lelab-site-link--left{ width:auto; margin:0; text-align:left; }
-.tiles-foot{ margin-top:14px; display:flex; justify-content:flex-start; }
 
 /* Zone d'action bas de Mon site : publier + indicateur */
 .lelab-actions { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -361,7 +355,11 @@ body.lelab-plus{
   --accent-txt:var(--jaune-txt);--accent-bord:var(--jaune-bord);
   --accent-glow:rgba(255,242,140,.35);
 }
-html{color-scheme:light only;background:var(--ink);}
+/* La COQUILLE suit la chromie (charte.css : nuit par défaut, jour sur un téléphone en clair).
+   ⚠️ Les écrans PAS ENCORE REFAITS (login, studio, éditeurs, modales) gardent `light` : leurs champs
+      et leurs contrôles natifs ont été réglés pour un fond crème — un `dark` hérité les noircirait. */
+html{background:var(--fond);}
+#login-gate,#screen-studio,#screen-edit,.confirm-overlay{color-scheme:light;}
 *{margin:0;padding:0;box-sizing:border-box;}
 
 /* ═══ LE FOCUS CLAVIER — il n'existait NULLE PART hors des champs ═══════════════════════════════
@@ -381,7 +379,7 @@ a[href]:focus-visible,
   outline-offset:2px;
 }
 body{
-  background-color: var(--ink);
+  background-color: var(--fond);
   font-family: var(--font-admin);
   position: relative;
   color:var(--ink);
@@ -426,83 +424,6 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
    barres. (`.app` porte la coquille entière : c'est elle qui décide si la page déborde.) */
 .app{display:flex;min-height:100dvh;}
 
-/* ── SIDEBAR ───────────────────────────────────────────── */
-.sidebar{
-  width:var(--sidebar-w);flex-shrink:0;background:var(--blanc);
-  border-right:1px solid var(--line);
-  display:flex;flex-direction:column;padding:18px 12px;
-  position:sticky;top:0;height:100vh;overflow-y:auto;
-}
-.logo-wrap{padding:8px 8px 30px;}
-.logo-wrap img{height:75px;display:block;}
-
-/* nav */
-.nav-item{
-  display:flex;align-items:center;gap:10px;padding:9px 10px;
-  border-radius:var(--r-sm);font-size:13px;font-weight:500;
-  color:var(--ink-2);margin-bottom:1px;transition:all .15s;width:100%;text-align:left;
-}
-.nav-item svg{width:17px;height:17px;stroke:currentColor;flex-shrink:0;}
-.nav-item:hover{background:var(--gris-card);color:var(--ink);}
-.nav-item.active{background:var(--ink);color:#fff;}
-.nav-item.active svg{stroke:#fff;}
-.nav-item.locked-item{opacity:.45;pointer-events:none;cursor:default;}
-.nav-item .lock-s{margin-left:auto;font-size:11px;color:var(--ink-2);}
-
-/* sidebar footer */
-.sidebar-foot{margin-top:auto;padding-top:12px;}
-.plan-badge{
-  border-radius:var(--r-sm);padding:12px;margin-bottom:10px;
-  background:var(--accent-soft);border:1px solid var(--accent-bord);
-}
-.plan-badge .tag{
-  display:inline-flex;align-items:center;gap:5px;
-  background:var(--accent);color:var(--accent-txt);
-  font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:var(--r-lg);
-}
-.plan-badge p{font-size:11px;color:var(--ink-2);margin-top:7px;line-height:1.4;}
-.user-row{display:flex;align-items:center;gap:9px;padding:4px 6px;}
-.avatar{width:32px;height:32px;border-radius:var(--r-round);background:var(--ink);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
-.user-name{font-size:12.5px;font-weight:600;}
-.user-plan{font-size:10.5px;color:var(--ink-2);}
-
-/* ── PHASE 6 — AMBIANCE LESTUD (sidebar sombre + grain + étoile) ── */
-.sidebar{ background:var(--ink); border-right:none; }
-.sidebar::before{
-  content:''; position:absolute; inset:0; pointer-events:none;
-  opacity:.20; mix-blend-mode:overlay;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='ns'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23ns)'/%3E%3C/svg%3E");
-  background-size:180px;
-}
-/* contenu de la sidebar au-dessus du grain */
-.sidebar > *{ position:relative; z-index:1; }
-/* couleurs adaptées au fond sombre (sidebar uniquement) */
-.nav-item{ color:rgba(255,255,255,.7); }
-.nav-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
-.nav-item.active{ background:rgba(255,255,255,.1); color:#fff; }
-.nav-item.active svg{ stroke:#fff; }
-/* libellé + sous-titre plan (anti-bégaiement) */
-.nav-txt{ display:flex; flex-direction:column; line-height:1.15; text-align:left; }
-.nav-name{ font-size:13px; font-weight:600; }
-.nav-sub{ font-size:10px; font-weight:500; color:rgba(255,255,255,.4); margin-top:1px; }
-.user-name{ color:#fff; }
-.user-plan{ color:rgba(255,255,255,.5); }
-.avatar{ background:rgba(255,255,255,.14); color:#fff; }
-.user-row > button{ background:rgba(255,255,255,.1)!important; color:rgba(255,255,255,.7)!important; }
-/* badge plan + étoile signature LeStud */
-.plan-badge{ border:none; }
-.plan-badge-head{ display:flex; align-items:center; gap:6px; }
-.plan-badge .tag{ background:transparent; padding:0; }
-.plan-badge p{ color:rgba(255,255,255,.6); }
-.lelab-star{ width:14px; height:14px; flex-shrink:0; }
-body.lelab-plus .plan-badge{ background:rgba(255,242,140,.12); }
-body:not(.lelab-plus) .plan-badge{ background:rgba(202,180,255,.12); }
-body.lelab-plus .plan-badge .tag{ color:var(--g-color); }
-body:not(.lelab-plus) .plan-badge .tag{ color:var(--m-color); }
-body.lelab-plus .lelab-star path{ fill:var(--g-color); }
-body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
-
 /* ── MAIN ──────────────────────────────────────────────── */
 .main{flex:1;min-width:0;display:flex;flex-direction:column;transition:opacity .2s ease;background:var(--bg);position:relative;}
 /* grain CLAIR du contenu sable (doux, distinct du grain sombre de la sidebar) */
@@ -513,7 +434,82 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
 }
 .main.fading{opacity:0;}
 .ig-img-reveal{transition:opacity .3s ease;}
-.topbar-m{display:none;}
+
+/* ═══ LA COQUILLE (bout 3) — barre haute, pièce « Mon site », phrase d'accueil ══════════════════
+   Spec : LELAB-DESIGN §4 (phrase, barre, segment) et §5 écran 1. Couleurs : UNIQUEMENT les tokens de
+   charte.css. Les cartes de Mon site et les écrans studio / éditeur ne changent pas ici.
+   ⚠️ Le fond de la charte, ses flous et son grain ne sont posés QUE sur Mon site (body.ecran-site) :
+      le studio et les éditeurs gardent leur crème tant qu'ils ne sont pas refaits.
+   ⚠️ z-index NÉGATIFS pour les flous et le grain : body n'est pas un contexte d'empilement, ils se
+      peignent donc SOUS tout le contenu et AU-DESSUS du fond — sans toucher à l'empilement de
+      l'app (les fixed du studio, la porte de login, les modales gardent leurs z-index). */
+.flou-violet,.flou-jaune,.grain-fond{display:none;}
+body.authed.ecran-site .flou-violet,body.authed.ecran-site .flou-jaune,body.authed.ecran-site .grain-fond{display:block;}
+.flou-violet,.flou-jaune{z-index:-2;}
+.grain-fond{z-index:-1;}
+body.ecran-site::before{display:none;}                   /* l'ancien grain SVG de l'app */
+body.ecran-site .main{background:transparent;}
+body.ecran-site .main::before{display:none;}
+
+.barre{position:relative;z-index:5;background:var(--fond);color:var(--texte);
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:14px 16px;}
+body.ecran-site .barre{background:transparent;}
+.barre-logo{display:flex;align-items:center;}
+.barre-logo img{height:34px;width:auto;display:block;}
+/* Le logo inchangé, dans la variante qui se lit sur le fond : blanc la nuit, noir le jour.
+   ⚠️ Mêmes trois cas que charte.css (défaut nuit · attribut · prefers-color-scheme sans attribut). */
+.logo-jour{display:none!important;}
+html[data-chromie="jour"] .logo-nuit{display:none!important;}
+html[data-chromie="jour"] .logo-jour{display:block!important;}
+@media (prefers-color-scheme:light){
+  html:not([data-chromie]) .logo-nuit{display:none!important;}
+  html:not([data-chromie]) .logo-jour{display:block!important;}
+}
+.segment{justify-self:center;display:inline-flex;gap:2px;padding:3px;border-radius:999px;
+  border:1px solid var(--contour);border-color:color-mix(in srgb,var(--texte) 22%,transparent);}
+.seg{min-height:44px;padding:0 18px;border-radius:999px;font:500 14px/1 var(--sans);color:var(--texte);
+  background:transparent;border:0;cursor:pointer;white-space:nowrap;}
+.seg[aria-current="page"].seg--site{background:var(--papier);color:var(--encre);}
+.seg[aria-current="page"].seg--insta{background:var(--en-ligne);color:var(--encre);}
+.avatar-init{width:44px;height:44px;border-radius:50%;background:var(--a-voir);color:var(--a-voir-texte);
+  font:600 14px/1 var(--sans);letter-spacing:.02em;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* Le volet du compte, ancré sous l'avatar. Papier + encre : 15,34:1 (couple déjà mesuré, cf. mesure-charte). */
+.compte{position:relative;}
+.volet-compte{position:absolute;top:calc(100% + 8px);right:0;z-index:60;min-width:220px;padding:16px;
+  background:var(--papier);color:var(--encre);border-radius:20px;display:flex;flex-direction:column;gap:12px;}
+.volet-compte[hidden]{display:none;}
+.vc-nom{margin:0;font:400 22px/1.1 var(--serif);}
+.vc-sortie{min-height:44px;padding:0 18px;border-radius:999px;background:transparent;color:var(--encre);
+  border:1.5px solid var(--filet);border-color:color-mix(in srgb,var(--encre) 22%,transparent);font:500 14px/1 var(--sans);cursor:pointer;}
+
+.accueil{font:400 54px/.93 var(--serif);letter-spacing:-.028em;color:var(--texte);margin:0;}
+.accueil span{display:block;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
+.chip{font:500 13px/1 var(--sans);padding:9px 14px;border-radius:999px;}
+.chip--en-ligne{background:var(--en-ligne);color:var(--encre);}
+.chip--a-voir{background:var(--a-voir);color:var(--a-voir-texte);}
+.chip[hidden]{display:none;}
+.site-cadre{width:100%;max-width:1360px;margin-inline:auto;}
+.accueil-col{padding:20px 16px 8px;}
+/* Le bas de Mon site est désormais posé sur le fond : ses textes prennent les tokens de texte. */
+#screen-monsite .lelab-site-link,#screen-monsite .lelab-delai{color:var(--texte-2);}
+#screen-monsite .lelab-site-link:hover{color:var(--texte);}
+#screen-monsite .lelab-dirty{color:var(--texte);}
+.lelab-delai{font-size:13px;line-height:1.45;text-align:center;max-width:420px;margin:0;}
+@media(max-width:720px){
+  .barre{grid-template-columns:auto 1fr;row-gap:12px;}
+  .barre .compte{justify-self:end;}
+  .segment{grid-column:1 / -1;grid-row:2;justify-self:stretch;}
+  .seg{flex:1;}
+}
+@media(min-width:961px){
+  .barre{padding:20px 32px;}
+  .site-cadre{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;padding:0 32px;}
+  .accueil-col{position:sticky;top:24px;align-self:start;padding:40px 0;}
+  .accueil{font-size:clamp(64px,6.4vw,92px);line-height:.92;}
+  #screen-monsite .page{max-width:none;margin:0;padding:40px 0 60px;}
+}
 
 /* ── SCREENS ───────────────────────────────────────────── */
 .screen{display:none;flex:1;flex-direction:column;}
@@ -525,92 +521,6 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
 .pg-head h1{font-size:28px;font-weight:800;}
 .pg-head p{font-size:14px;color:var(--ink-2);margin-top:5px;}
 
-/* ── DASHBOARD (accueil) ───────────────────────────────── */
-.hello{margin-bottom:24px;}
-/* Pavé typographique : date micro-caps + un seul bloc, même corps, deux graisses (800 / 200). */
-.hello-date{font-size:10px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin-bottom:14px;}
-.hello-title{font-family:var(--titre);font-size:40px;letter-spacing:-.035em;line-height:1.0;color:var(--ink);}
-.hello-title .ht-strong,.hello-title .ht-light{display:block;}
-.hello-title .ht-strong{font-weight:800;}
-.hello-title .ht-light{font-weight:200;}
-
-/* Deux tuiles — couleurs FIXES (violet Mon site / jaune Publier), identiques pour TOUS les clients :
-   elles ne signalent PAS le plan (cf. LELAB.md → REFONTE STUDIO). Grain = signature LeStud. */
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:26px;}
-.tile{
-  position:relative;overflow:hidden;min-height:170px;border:none;border-radius:var(--r-md);   /* min-height, PAS height : cf. BACKLOG n°6 (si le libellé passe à 3 lignes — gros texte iOS — une hauteur figée le COUPE en silence) */
-  padding:var(--sp-4);cursor:pointer;font-family:inherit;box-shadow:none;
-  display:flex;flex-direction:column;transition:transform .08s;   /* colonne (comme .lelab-card studio) → tile-in remplit la hauteur, foot poussé en bas */
-}
-.tile:active{transform:scale(.985);}
-.tile-mon{background:var(--m-color);}
-.tile-studio{background:var(--g-color);}
-.tile-grain{position:absolute;inset:0;opacity:var(--grain-on-color);mix-blend-mode:multiply;pointer-events:none;background-size:120px 120px;}
-.tile-mon .tile-grain{background-image:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22120%22%20height=%22120%22%3E%3Cfilter%20id=%22g1%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.9%22%20numOctaves=%224%22/%3E%3C/filter%3E%3Crect%20width=%22120%22%20height=%22120%22%20filter=%22url(%23g1)%22/%3E%3C/svg%3E");}
-.tile-studio .tile-grain{background-image:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22120%22%20height=%22120%22%3E%3Cfilter%20id=%22g2%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%220.9%22%20numOctaves=%224%22/%3E%3C/filter%3E%3Crect%20width=%22120%22%20height=%22120%22%20filter=%22url(%23g2)%22/%3E%3C/svg%3E");}
-/* ⚠️⚠️ `width:100%` N'EST PAS COSMÉTIQUE — NE PAS LE RETIRER. C'est le correctif d'un BUG DE SAFARI,
-   et il a coûté cher à trouver.
-   LE BUG : `.tile` est un <button>. Safari ne sait pas faire d'un <button> un conteneur flex correct —
-   il enveloppe son contenu dans une boîte anonyme QUI NE S'ÉTIRE PAS. `.tile-in` se rétrécissait donc
-   sur son contenu (≈156px au lieu de ≈219px), et `justify-content:space-between` du pied répartissait
-   dans une boîte trop étroite : la flèche s'arrêtait AU MILIEU de la tuile, collée au titre, avec un
-   grand vide à sa droite. Chrome respecte la spec → INVISIBLE en dev, invisible dans le harnais.
-   POURQUOI SEULES CES CARDS : ce sont les SEULES de l'app dans un <button>. `.site-card` (Mon site) et
-   `.lelab-card` (studio) sont des <div> → pas de bug. C'était toute l'asymétrie du terrain.
-   ⚠️ DEUX PANSEMENTS ONT PRÉCÉDÉ CE CORRECTIF, tous deux retirés : `flex-wrap:wrap` sur .tile-foot
-      (la flèche partait sur une ligne à elle) et `margin-left:auto` sur .tile-arrow. Chacun
-      contournait CE bug sans le nommer. Si la flèche se déplace encore un jour, c'est ICI qu'il faut
-      regarder — pas ajouter un troisième pansement.
-   ⚠️ ET SURTOUT : NE PAS « CORRIGER » EN PASSANT LA TUILE EN <div onclick>. Ça imiterait .site-card…
-      qui n'a ni role ni tabindex, donc n'est PAS atteignable au clavier. Elle ne marche que parce
-      qu'elle est moins accessible. Le <button> est le bon choix : c'est Safari qui a tort. */
-.tile-in{position:relative;z-index:1;flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-start;text-align:left;}
-.tile-ico{margin-left:-1px;}
-.tile-ico svg{display:block;width:54px;height:54px;}
-/* ⚠️ IL Y AVAIT ICI `flex-wrap:wrap`, ET C'ÉTAIT LA SEULE DIFFÉRENCE AVEC LES CARDS QUI MARCHENT.
-   Les deux autres familles — `.sc-foot` (Mon site) et `#themeGrid .tc-foot` (studio) — ne déclarent
-   PAS flex-wrap, et leur flèche tient le coin partout. Les cards de l'accueil étaient les seules à
-   sortir : c'est exactement ce que le terrain a rapporté (« seules les cards de l'accueil coincent »).
-   Le wrap avait été posé pour que « la flèche descende plutôt que d'être coupée ». Le danger a disparu
-   depuis : `.tile-act` porte `min-width:0` + `overflow-wrap:anywhere`, donc le LIBELLÉ se resserre et
-   la flèche ne peut plus être rognée. La protection a survécu à son danger — et envoyait la flèche sur
-   une ligne à elle dès que le texte grossissait (réglage « taille du texte » d'iOS) : elle quittait le
-   COIN tout en restant à 16px du bord. Les marges étaient bonnes, la composition non.
-   → On ne redéclare rien : on RETIRE, et le pied rejoint le patron de .sc-foot / .tc-foot. Ne pas
-     remettre flex-wrap sans avoir prouvé qu'un libellé peut encore être coupé (mesuré : il ne peut pas,
-     de 320px à ×2). */
-.tile-foot{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;}   /* poussé EN BAS (picto en haut) — langage des cards studio */
-.tile-act{font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.1;color:var(--ink);min-width:0;overflow-wrap:anywhere;}
-/* ⚠️ IL Y A EU ICI UN `margin-left:auto` — un pansement sur un pansement, retiré. Il repoussait la
-   flèche à droite quand le flex-wrap l'avait envoyée sur une ligne à elle : il compensait le symptôme
-   au lieu d'enlever la cause. Aucune card qui marche n'en a (.sc-arrow, .tc-arrow) : avec `nowrap`
-   (défaut) + `space-between`, la flèche est à droite parce que c'est le seul endroit où elle peut être.
-   `flex-shrink:0` suffit — elle ne rétrécit jamais, c'est le texte qui cède. */
-.tile-arrow{flex-shrink:0;width:30px;height:30px;border-radius:var(--r-round);border:1.6px solid var(--ink);color:var(--ink);display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;}
-.tile-arrow svg{width:15px;height:15px;}
-.tile-mon:active .tile-arrow{background:var(--ink);color:var(--m-color);}
-.tile-studio:active .tile-arrow{background:var(--ink);color:var(--g-color);}
-
-/* Stats repliées : filet + ligne discrète + accordéon simple, aucun chiffre à l'arrivée. */
-.stats-fold{margin-top:22px;padding-top:14px;margin-bottom:8px;border-top:1px solid var(--line);}
-.stats-toggle{
-  width:100%;display:flex;align-items:center;justify-content:space-between;
-  background:none;border:none;padding:14px 2px;cursor:pointer;font-family:inherit;
-  color:var(--ink-2);font-size:12px;font-weight:500;
-}
-.stats-toggle:hover{color:var(--ink);}
-.st-chev{font-size:13px;transition:transform .2s;}
-.stats-toggle[aria-expanded="true"] .st-chev{transform:rotate(180deg);}
-/* Stats = tableau de bord éditorial : le chiffre est la star (Bricolage/encre), le libellé chuchote (petit/gris).
-   Séparés par des FILETS fins — pas de boîtes, pas d'ombre, pas de couleur. "C'est de l'imprimé." */
-.stats{display:flex;margin:14px 0 8px;}
-.stats[hidden]{display:none;}   /* fix : sans ça, .stats{display:flex} écrase l'attribut [hidden] */
-.stat{flex:1;min-width:0;padding:2px 20px;}
-.stat:first-child{padding-left:2px;}
-.stat + .stat{border-left:1px solid rgba(28,26,25,.14);}   /* filet fin entre chaque chiffre */
-.stat-num{font-family:var(--titre);font-size:36px;font-weight:800;line-height:1;color:var(--ink);letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.stat-num--sm{font-size:22px;line-height:1.14;}
-.stat-lbl{font-size:11px;font-weight:400;color:var(--ink-2);margin-top:8px;letter-spacing:.01em;}
 
 .toggle{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
 .toggle input{opacity:0;width:0;height:0;}
@@ -640,25 +550,6 @@ body:not(.lelab-plus) .lelab-star path{ fill:var(--m-color); }
 }
 
 /* ── STUDIO LELAB+ ─────────────────────────────────────── */
-/* locked state */
-.studio-locked{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:60px 32px;flex:1;
-}
-.lock-circle{
-  width:72px;height:72px;border-radius:var(--r-round);
-  background:var(--jaune-soft);border:2px solid var(--jaune-bord);
-  display:flex;align-items:center;justify-content:center;
-  font-size:28px;margin-bottom:20px;
-}
-.studio-locked h2{font-size:22px;font-weight:800;margin-bottom:8px;}
-.studio-locked p{font-size:14px;color:var(--ink-2);max-width:340px;line-height:1.55;margin-bottom:24px;}
-.btn-upgrade{
-  background:var(--jaune);color:var(--jaune-txt);
-  border-radius:var(--r-sm);padding:14px 28px;font-size:14px;font-weight:700;
-  display:inline-flex;align-items:center;gap:8px;
-}
-
 /* studio unlocked */
 .studio-wrap{display:flex;flex:1;min-height:0;max-width:1080px;width:100%;margin-inline:auto;}
 .compose{flex:1;min-width:0;padding:28px 30px 0;max-width:640px;}   /* padding-bottom 0 : le PIED porte l'espacement du bas */
@@ -742,15 +633,13 @@ body.in-tunnel .lelab-foot .btn-save{margin-top:0;}    /* .btn-save porte une ma
 .studio-bar #studio-back{display:none;}                /* Retour et Continuer quittent la barre haute… */
 .studio-bar .bar-right{display:none;}                  /* …à TOUTES les largeurs : ils sont dans le pied */
 
-body.in-tunnel .mobile-nav{display:none;}   /* tunnel : la nav globale s'efface, place à la barre d'action */
 @media(max-width:960px){
   /* MOBILE : le pied redevient FIXE (zone du pouce).
      ⚠️ La compensation du viewport iOS (studioFootViewport — barres de Safari ET clavier) s'applique
         à CE mode-là, celui où le pied est `fixed`. NE PAS y toucher. */
   body.in-tunnel .lelab-foot{
-    /* 🐛 c'était `left:0` : entre 721 et 960 px la sidebar est VISIBLE, et le pied passait dessous.
-       Il s'adosse désormais à elle. Sous 720 px, --sidebar-w vaut 0 → il reprend toute la largeur. */
-    position:fixed;left:var(--sidebar-w);right:0;bottom:0;z-index:70;
+    /* La sidebar est retirée (bout 3) : plus rien à gauche, le pied prend toute la largeur. */
+    position:fixed;left:0;right:0;bottom:0;z-index:70;
     margin-top:0;
     padding:12px 16px calc(12px + env(safe-area-inset-bottom));
     background:var(--bg);border-top:1px solid var(--line);   /* OPAQUE (fond canvas) — porte l'action, pas de transparence cheap */
@@ -827,7 +716,7 @@ body.in-final .mini-preview{display:none;}
   body.in-final .steps-viewport{overflow:visible;height:auto!important;transition:none;}   /* ne coupe/anime plus le post */
   body.in-final .compose{padding-top:8px;padding-bottom:12px;}   /* post dimensionné au-dessus du pied → réserve minimale */
   /* Écran final = LE POST, plein écran. On efface TOUT le chrome de l'app (moment contemplatif). Sortie = Retour (pied). */
-  body.in-final .topbar-m,
+  body.in-final .barre,
   body.in-final .compose-head{display:none!important;}   /* ⚠️ règle À PART : le retrait du bandeau de reprise avait fusionné ces sélecteurs avec .fp-quit → logo LeLab + CTA Insta fantômes au reveal */
   /* échappement discret : petit ✕ en coin (le Retour du pied reste la sortie principale) */
   body.in-final .fp-quit{display:flex;align-items:center;justify-content:center;position:fixed;top:calc(9px + env(safe-area-inset-top));right:11px;z-index:75;width:30px;height:30px;padding:0;border:none;border-radius:var(--r-round);background:rgba(28,26,25,.06);color:var(--ink-2);cursor:pointer;}
@@ -881,17 +770,6 @@ body.in-final .mini-preview{display:none;}
    texte restait noir : contraste 1:1. Et sur iOS le hover COLLE après un tap — d'où la « card
    sélectionnée noire et illisible ». Le hover n'est pas une affordance sur mobile : on le retire.
    Le tap a déjà son retour (:active → scale) et la sélection a désormais le sien (surface encre). */
-/* Templates réservés LeLab+ (plan lelab, accès libre) : visibles mais floutés + overlay, clic = upsell */
-#studio-unlocked .lelab-card.is-locked{position:relative;cursor:pointer;}
-#studio-unlocked .lelab-card.is-locked>*{filter:blur(4px);opacity:.75;pointer-events:none;}
-#studio-unlocked .lelab-card.is-locked::after{content:"🔒";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(255,255,255,.45);border-radius:var(--r-md);}
-/* Entrée guidée (lelab) : étape Thème verrouillée — pastille 1 non cliquable */
-/* Bandeau upsell (plan lelab, accès libre) */
-.studio-upsell{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;max-width:460px;margin:0 auto 18px;padding:13px 16px;border-radius:var(--r-md);background:rgba(202,180,255,.14);border:1px solid rgba(202,180,255,.4);}
-.studio-upsell .su-txt{display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.35;color:var(--ink);}
-.studio-upsell .su-txt b{font-size:13.5px;font-weight:800;}
-.studio-upsell .su-txt span{color:var(--ink-2);}
-.studio-upsell .btn{min-width:0;white-space:nowrap;text-decoration:none;}   /* il ne peut plus déborder : il passe à la ligne (flex-wrap ci-dessus) */
 /* Formats Story réservés LeLab+ : masqués en plan lelab (point 6) */
 .plan-lab #fmtRow .fmt[data-fmt="story"]{display:none;}
 /* overlay étoile LeStud (publication) */
@@ -1126,33 +1004,20 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-uname{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:700;color:var(--green);}
 .ig-uname .d{width:7px;height:7px;border-radius:var(--r-round);background:var(--green);box-shadow:0 0 0 3px rgba(26,143,76,.18);}
 .ig-id{font-size:11px;color:var(--ink-2);font-weight:500;letter-spacing:.01em;}
-/* ── Vignette IG COMPACTE : studio (mobile ≤720) + sidebar (desktop >720). On resserre UNIQUEMENT l'habillage
+/* ── Vignette IG COMPACTE : studio (mobile ≤720). On resserre UNIQUEMENT l'habillage
    (padding/marges/hauteur/fond/bordure). Le TRIPLET Meta — avatar + @username + ID — reste intégralement
    visible & lisible partout (aucun display:none / font-size:0 / ellipsis / troncature). Template innerHTML inchangé. ── */
-#igStatusStudio .ig-card,
-#igStatusSidebar .ig-card{
+#igStatusStudio .ig-card{
   display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;
   width:100%;padding:8px 10px;border-radius:var(--r-sm);
 }
-#igStatusStudio .ig-avatar,
-#igStatusSidebar .ig-avatar{width:42px;height:42px;flex:0 0 42px;}   /* photo de profil pleine taille (conservateur Meta) */
-#igStatusStudio .ig-meta,
-#igStatusSidebar .ig-meta{flex:0 1 auto;min-width:0;}                /* pas d'overflow:hidden, pas d'ellipsis → rien n'est tronqué */
-#igStatusStudio .ig-uname,
-#igStatusSidebar .ig-uname{font-size:13px;}
-#igStatusStudio .ig-id,
-#igStatusSidebar .ig-id{font-size:11px;}                             /* ID numérique conservé et lisible */
-#igStatusStudio .ig-disconnect,
-#igStatusSidebar .ig-disconnect{margin-left:auto;}                   /* Déconnecter inline, toujours visible (jamais derrière un tap) */
+#igStatusStudio .ig-avatar{width:42px;height:42px;flex:0 0 42px;}   /* photo de profil pleine taille (conservateur Meta) */
+#igStatusStudio .ig-meta{flex:0 1 auto;min-width:0;}                /* pas d'overflow:hidden, pas d'ellipsis → rien n'est tronqué */
+#igStatusStudio .ig-uname{font-size:13px;}
+#igStatusStudio .ig-id{font-size:11px;}                             /* ID numérique conservé et lisible */
+#igStatusStudio .ig-disconnect{margin-left:auto;}                   /* Déconnecter inline, toujours visible (jamais derrière un tap) */
 /* Sidebar (fond sombre var(--ink)) : contraste pour garder le triplet lisible */
-#igStatusSidebar{margin-top:10px;}
-#igStatusSidebar .ig-card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);}
-#igStatusSidebar .ig-uname{color:#fff;}
-#igStatusSidebar .ig-id{color:rgba(255,255,255,.62);}
-#igStatusSidebar .ig-disconnect{color:rgba(255,255,255,.6);}
-#igStatusSidebar .ig-disconnect:hover{color:var(--red);}
-#igStatusSidebar .ig-status.off{width:100%;justify-content:center;background:transparent;border:1px solid rgba(255,255,255,.28);color:#fff;}   /* état "Connecter" lisible sur sombre */
-/* Bascule 720px : desktop → vignette dans la sidebar, tête du studio repliée (spécificité #studio-unlocked pour gagner sur .compose-head{display:flex}) */
+/* Bascule 720px : tête du studio repliée en desktop (spécificité #studio-unlocked pour gagner sur .compose-head{display:flex}) */
 @media(min-width:721px){ #studio-unlocked .compose-head{display:none;} }
 /* .compose-foot dissous — Retour/Publier remontés dans la .studio-bar (haut) */
 /* Récap étape 4 — Publier */
@@ -1274,7 +1139,7 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-img.ph-dragging .ig-drag-hint{display:none;}
 .ig-habillage{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:2;pointer-events:none;}
 .ig-text{display:none;position:absolute;z-index:4;align-items:center;overflow:hidden;pointer-events:none;}
-.ig-text span{display:block;width:100%;line-height:1.08;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;word-break:break-word;}
+.ig-text span{display:block;width:100%;line-height:1.08;font-family:var(--font-admin);font-weight:800;word-break:break-word;}
 .ig-typo{
   width:100%;aspect-ratio:1;
   background:var(--client-cream);display:flex;flex-direction:column;
@@ -1331,9 +1196,6 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
    libellé complet et ne romprait jamais ; un min-width ne l'y forcerait pas non plus. La base
    150px est donc ce qui décide : les deux boutons tiennent côte à côte, ou ils s'empilent. */
 
-/* ── MOBILE NAV ────────────────────────────────────────── */
-.mobile-nav{display:none;}
-
 /* ── RESPONSIVE ────────────────────────────────────────── */
 @media(max-width:1100px){.preview-pane{width:320px;}}
 @media(max-width:960px){
@@ -1341,7 +1203,7 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
   .compose{max-width:none;padding:20px 16px 60px;}
   /* ── BANDEAU "CINÉMA" (jaune LeLab+) ── */
   .mini-preview{
-    position:sticky;top:0;z-index:35;cursor:pointer;overflow:hidden;   /* 721–960px : pas de topbar-m → colle en haut (top:53px réintroduit en ≤720) */
+    position:sticky;top:0;z-index:35;cursor:pointer;overflow:hidden;   /* la barre haute n'est pas collante : le bandeau colle au bord, à toutes les largeurs */
     background:var(--accent);padding:11px 16px;
     display:flex;align-items:center;gap:12px;
     border-bottom:2px solid rgba(0,0,0,0.08);
@@ -1450,42 +1312,12 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
   .mini-preview{ position:static; }
 }
 @media(max-width:720px){
-  :root{ --sidebar-w:0px; }   /* la sidebar disparaît → le pied CTA reprend toute la largeur */
-  .sidebar{display:none;}
-  .mini-preview{top:53px;}   /* la topbar-m (sticky, 53px) réapparaît ≤720 → on dégage le bandeau sous elle */
-  .topbar-m{
-    display:flex;align-items:center;justify-content:space-between;
-    background:var(--bg);
-    padding:11px 16px;position:sticky;top:0;z-index:50;
-  }
-  .topbar-m img{height:42px;width:auto;}
-  .topbar-m .av{width:30px;height:30px;border-radius:var(--r-round);background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
-  .topbar-m .topbar-logout{background:none;border:none;color:var(--ink);padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;}
-  .topbar-m .topbar-logout svg{width:19px;height:19px;}
   .page{padding:20px 16px 80px;}
-  .stats{flex-direction:column;}   /* mobile : empilé, filets horizontaux */
-  .stat{padding:13px 2px;}
-  .stat:first-child{padding-top:2px;}
-  .stat + .stat{border-left:none;border-top:1px solid rgba(28,26,25,.14);}
-  .stat-num{font-size:32px;}
-  .stat-num--sm{font-size:20px;}
-  .mobile-nav{
-    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;
-    background:var(--bg);
-    padding:9px 8px calc(9px + env(safe-area-inset-bottom));justify-content:space-around;
-  }
-  /* chrome crème : pictos en APLAT D'ENCRE (fill), la nav s'efface dans le canvas — aucune barre */
-  /* ⚠️ Ces items sont des <button> : réinitialisation UA obligatoire (fond, bordure, police,
-     couleur — un bouton n'hérite d'aucune) + `flex:1 1 0` et `min-width:0` écrits en toutes lettres,
-     parce qu'un <button> ne s'étire pas comme un <a> en item flex sur Safari. */
-  .mn-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-2);font-size:11px;font-weight:500;flex:1 1 0;min-width:0;padding:6px 0;position:relative;
-    -webkit-appearance:none;appearance:none;background:none;border:0;font-family:inherit;cursor:pointer;}
-  .mn-item svg{width:22px;height:22px;}
-  .mn-item.active{color:var(--ink);font-weight:800;}
 }
-/* PAS de bloc @media(prefers-color-scheme:dark) — et c'est VOLONTAIRE.
-   L'app a une charte (crème, encre) : elle est IDENTIQUE dans les deux modes. Le navigateur le sait
-   déjà — `color-scheme: light only` est déclaré sur <html> (+ le <meta>), il ne redessine donc rien.
+/* PAS de bloc @media(prefers-color-scheme:dark) ICI — et c'est VOLONTAIRE.
+   La chromie de la COQUILLE vit dans charte.css (une seule source, mesurée). Les écrans pas encore
+   refaits restent crème et `color-scheme: light` (cf. le haut de ce fichier) : il n'y a rien à
+   neutraliser pour eux.
    Le neutraliseur qui vivait ici ne protégeait RIEN : il ne faisait que forcer des valeurs, et il
    s'est trompé TROIS fois (il forçait .popup en blanc après sa refonte, ciblait .btn-dark/.btn-publish
    supprimées au lot 2, et forçait .fmt en blanc au lieu du jaune). Invisible en mode clair, donc
@@ -1507,8 +1339,7 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 #login-form .btn,#setpw-form .btn{margin-top:var(--sp-1);}
 #login-error,#setpw-error{color:var(--red);font-size:12.5px;margin:2px 0 0;min-height:1em;}
 /* tant que non connecté : on masque l'app et la nav mobile */
-body:not(.authed) .app,
-body:not(.authed) .mobile-nav{display:none;}
+body:not(.authed) .app{display:none;}
 body.authed #login-gate{display:none;}
 /* Badge MODE DEV — visible UNIQUEMENT quand le bypass localhost est actif (body.dev-local, posé
    par restoreSession sur localhost). Ne peut pas apparaître en prod : le hostname n'y est pas localhost. */
@@ -1691,140 +1522,50 @@ body.dev-local::after{
   </form>
 </div>
 
+<!-- Matière de la pièce « Mon site » (charte.css) — affichée seulement sur Mon site, cf. .ecran-site -->
+<div class="flou-violet" aria-hidden="true"></div>
+<div class="flou-jaune" aria-hidden="true"></div>
+<div class="grain-fond" aria-hidden="true"></div>
+
 <div class="app">
-  <!-- ═══ SIDEBAR ═══ -->
-  <aside class="sidebar">
-        <div class="logo-wrap"><img id="logo-sidebar" src="assets/logo-lelab-blanc.png" data-lelab="assets/logo-lelab-blanc.png" data-lelab-plus="assets/logo-lelab-plus-blanc.png" alt="LeLab"></div>
-
-    <nav class="nav-list">
-      <button class="nav-item active" onclick="showScreen('dashboard')">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
-        <span class="nav-txt"><span class="nav-name">Accueil</span><span class="nav-sub">Stats</span></span>
-      </button>
-      <button class="nav-item" onclick="showScreen('monsite')">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
-        <span class="nav-txt"><span class="nav-name">Mon site</span><span class="nav-sub">Mon contenu</span></span>
-      </button>
-      <button class="nav-item locked-item" id="nav-studio" onclick="handlePlusClick()">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-        <span class="nav-txt"><span class="nav-name">Publier</span><span class="nav-sub">Créer un post</span></span>
-        <span class="lock-s" id="nav-lock">🔒</span>
-      </button>
-    </nav>
-
-    <div class="sidebar-foot">
-      <div class="plan-badge" id="sidebar-badge">
-        <div class="plan-badge-head">
-          <svg class="lelab-star" viewBox="0 0 100 100" aria-hidden="true">
-            <path d="M50,0 L61.1,26 L85.1,14.9 L74,38.9 L100,50 L74,61.1 L85.1,85.1 L61.1,74 L50,100 L38.9,74 L14.9,85.1 L26,61.1 L0,50 L26,38.9 L14.9,14.9 L38.9,26 Z"/>
-          </svg>
-          <span class="tag" id="badge-tag">LeLab</span>
-        </div>
-        <p id="badge-desc">Modifiez votre site en autonomie et publiez simplement sur Instagram.</p>
-      </div>
-      <div class="user-row">
-        <div class="avatar">VC</div>
-        <div style="flex:1"><div class="user-name">Votre commerce</div><div class="user-plan">@votre_compte</div></div>
-        <button onclick="doLogout()" title="Déconnexion" style="margin-left:auto;background:var(--gris-card);border-radius:var(--r-sm);width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:14px;">⏻</button>
-      </div>
-      <!-- Statut Instagram (desktop) — peuplé par loadInstagramStatus(), même modèle que #igStatusStudio.
-           VIDE en vignette légère (le rail d'aperçu porte le statut) ; la carte Meta n'y vient qu'en `detaillee`.
-           (Ce commentaire citait #igStatusPublier — un mount supprimé depuis : il envoyait le lecteur sur un mort.) -->
-      <div id="igStatusSidebar"></div>
-    </div>
-  </aside>
-
   <div class="main">
-    <!-- topbar mobile -->
-    <div class="topbar-m"><img id="logo-topbar" src="assets/logo-lelab-noir-h.png" data-lelab="assets/logo-lelab-noir-h.png" data-lelab-plus="assets/logo-lelab-plus-noir-h.png" alt="LeLab"><div style="display:flex;align-items:center;gap:12px"><div class="av">BS</div><button onclick="doLogout()" title="Déconnexion" class="topbar-logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M6.6 6.8a8 8 0 1 0 10.8 0"/></svg></button></div></div>
-
-    <!-- ═══ SCREEN : DASHBOARD ═══ -->
-    <div class="screen active" id="screen-dashboard">
-      <div class="page">
-        <div class="hello">
-          <div class="hello-date" id="helloDate"></div>
-          <h1 class="hello-title"><span class="ht-strong">Bonjour<br><span id="helloName"></span>,</span><span class="ht-light">que voulez-vous<br>faire aujourd'hui ?</span></h1>
-        </div>
-
-        <div class="tiles">
-          <button type="button" class="tile tile-mon" onclick="showScreen('monsite')">
-            <span class="tile-grain"></span>
-            <span class="tile-in">
-              <span class="tile-ico"><svg width="60" height="60" viewBox="0 0 64 64" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M10.4 17.6c-.2-2.6 1.1-4 3.7-4.1 12-.5 24-.5 36-.1 2.6.1 3.9 1.4 3.8 4-.3 7.6-.4 15.2-.2 22.8.1 2.5-1.2 3.8-3.7 3.9-11.9.5-23.8.4-35.7 0-2.6-.1-3.9-1.4-3.8-4 .4-7.5.4-15 .1-22.5Z" fill="var(--ink)"/>
-  <path d="M17.6 22.6c9.6-.4 19.2-.4 28.8 0" stroke="var(--m-color)" stroke-width="2.4"/>
-  <path d="M17.6 29.8c6.4-.3 12.8-.3 19.2 0" stroke="var(--m-color)" stroke-width="2.4"/>
-  <path d="M17.6 36.6c9.6-.4 19.2-.4 28.8 0" stroke="var(--m-color)" stroke-width="2.4"/>
-  <path d="M28.4 44.8c-.4 2.6-1.1 5.1-2.1 7.5"/>
-  <path d="M37.2 44.7c.4 2.6 1.1 5.1 2 7.5"/>
-  <path d="M24.6 52.6c5.3-.4 10.6-.5 15.9-.1"/>
-</svg></span>
-              <span class="tile-foot">
-                <span class="tile-act">Modifier<br>mon site</span>
-                <span class="tile-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
-              </span>
-            </span>
-          </button>
-          <button type="button" class="tile tile-studio" onclick="handlePlusClick()">
-            <span class="tile-grain"></span>
-            <span class="tile-in">
-              <span class="tile-ico"><svg width="60" height="60" viewBox="0 0 64 64" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M6.8 20.4c-.2-2.6 1.1-4 3.7-4.1 3-.2 6-.2 9-.2 1.4-2 2.7-4 3.9-6.1.4-.8 1.1-1.2 2-1.2 4.4-.2 8.8-.2 13.2 0 .9 0 1.6.4 2 1.2 1.2 2.1 2.5 4.1 3.9 6.1 3 0 6 .1 9 .2 2.6.1 3.9 1.5 3.8 4.1-.3 7.6-.4 15.2-.2 22.8.1 2.6-1.2 3.9-3.8 4-15.2.5-30.4.5-45.6 0-2.6-.1-3.9-1.4-3.8-4 .4-7.6.4-15.2.1-22.8Z" fill="var(--ink)"/>
-  <path d="M32.2 21.8c6.6-.3 12.2 4.8 12.5 11.4.3 6.6-4.8 12.1-11.4 12.4-6.6.3-12.1-4.8-12.4-11.4-.3-6.5 4.7-12.1 11.3-12.4Z" fill="var(--g-color)"/>
-  <path d="M32.4 28.4c2.9-.1 5.4 2.1 5.5 5 .2 2.9-2.1 5.4-5 5.5-2.9.2-5.4-2.1-5.5-5-.1-2.9 2.1-5.3 5-5.5" fill="var(--ink)"/>
-  <path d="M46.6 24.4c1.2-.1 2.4-.1 3.6 0" stroke="var(--g-color)" stroke-width="2.6"/>
-</svg></span>
-              <span class="tile-foot">
-                <span class="tile-act">Publier<br>sur Insta</span>
-                <span class="tile-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
-              </span>
-            </span>
-          </button>
-        </div>
-
-        <!-- ACCÈS AU SITE PUBLIC — le client veut VOIR son site, pas seulement le modifier.
-             Ferré à gauche comme tout l'écran, sous les tuiles : il n'entre pas en concurrence avec les
-             deux gestes (11,5px et --ink-2 contre 17px et encre pleine), et il reste au-dessus des stats
-             donc atteignable sans scroll. Libellé posé par syncSiteLinks (cf. libelleSiteLien). -->
-        <div class="tiles-foot">
-          <a class="lelab-site-link lelab-site-link--left" id="dashSiteLink" href="/" target="_blank" rel="noopener"></a>
-        </div>
-
-        <div class="stats-fold">
-          <button type="button" class="stats-toggle" id="statsToggle" aria-expanded="true" aria-controls="statsPanel" onclick="toggleStats()">
-            <span class="st-label">Masquer mes statistiques</span>
-            <span class="st-chev" aria-hidden="true">⌄</span>
-          </button>
-          <!-- Tableau de bord : INFORME, n'agit pas. Aucun impératif/bouton (l'action est dans les 2 grandes cards). -->
-          <div class="stats" id="statsPanel">
-            <div class="stat">
-              <div class="stat-num" id="statPubMonth">0</div>
-              <div class="stat-lbl">publications ce mois</div>
-            </div>
-            <div class="stat">
-              <div class="stat-num stat-num--sm" id="statLastUpdate">Jamais</div>
-              <div class="stat-lbl">dernière mise à jour</div>
-            </div>
-            <div class="stat" id="statEventCard" style="display:none;">
-              <div class="stat-num stat-num--sm" id="statNextEvent">—</div>
-              <div class="stat-lbl">prochain événement</div>
-            </div>
-          </div>
+    <!-- ═══ BARRE HAUTE (LELAB-DESIGN §4) — logo, segment des pièces, avatar. Pas d'autre navigation. ═══
+         ⚠️ Les deux logos portent data-lelab / data-lelab-plus : applyPlan les bascule comme avant. -->
+    <header class="barre">
+      <span class="barre-logo">
+        <img class="logo-nuit" src="assets/logo-lelab-blanc-h.png" data-lelab="assets/logo-lelab-blanc-h.png" data-lelab-plus="assets/logo-lelab-plus-blanc-h.png" alt="LeLab">
+        <img class="logo-jour" src="assets/logo-lelab-noir-h.png" data-lelab="assets/logo-lelab-noir-h.png" data-lelab-plus="assets/logo-lelab-plus-noir-h.png" alt="LeLab">
+      </span>
+      <nav class="segment" aria-label="Pièces">
+        <button type="button" class="seg seg--site" id="segSite" onclick="showScreen('monsite')" aria-current="page">Mon site</button>
+        <button type="button" class="seg seg--insta" id="segInsta" onclick="handlePlusClick()">Mon Instagram</button>
+      </nav>
+      <!-- L'avatar ouvre un VOLET (nom du commerce + « Se déconnecter ») : un toucher ne déconnecte jamais
+           seul. « Mon compte » viendra à son bout. ⚠️ Pas de confirm() : il ne s'affiche pas partout. -->
+      <div class="compte" id="compte">
+        <button type="button" class="avatar-init" id="avatarInit" onclick="basculerVoletCompte()"
+                aria-haspopup="true" aria-expanded="false" aria-controls="voletCompte" aria-label="Mon compte"></button>
+        <div class="volet-compte" id="voletCompte" hidden>
+          <p class="vc-nom" id="voletNom"></p>
+          <button type="button" class="vc-sortie" onclick="fermerVoletCompte();doLogout()">Se déconnecter</button>
         </div>
       </div>
-    </div>
+    </header>
 
     <!-- ═══ SCREEN : MON SITE ═══ -->
-    <div class="screen" id="screen-monsite">
+    <div class="screen active" id="screen-monsite">
+      <!-- ⚠️ « Mon site » EST l'accueil (LELAB-DESIGN §5, écran 1) : il porte .active dès le HTML, comme
+           le faisait l'ancien écran d'accueil — boot() n'appelle aucun showScreen par défaut. -->
+      <div class="site-cadre">
+      <div class="accueil-col">
+        <!-- La phrase d'accueil remplace le titre et les statistiques (§4). Écrite par renderAccueil(). -->
+        <h1 class="accueil"><span id="accueilSalut">Bonjour.</span><span id="accueilEtat">Votre site est à jour.</span></h1>
+        <div class="chips">
+          <span class="chip chip--en-ligne">En ligne</span>
+          <span class="chip chip--a-voir" id="chipAVoir" hidden></span>
+        </div>
+      </div>
       <div class="page">
-        <!-- ⚠️ « EN QUELQUES SECONDES » ÉTAIT FAUX À CHAQUE FOIS. Publier écrit un commit ; le site
-             n'est à jour qu'après un build (~30-60 s, cf. DEV.md). Le client rechargeait son site,
-             ne voyait rien, et republiait. « Moins d'une minute » est une BORNE HAUTE : dépassée de
-             temps en temps, elle fait attendre — elle ne trahit pas.
-             ⚠️ Le vrai correctif sera d'interroger l'état du déploiement et de le CONSTATER. Tant
-             qu'on ne le fait pas, on annonce une prévision, et on l'annonce comme telle. -->
-        <div class="pg-head"><h1>Mon site</h1><p>Modifiez le contenu de votre site. Après publication, comptez moins d’une minute avant de voir les changements en ligne.</p></div>
-
         <!-- ⚠️ LES CARDS SONT GÉNÉRÉES DEPUIS config.json (renderSiteCards). Elles étaient ÉCRITES EN
              DUR : 7 cards, 7 pictos, 7 libellés — pour UN client. Masa n'a pas « Le plat du jour »
              mais « Fournée du jour » ; son admin devait donc être ÉDITÉ. La correspondance
@@ -1836,23 +1577,21 @@ body.dev-local::after{
           <!-- Libellé posé par syncSiteLinks — le même que celui de l'accueil. Deux liens vers LE MÊME
                endroit qui s'écrivent différemment finissent toujours par diverger : une seule source. -->
           <a class="lelab-site-link" id="monsiteSiteLink" href="/" target="_blank" rel="noopener"></a>
+          <!-- ⚠️ « EN QUELQUES SECONDES » ÉTAIT FAUX À CHAQUE FOIS. Publier écrit un commit ; le site
+               n'est à jour qu'après un build (~30-60 s). « Moins d'une minute » est une BORNE HAUTE.
+               Ex-sous-titre de « Mon site », descendu près du bouton qu'il concerne (bout 3). -->
+          <p class="lelab-delai">Après publication, comptez moins d’une minute avant de voir les changements en ligne.</p>
         </div>
       </div>
+      </div><!-- /site-cadre -->
     </div>
 
     <!-- ═══ SCREEN : PUBLIER (LeLab basique) ═══ -->
 
     <!-- ═══ SCREEN : STUDIO LELAB+ ═══ -->
     <div class="screen" id="screen-studio">
-      <!-- state locked (affiché si plan = lelab) -->
-      <div class="studio-locked" id="studio-locked">
-        <div class="lock-circle">🔒</div>
-        <h2>Studio Instagram LeLab+</h2>
-        <p>Thèmes adaptatifs, 3 formats, visuel menu du jour généré dans votre charte, IA pour vos légendes et preview en direct.</p>
-        <button class="btn-upgrade" onclick="showUpsell()">✦ Passer à LeLab+ — 89€/mois</button>
-      </div>
-      <!-- state unlocked (affiché si plan = lelab_plus) -->
-      <div class="studio-wrap" id="studio-unlocked" style="display:none;">
+      <!-- Le studio, dans les deux plans (lelab = version contrainte, cf. applyStudioConstraints) -->
+      <div class="studio-wrap" id="studio-unlocked">
         <!-- mini preview (mobile) -->
         <div class="mini-preview" onclick="togglePreview()">
           <!-- Le point vert vit SUR le logo : en mobile le tiroir d'aperçu est FERMÉ à l'arrivée, donc ce
@@ -1874,12 +1613,12 @@ body.dev-local::after{
         <div class="compose">
           <div class="compose-head">
             <div id="igStatusStudio"></div>
-            <button class="ch-quit" onclick="showScreen('dashboard')" aria-label="Retour à l'accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Accueil</button>
+            <button class="ch-quit" onclick="showScreen('monsite')" aria-label="Retour à Mon site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Mon site</button>
           </div>
 
           <div class="studio-bar" id="studioBar">
             <div class="bar-left">
-              <button class="bar-cross" id="studio-cross" onclick="showScreen('dashboard')" aria-label="Retour à l'accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg><span class="bar-cross-lbl">Accueil</span></button>
+              <button class="bar-cross" id="studio-cross" onclick="showScreen('monsite')" aria-label="Retour à Mon site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg><span class="bar-cross-lbl">Mon site</span></button>
               <button class="btn btn--ghost" id="studio-back" onclick="prevStep()" aria-label="Étape précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Retour</button>
             </div>
             <div class="bar-center"><!-- stepper supprimé : la progression est dans le titre de l'écran (N/5 — …) --></div>
@@ -1893,7 +1632,7 @@ body.dev-local::after{
           <div class="studio-reset-row"><button type="button" class="studio-reset-link" onclick="askRecommencer()">Recommencer</button></div>
 
           <!-- Échappement discret : visible uniquement sur l'écran final (body.in-final), en dehors de la zone transformée. -->
-          <button class="fp-quit" id="fpQuit" onclick="showScreen('dashboard')" aria-label="Quitter le studio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          <button class="fp-quit" id="fpQuit" onclick="showScreen('monsite')" aria-label="Quitter le studio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 
           <div class="steps-viewport" id="stepsViewport">
           <!-- ÉCRAN : FORMAT (post/story) — tap sur une card = sélection + avance -->
@@ -1921,10 +1660,6 @@ body.dev-local::after{
             <div class="studio-head">
               <h2 class="studio-q"><span class="q-num"></span>Que voulez-vous publier ?</h2>
               <p class="studio-sub">Choisissez le type de post.</p>
-            </div>
-            <div class="studio-upsell" id="studio-upsell" style="display:none;">
-              <div class="su-txt"><b>Débloquez le studio complet avec LeLab+</b><span>Thèmes photo, infos pratiques, stories et carrousels sur-mesure.</span></div>
-              <a class="btn btn--sm" href="mailto:hello@lestud.fr?subject=Découvrir%20LeLab%2B">Découvrir LeLab+</a>
             </div>
             <div class="lelab-grid lelab-grid--2" id="themeGrid">
 
@@ -2179,19 +1914,6 @@ body.dev-local::after{
 
 <!-- ═══ POPUP PUBLICATION BASIQUE ═══ -->
 
-<!-- ═══ MOBILE NAV ═══ -->
-<nav class="mobile-nav">
-  <!-- ⚠️ DES <button>, PLUS DES <a>. C'étaient des <a> SANS href : un lien sans href n'est ni
-       focusable ni activable au clavier — la nav entière était invisible à la touche Tab. Ce sont
-       des ACTIONS (changer d'écran), pas des destinations : le bouton est la balise juste.
-       ⚠️ `flex:1` explicite malgré .mn-item : c'est le piège déjà payé (LELAB.md, 16/07) — un
-       <button> ne s'étire pas comme un <a> en item flex sur Safari. Et la réinitialisation UA
-       (police, couleur, fond, bordure) est obligatoire, un bouton n'hérite d'aucune des trois. -->
-  <button type="button" class="mn-item active" onclick="showScreen('dashboard')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.1 3 10.8c-.5.4-.2 1.2.4 1.2H5v7.6c0 .5.4.9.9.9h3.4v-5.1c0-.5.4-.9.9-.9h3.6c.5 0 .9.4.9.9v5.1h3.4c.5 0 .9-.4.9-.9V12h1.6c.6 0 .9-.8.4-1.2L12 3.1Z"/></svg>Accueil</button>
-  <button type="button" class="mn-item" onclick="showScreen('monsite')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4.6h16c.6 0 1 .4 1 1v9c0 .6-.4 1-1 1h-6v2.4h2.2c.4 0 .8.3.8.8s-.4.7-.8.7H7.8c-.4 0-.8-.3-.8-.7s.4-.8.8-.8H10V15.6H4c-.6 0-1-.4-1-1v-9c0-.6.4-1 1-1Z"/></svg>Mon site</button>
-  <button type="button" class="mn-item" onclick="handlePlusClick()"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M9 4.6c-.4 0-.7.2-.9.5L7 6.6H4c-.8 0-1.5.7-1.5 1.5v8.8c0 .8.7 1.5 1.5 1.5h16c.8 0 1.5-.7 1.5-1.5V8.1c0-.8-.7-1.5-1.5-1.5h-3l-1.1-1.5c-.2-.3-.5-.5-.9-.5H9Zm3 4.1a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8Zm0 1.9a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"/></svg>Publier</button>
-</nav>
-
 <!-- Pied d'action studio (MOBILE) — CTA en zone du pouce ; affiché via body.in-studio (cf. @media 960) -->
 
 <script src="/client-tokens.js?v=1"></script>   <!-- ⚠️ nom NEUTRE : chaque fork a SON client-tokens.js, l'admin ne change pas -->
@@ -2239,12 +1961,11 @@ function injectActuButton(){
   top.appendChild(btn);   // haut-droite : la zone des ACTIONS. Le reste de la card OUVRE.
 }
 
-// Studio guidé (entrée depuis le bouton actu-métier) : template imposé/invisible, plats pré-remplis, accès direct au choix du format (étape 2).
-let studioEntry = 'browse';   // 'guided' (bouton actu-métier) | 'browse' (nav / accès libre)
-
+// Entrée directe depuis le bouton actu-métier : template de l'actu, plats pré-remplis, arrivée sur la saisie.
+// ⚠️ Le mode « guidé » (studioEntry / isLabGuided) est retiré au bout 3 : les templates non autorisés
+//    sont désormais TOUJOURS masqués en plan lelab (plus de version floutée + bandeau upsell).
 function openStudioGuided(e){
   if (e) e.stopPropagation();
-  studioEntry = 'guided';
   applyStudioConstraints();   // masque les templates non autorisés (lelab)
   showScreen('studio');
   const actu = lelabActu();
@@ -2405,12 +2126,13 @@ async function boot(user){
      applyScreen de 150 ms (le fondu). La route s'appliquait dans l'intervalle — l'éditeur s'ouvrait
      vraiment, titre et champs remplis — puis le timer retombait et réactivait l'accueil par-dessus.
      Symptôme : « La carte » chargée… derrière l'écran d'accueil. Le hash n'y était pour rien.
-     → Plus d'écran par défaut ici : `#screen-dashboard` porte déjà `.active` dans le HTML (donc
+     → Plus d'écran par défaut ici : `#screen-monsite` porte déjà `.active` dans le HTML (donc
        l'accueil s'affiche pendant le chargement), et appliquerRoute tranche ensuite, une seule fois.
      Le salut affiche le nom du commerce (config.json), posé par loadSassyData. */
   /* ⚠️ AWAIT, et c'est nécessaire : la route peut demander d'ouvrir un éditeur, et openEdit lit
      sassyData (ecranDe / prefillSection). Sans attendre, on rouvrirait un écran sur des données
      absentes. loadSassyData n'était pas attendu — personne n'en avait besoin jusqu'ici. */
+  purgerStatsLocales();
   await loadSassyData();   // ↪ défini au bloc 4 (charge les JSON + applique le plan)
   appliquerRoute();        // « où on était » — après les données, jamais avant
   loadInstagramStatus();   // statut Instagram (badge studio + écran Publier)
@@ -2571,7 +2293,7 @@ function customLogout(){
        perdre la course au routeur dans boot().
      ⚠️ Ceci n'écrase JAMAIS un jeton : ecrireRoute se tait si le fragment en porte un (cf.
        hashPorteUnToken) — se déconnecter pile quand un #access_token arrive le laisse intact. */
-  applyScreen('dashboard');
+  applyScreen('monsite');
   document.body.classList.remove('authed');
   showToast('👋 Déconnecté');
 }
@@ -2616,8 +2338,9 @@ async function restoreSession(){
           était déjà testé.
       → Refresh dans le studio : on y REVIENT. On ne combat plus le geste accidentel (l'overscroll a
         été tenté et a échoué sur iOS, cf. le revert du 16/07) — on rend son effet inoffensif.
-      ⚠️ COÛT ASSUMÉ, NE PAS « CORRIGER » : studioEntry ('guided'/'browse') n'est pas dans le
-         brouillon, donc un refresh revient toujours en 'browse'. Aujourd'hui c'est SANS EFFET —
+      (Le mode guidé/libre — studioEntry — est retiré depuis le bout 3 : plus rien à reprendre ici.)
+      ⚠️ Ancien coût, conservé pour l'historique : studioEntry ('guided'/'browse') n'était pas dans le
+         brouillon, donc un refresh revenait toujours en 'browse'. Aujourd'hui c'est SANS EFFET —
          master et Masa sont en lelab_plus, donc isLabGuided() est faux partout et le mode ne change
          ni les templates ni le verrouillage du thème. Le seul écart : un client entré en guidé SANS
          travail revenait à l'étape 3 (thème/format présélectionnés), il reviendra à l'étape 1. Sans
@@ -2640,7 +2363,11 @@ async function restoreSession(){
       porte DEUX éditeurs (« horaires » et « contact »). `#edit/infos` serait ambigu. Les clés `edit`
       (menu, photos, horaires, contact, dujour, events) sont uniques. D'où `#edit/menu` pour « La
       carte » : c'est le vocabulaire de la config, pas un identifiant inventé ici. */
-const ROUTE_ECRANS = { accueil: 'dashboard', monsite: 'monsite', studio: 'studio' };   // ⚠️ studio : ÉCRITURE seule, cf. ci-dessus
+const ROUTE_ECRANS = { site: 'monsite', studio: 'studio' };   // ⚠️ studio : ÉCRITURE seule, cf. ci-dessus
+/* ⚠️ LES ANCIENNES ADRESSES RESTENT VALABLES (bout 3). L'accueil et « Mon site » ne font plus qu'un
+   écran, #site. Un favori, un lien de mail ou un onglet resté ouvert sur #accueil, #dashboard ou
+   #monsite y mène, et l'URL est réécrite en #site — on ne laisse pas une adresse qui n'existe plus. */
+const ROUTE_ALIAS = { accueil: 'site', dashboard: 'site', monsite: 'site' };
 
 /* ⚠️ ON N'ÉCRIT JAMAIS PAR-DESSUS UN TOKEN. Identity fait arriver invite_token / recovery_token /
    access_token dans le fragment ; handleAuthHash les intercepte au boot et nettoie l'URL. Tant qu'un
@@ -2673,7 +2400,7 @@ function appliquerRoute(){
     const connue = (typeof toutesLesCartes === 'function')
       && toutesLesCartes().some(c => c.editable && c.edit === m[1]);
     if (connue){ openEdit(m[1]); return; }
-    ecrireRoute('accueil');                             // clé inconnue → on ne laisse pas d'URL qui ment
+    ecrireRoute('site');                                // clé inconnue → on ne laisse pas d'URL qui ment
   }
   /* ⚠️ AVANT le lookup, et ce n'est pas un raccourci : ROUTE_ECRANS.studio vaut 'studio', donc tomber
      dans applyScreen ci-dessous ouvrirait l'écran SANS le seuil (cf. le bloc du routeur). Le studio
@@ -2693,8 +2420,8 @@ function appliquerRoute(){
     else if (typeof ecrireRoute === 'function') ecrireRoute('studio/' + currentStep);   // #studio, #studio/0, #studio/abc, #studio/9 → l'URL dit la vérité
     return;
   }
-  const ecran = ROUTE_ECRANS[h];
-  applyScreen(ecran || 'dashboard');
+  const ecran = ROUTE_ECRANS[ROUTE_ALIAS[h] || h];
+  applyScreen(ecran || 'monsite');   // hash inconnu ou vide → Mon site, et applyScreen réécrit #site
 }
 
 /* ═══ LE HASH QUI CHANGE SANS RECHARGEMENT ═══════════════════════════════════════════════════════
@@ -2856,25 +2583,12 @@ async function loadSassyData(){
   } catch(e){
     console.log('[Admin] Données JSON non disponibles');
   }
-  /* ⚠️ L'IDENTITÉ ÉTAIT ÉCRITE EN DUR DANS LE MARKUP. Le master affichait « Votre commerce » /
-     « @votre_compte » ; Masa affichait « Masa Madre » / « @masamadre.marseille » — donc son admin
-     devait être ÉDITÉ pour ça. Or config.json porte commerce.nom et general.instagram.
-     Le salut de l'accueil les lisait déjà ; la barre latérale, non. Elle les lit maintenant. */
-  const nomCommerce = sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom;
-  const nameEl = document.getElementById('helloName');
-  if (nameEl && nomCommerce) nameEl.textContent = nomCommerce;
-  document.querySelectorAll('.user-name').forEach(el => { if (nomCommerce) el.textContent = nomCommerce; });
-  /* ⚠️ LE DÉFAUT NE DOIT JAMAIS ÊTRE UN FAUX COMPTE. Le markup portait « @votre_compte » en dur, et le
-     `if (pseudo)` le laissait en place quand la donnée manquait (general.instagram vaut '' sur le
-     master) : un pseudo PLAUSIBLE, donc un mensonge — la même faute que l'avatar Unsplash et que le
-     « votre_compte » de la légende. Pas de donnée → on n'affiche RIEN. Le vide ne ment pas. */
-  const pseudo = (sassyData.general && sassyData.general.instagram || '').trim();
-  document.querySelectorAll('.user-plan').forEach(el => {
-    el.textContent = pseudo ? (pseudo.startsWith('@') ? pseudo : '@' + pseudo) : '';
-    el.hidden = !pseudo;
-  });
-  const dateEl = document.getElementById('helloDate');
-  if (dateEl){ const _d = new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }); dateEl.textContent = _d.charAt(0).toUpperCase() + _d.slice(1); }
+  /* L'identité de la barre haute : initiales de l'avatar (prénom, sinon nom du commerce). La phrase
+     d'accueil, elle, est posée par renderAccueil() en fin de chargement. */
+  const av = document.getElementById('avatarInit');
+  if (av) av.textContent = initialesAvatar();
+  const nomVolet = document.getElementById('voletNom');
+  if (nomVolet) nomVolet.textContent = ((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '').trim();
 
   /* ⚠️ LE TITRE DU VISUEL — il part À L'IA, donc il finit dans la LÉGENDE PUBLIÉE. Il valait
      « Menu du jour » EN DUR dans le markup : un boulanger n'a pas de menu du jour. Il vient
@@ -2893,7 +2607,7 @@ async function loadSassyData(){
   //    besoin des interrupteurs que renderSiteCards() vient de poser.
   renderSiteCards();
   enregistrerSourcesDeBlocs();
-  syncSiteLinks();   // libellé du lien « site public » (accueil + Mon site) — dépend de config.commerce
+  syncSiteLinks();   // libellé du lien « site public » de Mon site — dépend de config.commerce
 
   // Plan piloté par la donnée (fallback lelab si absent/illisible)
   applyPlan(sassyData.config && sassyData.config.plan === 'lelab_plus' ? 'lelab_plus' : 'lelab');
@@ -2903,26 +2617,12 @@ async function loadSassyData(){
   injectActuButton();
   // Cards des thèmes custom (générateur d'habillages)
   renderCustomThemes();
-  // Métriques d'accueil (publications du mois, dernière MAJ, prochain événement)
-  renderDashboardStats();
+  renderAccueil();   // phrase d'accueil + chips (LELAB-DESIGN §4)
 }
 
-/* ── Dashboard : métriques d'action (publications du mois, dernière MAJ, prochain événement) ── */
-const LELAB_PUB_LOG_KEY = 'lelab_pub_log';
-const LELAB_LAST_UPDATE_KEY = 'lelab_last_update';
-function lelabPubLog(){
-  try { const a = JSON.parse(localStorage.getItem(LELAB_PUB_LOG_KEY) || '[]'); return Array.isArray(a) ? a : []; }
-  catch(e){ return []; }
-}
-function recordPublication(){               // après une publication Instagram réussie
-  const log = lelabPubLog(); log.push(Date.now());
-  try { localStorage.setItem(LELAB_PUB_LOG_KEY, JSON.stringify(log.slice(-200))); } catch(e){}
-  renderDashboardStats();
-}
-function markSiteUpdated(){                  // après une sauvegarde save-data réussie
-  try { localStorage.setItem(LELAB_LAST_UPDATE_KEY, String(Date.now())); } catch(e){}
-  renderDashboardStats();
-}
+/* ── Les statistiques d'accueil sont RETIRÉES (bout 3, LELAB-DESIGN §4 : la phrase d'accueil les remplace).
+   Leurs deux clés localStorage sont purgées une fois au boot (purgerStatsLocales), pour ne rien laisser
+   traîner chez le client. nextUpcomingEvent / fmtEventWhen restent : le pré-remplissage « event » les lit. */
 function nextUpcomingEvent(){
   const events = Array.isArray(sassyData.events) ? sassyData.events : [];
   const today = new Date(); today.setHours(0,0,0,0);
@@ -2930,53 +2630,105 @@ function nextUpcomingEvent(){
     .filter(e => e && e.date && !isNaN(new Date(e.date).getTime()) && new Date(e.date) >= today)
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null;
 }
-function fmtRelativeDay(ts){
-  const d = new Date(ts); d.setHours(0,0,0,0);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const j = Math.round((today - d) / 86400000);
-  if (j <= 0) return "Aujourd'hui";
-  if (j === 1) return 'Hier';
-  if (j < 7) return 'Il y a ' + j + ' j';
-  return new Date(ts).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
-}
 function fmtEventWhen(ev){
   const d = new Date(ev.date);
   const day = isNaN(d.getTime()) ? (ev.date || '') : d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
   return ev.heure ? (day + ' · ' + ev.heure) : day;
 }
-function renderDashboardStats(){
-  // 1) Publications Instagram ce mois (journal local, 0 par défaut)
-  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
-  const pub = lelabPubLog().filter(ts => { const d = new Date(ts); return d.getMonth() === m && d.getFullYear() === y; }).length;
-  const elPub = document.getElementById('statPubMonth'); if (elPub) elPub.textContent = pub;
-  // 2) Dernière mise à jour du site (INFO seule — plus d'impératif "Publiez…")
-  const ts = parseInt(localStorage.getItem(LELAB_LAST_UPDATE_KEY) || '', 10);
-  const elUpd = document.getElementById('statLastUpdate'); if (elUpd) elUpd.textContent = ts ? fmtRelativeDay(ts) : 'Jamais';
-  // 3) Prochain événement (sinon carte masquée)
-  const card = document.getElementById('statEventCard');
-  if (card){
-    const ev = nextUpcomingEvent();
-    if (ev){
-      card.style.display = '';
-      const t = document.getElementById('statNextEvent'); if (t) t.textContent = (ev.titre || 'Événement').replace(/^./, c => c.toUpperCase());
-    } else { card.style.display = 'none'; }
-  }
+/* ═══ LA PHRASE D'ACCUEIL — LELAB-DESIGN §4 ════════════════════════════════════════════════════
+   « Bonsoir Vincent. » puis l'état RÉEL du site en une phrase, et dessous les chips « En ligne » et
+   « n à voir ». Elle remplace les statistiques.
+
+   L'ÉTAT D'UNE SECTION (§2) — un des trois, jamais deviné :
+     · masquée : le bloc porte `actif:false` dans config.json. Strictement ça.
+     · à voir  : une SOURCE dit pourquoi (date passée sur un contenu du jour, fin à ≤ 3 jours…).
+     · à jour  : sinon.
+   ⚠️ SOURCES_A_VOIR EST VIDE, ET C'EST MESURÉ, PAS OUBLIÉ (26/10). Relevé champ par champ des _data
+      de Sassy : aucune date d'ardoise, aucune date de fin. La seule date (events.json) est le JOUR de
+      l'événement — ni un contenu du jour, ni une fin — et la spec range « rien à venir » en masquée,
+      pas en à voir. Décision de Romain : la phrase reste fixe dans ce bout, la mécanique 0/1/n est
+      câblée et prouvée sur une source SIMULÉE (scripts/test-accueil.js). La première vraie source
+      viendra avec la feuille, qui écrira une date à chaque publication.
+      → Une source = (bloc, sassyData, maintenant) → raison (texte) ou null. On n'en écrit aucune
+        sans une donnée réelle qui la porte. */
+const SOURCES_A_VOIR = [];
+
+function etatDesSections(maintenant){
+  return tousLesBlocs().map(bloc => {
+    if (bloc.actif === false) return { cle: bloc.cle, etat: 'masquee' };
+    for (const source of SOURCES_A_VOIR){
+      const raison = source(bloc, sassyData, maintenant);
+      if (raison) return { cle: bloc.cle, etat: 'a-voir', raison };
+    }
+    return { cle: bloc.cle, etat: 'a-jour' };
+  });
+}
+function phraseEtat(n){
+  if (n <= 0) return 'Votre site est à jour.';
+  if (n === 1) return 'Une carte vous attend.';
+  return n + ' cartes vous attendent.';
+}
+function prenomDuProfil(){
+  return ((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.prenom) || '').trim();
+}
+function salutation(maintenant){
+  const prenom = prenomDuProfil();
+  return (maintenant.getHours() < 18 ? 'Bonjour' : 'Bonsoir') + (prenom ? ' ' + prenom : '') + '.';
+}
+/* Initiales de l'avatar : le prénom s'il est rempli, sinon le nom du commerce (deux mots au plus). */
+function initialesAvatar(){
+  const prenom = prenomDuProfil();
+  if (prenom) return prenom.charAt(0).toUpperCase();
+  const nom = ((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '').trim();
+  return nom.split(/\s+/).filter(Boolean).slice(0, 2).map(m => m.charAt(0).toUpperCase()).join('');
+}
+function renderAccueil(maintenant){
+  const quand = maintenant || new Date();
+  const n = etatDesSections(quand).filter(e => e.etat === 'a-voir').length;
+  const salut = document.getElementById('accueilSalut');
+  const etat = document.getElementById('accueilEtat');
+  const chip = document.getElementById('chipAVoir');
+  if (salut) salut.textContent = salutation(quand);
+  if (etat) etat.textContent = phraseEtat(n);
+  if (chip){ chip.hidden = n <= 0; chip.textContent = n > 0 ? n + ' à voir' : ''; }
 }
 
-/* Accordéon des stats sur l'accueil : repliées par défaut, aucun chiffre à l'arrivée. */
-function toggleStats(){
-  const panel = document.getElementById('statsPanel');
-  const btn = document.getElementById('statsToggle');
-  if (!panel || !btn) return;
-  const willOpen = panel.hasAttribute('hidden');
-  const lbl = btn.querySelector('.st-label');
-  if (willOpen){ panel.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true'); if (lbl) lbl.textContent = 'Masquer mes statistiques'; }
-  else { panel.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); if (lbl) lbl.textContent = 'Voir mes statistiques'; }
+/* La pièce courante : le segment de la barre haute, et la matière du fond (Mon site seulement). */
+function marquerPiece(piece, matiereSite){
+  const site = document.getElementById('segSite'), insta = document.getElementById('segInsta');
+  if (site)  { if (piece === 'site')  site.setAttribute('aria-current', 'page');  else site.removeAttribute('aria-current'); }
+  if (insta) { if (piece === 'insta') insta.setAttribute('aria-current', 'page'); else insta.removeAttribute('aria-current'); }
+  document.body.classList.toggle('ecran-site', !!matiereSite);
 }
 
-/* ── Upsell LeLab+ (ne déverrouille pas : action commerciale) ── */
-function showUpsell(){
-  showToast('✦ LeLab+ : contactez LeStud pour activer le Studio Instagram complet.');
+/* ═══ LE VOLET DU COMPTE — ouvert par l'avatar, fermé dehors, par Échap ou par un second toucher ═══ */
+function voletCompteOuvert(){ const v = document.getElementById('voletCompte'); return !!(v && !v.hidden); }
+function ouvrirVoletCompte(){
+  const v = document.getElementById('voletCompte'), a = document.getElementById('avatarInit');
+  if (!v) return;
+  v.hidden = false; if (a) a.setAttribute('aria-expanded', 'true');
+}
+function fermerVoletCompte(){
+  const v = document.getElementById('voletCompte'), a = document.getElementById('avatarInit');
+  if (!v) return;
+  v.hidden = true; if (a) a.setAttribute('aria-expanded', 'false');
+}
+function basculerVoletCompte(){ voletCompteOuvert() ? fermerVoletCompte() : ouvrirVoletCompte(); }
+/* ⚠️ pointerdown, pas click : le toucher dehors ferme AVANT qu'un autre geste parte. Le second toucher
+   sur l'avatar est exclu ici (il est dans .compte) : c'est basculerVoletCompte qui le referme. */
+document.addEventListener('pointerdown', e => {
+  const c = document.getElementById('compte');
+  if (voletCompteOuvert() && c && !c.contains(e.target)) fermerVoletCompte();
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !voletCompteOuvert()) return;
+  fermerVoletCompte();
+  const a = document.getElementById('avatarInit'); if (a) a.focus();
+});
+
+/* Les deux clés des statistiques retirées (lelab_pub_log, lelab_last_update) : purgées une fois. */
+function purgerStatsLocales(){
+  try { localStorage.removeItem('lelab_pub_log'); localStorage.removeItem('lelab_last_update'); } catch (e){}
 }
 
 /* ── PLAN : application visuelle, pilotée par la donnée ── */
@@ -2992,48 +2744,23 @@ function applyPlan(plan){
     mainEl.classList.toggle('plan-lab', !isPlus);
   }
 
-  // switch logos (sidebar + topbar mobile + login)
-  ['logo-sidebar','logo-topbar','logo-login'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.src = isPlus ? el.dataset.lelabPlus : el.dataset.lelab;
+  // switch logos (barre haute, ses deux variantes nuit/jour, + login) : tout logo qui déclare ses deux sources
+  document.querySelectorAll('img[data-lelab][data-lelab-plus]').forEach(el => {
+    el.src = isPlus ? el.dataset.lelabPlus : el.dataset.lelab;
   });
 
-  // nav studio : cliquable dans les deux plans (lelab = studio contraint). Le cadenas reste un repère upsell.
-  const navStudio = document.getElementById('nav-studio');
-  navStudio.classList.remove('locked-item');
-  document.getElementById('nav-lock').style.display = isPlus ? 'none' : '';
-
-  // badge sidebar
-  const tag = document.getElementById('badge-tag');
-  const desc = document.getElementById('badge-desc');
-  if (isPlus) {
-    tag.textContent = 'LeLab+';
-    desc.textContent = 'Studio Instagram complet activé — thèmes, formats et IA.';
-  } else {
-    tag.textContent = 'LeLab';
-    desc.textContent = 'Modifiez votre site en autonomie et publiez simplement sur Instagram.';
-  }
-
-  // studio screen : déverrouillé dans les deux plans (lelab = version contrainte, cf. étape 5)
-  document.getElementById('studio-locked').style.display = 'none';
-  document.getElementById('studio-unlocked').style.display = 'flex';
 }
 
 // ── NAVIGATION ────────────────────────────────────────────
 function applyScreen(name) {
+  /* ⚠️ Deux écrans de premier niveau depuis le bout 3 : « Mon site » (l'accueil) et le studio. Un nom
+     inconnu — dont l'ancien 'dashboard' — retombe sur Mon site, jamais sur un écran vide. */
+  if (name !== 'studio') name = 'monsite';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.mn-item').forEach(n => n.classList.remove('active'));
-
-  const map = {dashboard:'screen-dashboard',monsite:'screen-monsite',studio:'screen-studio'};   // 'publier' retiré : l'écran était INJOIGNABLE (aucun appelant de showScreen('publier'))
+  const map = {monsite:'screen-monsite',studio:'screen-studio'};
   const s = document.getElementById(map[name]);
   if (s) s.classList.add('active');
-
-  const idx = ['dashboard','monsite','studio'].indexOf(name);
-  const navItems = document.querySelectorAll('.nav-item');
-  if (navItems[idx]) navItems[idx].classList.add('active');
-  const mnItems = document.querySelectorAll('.mn-item');
-  if (mnItems[idx]) mnItems[idx].classList.add('active');
+  marquerPiece(name === 'studio' ? 'insta' : 'site', name === 'monsite');
 
   /* Le hash suit l'écran — studio COMPRIS depuis le 16/07 : il porte `studio` dans ROUTE_ECRANS et
      c'est ICI qu'on l'écrit, quel que soit le chemin d'entrée (nav, tuile, bouton actu). Seule la
@@ -3050,8 +2777,7 @@ function applyScreen(name) {
   }
   document.body.classList.toggle('in-studio', name === 'studio');   // studio-spécifique (aperçu, étapes…)
   /* TUNNEL : « on entre pour faire UNE chose, on sort par le ‹ ». Pose le pied d'action et efface la
-     nav du bas. applyScreen ne connaît que dashboard/monsite/studio → aller sur l'un des deux autres
-     SORT du tunnel. openEdit, lui, le pose (les éditeurs sont des tunnels aussi, cf. .lelab-foot). */
+     barre haute. applyScreen ne connaît que monsite/studio → aller sur Mon site SORT du tunnel. openEdit, lui, le pose (les éditeurs sont des tunnels aussi, cf. .lelab-foot). */
   document.body.classList.toggle('in-tunnel', name === 'studio');
   if (name !== 'studio') document.body.classList.remove('in-final');   // quitter le studio ferme l'état "écran final"
   if (name === 'studio') adjustStepsHeight();   // hauteur du stepper (la reprise est désormais DIRECTE, cf. handlePlusClick)
@@ -3071,7 +2797,7 @@ function applyScreen(name) {
    du 1er tap retombait 150 ms après et rouvrait SON écran (et son état in-tunnel) par-dessus →
    l'écran final était le PREMIER appelé, et la barre CTA (.lelab-foot, sur body.in-tunnel) sautait
    avec. Le clearTimeout tue ce fondu périmé : l'écran final est TOUJOURS le dernier demandé.
-   ⚠️ N'affecte NI le boot (aucun showScreen : #screen-dashboard porte déjà .active) NI la déconnexion
+   ⚠️ N'affecte NI le boot (aucun showScreen : #screen-monsite porte déjà .active) NI la déconnexion
       (applyScreen DIRECT) — les deux colmatages restent corrects, la généralisation ne les touche pas.
    ⚠️ On GARDE la bascule immédiate en plein fondu (pas un différé de plus) : c'est le comportement
       d'avant, et du code (et un garde-fou) lit l'écran juste après l'appel.
@@ -3104,10 +2830,8 @@ function showScreen(name){
 }
 
 // ── Contraintes studio (plan lelab) ──
-// Un seul template autorisé (LELAB_ACTU). guided → templates non autorisés MASQUÉS ;
-// browse → FLOUTÉS + bandeau (5c). lelab_plus → aucune contrainte (studio complet).
+// Un seul template autorisé (LELAB_ACTU) : les autres sont MASQUÉS. lelab_plus → aucune contrainte.
 function isLabPlan(){ return currentPlan !== 'lelab_plus'; }
-function isLabGuided(){ return isLabPlan() && studioEntry === 'guided'; }
 
 function applyStudioConstraints(){
   const isLab = isLabPlan();
@@ -3118,17 +2842,12 @@ function applyStudioConstraints(){
     card.classList.toggle('is-locked', !!locked);
     // Format choisi en amont (écran 1) : un thème sans habillage pour ce format ne s'affiche pas.
     const fmtOff = !cardSupportsFormat(card, currentFmt);
-    card.style.display = ((locked && studioEntry === 'guided') || fmtOff) ? 'none' : '';   // guided/format incompatible : masqué ; browse lock : flouté
+    card.style.display = (locked || fmtOff) ? 'none' : '';   // verrouillé ou format incompatible : masqué
   });
-  const root = document.getElementById('studio-unlocked');
-  if (root) root.classList.toggle('lab-guided', isLabGuided());   // étape Thème verrouillée
-  const banner = document.getElementById('studio-upsell');
-  if (banner) banner.style.display = (isLab && studioEntry === 'browse') ? 'flex' : 'none';   // bandeau upsell
   enforceStudioFormats();   // Story masqué (lelab) — réconcilié avec les contraintes
 }
 
 function handlePlusClick() {
-  studioEntry = 'browse';   // accès libre (nav) → studio non guidé (contraint en lelab, cf. étape 5b/5c)
   applyStudioConstraints();   // réconcilie les formats dispo selon le plan courant (story masquée en lelab)
   showScreen('studio');
   /* ⚠️ REPRISE — LE SEUIL EST LE TRAVAIL SAISI, JAMAIS L'ÉTAPE ATTEINTE.
@@ -3346,7 +3065,7 @@ function applyInfosVariant(annonce){
 }
 
 function selectTheme(btn, animate){
-  if (btn.classList.contains('is-locked')){ showUpsell(); return; }   // template LeLab+ verrouillé
+  if (btn.classList.contains('is-locked')) return;   // template LeLab+ verrouillé (masqué, cf. applyStudioConstraints)
   // Le SEUL endroit où l'on sait si le choix a changé : avant d'écraser currentTheme. Tout le reste en découle.
   const themeChanged = btn.dataset.theme !== currentTheme;
   document.querySelectorAll('#studio-unlocked .lelab-card').forEach(t => t.classList.remove('is-selected'));
@@ -3688,7 +3407,7 @@ function libelleSiteLien(){
 }
 function syncSiteLinks(){
   const txt = libelleSiteLien() + ' ↗';   // ↗ = « ça s'ouvre ailleurs » (target=_blank). Le geste se lit dans la flèche.
-  ['dashSiteLink', 'monsiteSiteLink'].forEach(id => {
+  ['monsiteSiteLink'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = txt;
   });
@@ -3747,16 +3466,16 @@ async function loadInstagramStatus(){
   syncStudioIgMount();   // tête studio (#igStatusStudio) : mount MOBILE de la vignette DÉTAILLÉE (vide en léger)
   /* ⚠️ Le mount #igStatusPublier a été retiré : l'élément n'existait PLUS dans le markup, seul ce code le
      cherchait encore. `s2` était donc null à chaque appel — du code qui s'adressait à un mort. */
-  const s3 = document.getElementById('igStatusSidebar');
-  if (s3) s3.innerHTML = igStatusHTML(status);   // mount sidebar (desktop) — vide en léger : le rail d'aperçu porte tout
+  /* ⚠️ Le mount #igStatusSidebar est retiré avec la sidebar (bout 3). En vignette `legere` (Sassy :
+     config.instagram absent) il était VIDE. Un fork en `detaillee` n'a plus de mount desktop : à reposer
+     dans « Mon Instagram » quand cette pièce sera refaite. */
   /* ⚠️ Le bloc #igStatusText a été retiré — TROISIÈME zombie de la même famille (après #igStatusPublier
      et .ig-status.on) : ce code composait trois phrases, choisissait la bonne… et les écrivait dans un
      élément ABSENT du markup. `txt` était null à chaque appel, depuis longtemps. Du code qui parle
      à un mort a l'air vivant : il se lit, il se maintient, il se porte chez le client. */
 }
 
-// Tête studio (#igStatusStudio) = mount MOBILE de la vignette. En desktop (≥721), la vignette vit
-// dans la sidebar (#igStatusSidebar) : on laisse la tête VIDE → .compose-head:empty{display:none} la masque,
+// Tête studio (#igStatusStudio) = mount MOBILE de la vignette. En desktop (≥721), on laisse la tête VIDE → .compose-head:empty{display:none} la masque,
 // double garde avec @media(min-width:721px). Évite toute vignette en double / holder qui occupe l'espace.
 function syncStudioIgMount(){
   const s1 = document.getElementById('igStatusStudio');
@@ -4332,7 +4051,6 @@ function singleFmtAvailable(){ return availableFmts().length <= 1; }
 // - un seul format dispo (lelab de base : story masquée) : l'écran Format n'a rien à choisir → on entre au Type ;
 // - sinon : l'écran Format (1). Le format unique est déjà sélectionné (enforceStudioFormats garantit currentFmt ∈ dispo).
 function studioMinStep(){
-  if (isLabGuided()) return stepNum('details');   // guidé : Format + Type imposés/sautés → entrée directe sur la saisie pré-remplie
   if (singleFmtAvailable()) return stepNum('type');
   return 1;
 }
@@ -4726,7 +4444,7 @@ function nextStep(){
 }
 function prevStep(){
   // À l'écran d'entrée (rien avant, ex. Type quand l'écran Format est sauté) → Retour = sortie, jamais d'écran fantôme.
-  if (currentStep <= studioMinStep()){ showScreen('dashboard'); return; }
+  if (currentStep <= studioMinStep()){ showScreen('monsite'); return; }
   goStep(currentStep - 1);
 }
 function studioPrimary(){ if (!isLastStep()) nextStep(); else studioPublish(); }
@@ -4972,7 +4690,6 @@ async function studioPublish(){
     // 4) succès
     setPubBtn(btn, '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><path d="M5 13l4 4L19 7"/></svg> Publié !', true);
     studioStarSuccess(data.permalink);       // écran succès (étoile + permalink)
-    recordPublication();                     // +1 publication du mois (journal local) → métrique d'accueil
     showToast(data.permalink ? ('✅ Publié sur Instagram — ' + data.permalink) : '✅ Publié sur Instagram !');
     setTimeout(resetStudioAfterPublish, 1500);
   } catch (e){
@@ -5027,7 +4744,7 @@ function resetStudioAfterPublish(){
   renderHashtagsRow();
   goStep(1);
   renderStudio();
-  showScreen('dashboard');   // publication terminée → retour à l'accueil (la nav du bas réapparaît, plus de tunnel)
+  showScreen('monsite');   // publication terminée → retour à Mon site (plus de tunnel)
 }
 
 /* ── Persistance brouillon studio (localStorage — survit à la fermeture d'onglet :
@@ -5110,7 +4827,7 @@ function studioReset(){
   renderHashtagsRow();
   renderStudioThumbs();
   renderStudio();
-  applyStudioConstraints();   // resynchronise verrouillage/masquage — studioEntry conservé (un reset en mode guidé reste guidé)
+  applyStudioConstraints();   // resynchronise verrouillage/masquage — plus de mode guidé depuis le bout 3
   // 3. Retour à l'étape 1.
   goStep(1);
   // 4. Purge du brouillon EN DERNIER. Et elle est désormais FINALE : studioHasWork() étant faux
@@ -5524,7 +5241,7 @@ function getHabImg(url, cb){
   if (habImgCache[url]){ cb(habImgCache[url]); return; }
   const im = new Image(); im.onload = () => { habImgCache[url] = im; cb(im); }; im.src = url;
 }
-// Charge les polices des templates AVANT le canvas (Bricolage + Inter, déjà servies).
+// Charge les polices des templates AVANT le canvas (celles du client, lues dans ses tokens).
 /* ⚠️ C'était une SECONDE liste de polices écrite en dur — une copie de ensureStudioFonts, avec des
    poids légèrement différents. Deux copies qui divergent : exactement ce qu'on traque. Elle appelle
    désormais la règle unique, qui lit les polices dans les tokens du client. */
@@ -6735,13 +6452,8 @@ function openEdit(section){
      SECONDE porte d'entrée des écrans — celle qu'on avait déjà oubliée pour `in-tunnel`. Le hash
      porte la clé `edit` (unique), pas le bloc (`infos` en porte deux). */
   if (typeof ecrireRoute === 'function') ecrireRoute('edit/' + section);
-  // les éditeurs sont des sous-écrans de "Mon site" → garder cet onglet actif
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.mn-item').forEach(n => n.classList.remove('active'));
-  const navItems = document.querySelectorAll('.nav-item');
-  if (navItems[1]) navItems[1].classList.add('active');
-  const mnItems = document.querySelectorAll('.mn-item');
-  if (mnItems[1]) mnItems[1].classList.add('active');
+  // les éditeurs sont des sous-écrans de « Mon site » → le segment le reste ; l'écran, lui, garde son crème
+  marquerPiece('site', false);
   window.scrollTo(0, 0);
   prefillSection(section);
 }
@@ -6982,7 +6694,6 @@ async function saveSection(){
     if (blocEnCours && TYPES_DE_BLOC[blocEnCours.type]) sassyData[blocEnCours.cle] = data;
     if (currentSection === 'photos') sassyData.photos = data;
 
-    markSiteUpdated();   // horodatage "dernière mise à jour du site"
     /* ⚠️ LE DRAPEAU RETOMBE ICI, ET SEULEMENT ICI — après un 200 du serveur, jamais avant. Le poser
        plus haut (à l'envoi) rendrait la sortie silencieuse alors que le POST peut encore échouer :
        le client perdrait son travail en croyant l'avoir publié. Un drapeau doit constater un
@@ -7128,7 +6839,6 @@ async function saveBlocs(){
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
     sassyData.config = next;
-    markSiteUpdated();   // horodatage "dernière mise à jour du site"
     publishedBlocState = currentBlocState();   // nouvelle référence publiée
     if (btn){ btn.textContent = '✓ Enregistré'; }
     updateDirtyIndicator();                    // plus de diff → indicateur masqué
@@ -7327,7 +7037,6 @@ async function savePhotos(){
   const result = await res.json();
   if (!res.ok) throw new Error(result.error || 'Sauvegarde échouée');
   sassyData.photos = data;
-  markSiteUpdated();   // horodatage "dernière mise à jour du site"
 }
 
 setFmtAvailability(currentKind === 'typo' ? ['portrait'] : ['portrait','story']);
