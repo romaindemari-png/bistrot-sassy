@@ -88,6 +88,20 @@ async function ouvrirAdmin(opts = {}) {
     /* Le 7ᵉ thème du point 23 est injecté DANS LA RÉPONSE HTTP, pas dans le
        dépôt : aucun fichier n'est modifié, donc rien à restaurer — et rien à
        oublier de restaurer. */
+    /* Bout 8 : le studio ne laisse choisir que les sujets qui ont de la matière. Sassy n'a ni plat du jour en
+       ligne ni événement à venir : on les lui DONNE dans la réponse (bloc `produits` allumé, un événement demain),
+       sinon la sonde mesurerait la carte en croyant mesurer le plat du jour. */
+    if (u.includes('/_data/config.json')) {
+      const c = JSON.parse(fs.readFileSync(path.join(RACINE, '_data/config.json'), 'utf8'));
+      for (const g of Object.values(c.blocs || {})) for (const b of Object.values(g || {})) if (b && b.type === 'produits') b.actif = true;
+      return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(c) });
+    }
+    if (u.includes('/_data/events.json')) {
+      const d = new Date(Date.now() + 86400000);
+      const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      return req.respond({ status: 200, contentType: 'application/json',
+        body: JSON.stringify([{ date: iso, heure: '20:00', titre: 'Soirée de la sonde', description: '' }]) });
+    }
     if (opts.themesPatch && u.includes('/_data/themes.json')) {
       const j = JSON.parse(fs.readFileSync(path.join(RACINE, '_data/themes.json'), 'utf8'));
       return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(opts.themesPatch(j)) });
@@ -136,6 +150,8 @@ async function entrerStudio(p, themeId, fmt) {
   }, themeId, fmt);
   if (!r.ok) return r;
   await dodo(500);
+  const choisi = await p.evaluate(() => typeof currentCustomTheme !== 'undefined' && currentCustomTheme ? currentCustomTheme.id : null);
+  if (choisi !== themeId) throw new Error(`le studio a gardé « ${choisi} » au lieu de « ${themeId} » — la sonde mesurerait un autre thème`);
   return await p.evaluate(() => ({
     ok: true,
     theme: typeof currentCustomTheme !== 'undefined' && currentCustomTheme ? currentCustomTheme.id : null,
@@ -173,8 +189,11 @@ async function remplir(p, themeId) {
    mini-vignette : `getBoundingClientRect` renvoyait y = −628, la souris tapait
    600 px au-dessus de la fenêtre et la sonde concluait « le glissement ne
    marche pas ». Rouge pour une raison étrangère à ce qu'elle mesure. */
+/* Bout 8 : plus de volet. Sur téléphone l'aperçu EST le pas 2 du studio (placerApercu l'y pose) : on s'y rend
+   pour qu'il soit à l'écran. Sur desktop il est à droite, déjà visible. */
 const ouvrirVolet = p => p.evaluate(() => {
-  if (!document.body.classList.contains('preview-open')) togglePreview();
+  const place = document.getElementById('apercuPlace'), ap = document.getElementById('apercu');
+  if (place && ap && place.contains(ap) && currentStep !== 2) goStep(2);
 });
 
 const repli = p => p.evaluate(() => {

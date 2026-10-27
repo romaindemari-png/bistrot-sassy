@@ -161,7 +161,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       handlePlusClick(); await new Promise(r => setTimeout(r, 300));
       const carte = document.querySelector('#themeGrid .lelab-card[data-theme="custom:sassy-carte"]');
       if (carte) selectTheme(carte);
-      goStep(stepNum('details')); await new Promise(r => setTimeout(r, 300));
+      goStep(stepNum('page')); await new Promise(r => setTimeout(r, 300));   // bout 8 : les plats se lisent au pas 2 (le visuel)
       const champs = [...document.querySelectorAll('#dishEdit .d-name, #dishEdit .d-price')];
       const lien = document.getElementById('studioModifier');
       return { n: champs.length, lecture: champs.filter(i => i.readOnly).length,

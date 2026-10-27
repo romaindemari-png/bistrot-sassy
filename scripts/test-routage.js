@@ -16,8 +16,8 @@
       SUIVRE : laisser « #edit/nawak » dans la barre d'adresse d'un client posé sur l'accueil, c'est
       une URL qui ment — et qu'il peut mettre en favori.
 
-   2bis. #studio/N — LA PLACE, INDÉPENDANTE DU CONTENU. Le studio est un tunnel de 5 écrans : « où on
-      est » n'y est pas « le studio », c'est « le studio, étape 4 ». Deux questions qu'on a confondues
+   2bis. #studio/N — LA PLACE, INDÉPENDANTE DU CONTENU. Le studio est un tunnel de 3 pas (bout 8) : « où on
+      est » n'y est pas « le studio », c'est « le studio, pas 2 ». Deux questions qu'on a confondues
       et qui ont coûté la journée du 16/07 :
         · LA PLACE   → le hash, écrit à chaque goStep, sans rien demander au seuil ;
         · LE CONTENU → le brouillon, qui suit le seuil (avancer n'est pas travailler).
@@ -194,19 +194,20 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
 
   /* ── (a) LE CAS DU CLIENT : avancer sans rien taper, recharger → on revient À SON ÉTAPE ──
      Rouge sur le code d'avant (#studio nu → handlePlusClick → étape 1). */
+  /* Bout 8 : trois pas. Le cas du client se joue au pas 2 (le visuel) : on y arrive sans rien taper. */
   await studioVierge();
-  await p.evaluate(() => goStep(4));
+  await p.evaluate(() => goStep(2));
   await wait(SETTLE);
   const a0 = await etatStudio();
-  if (a0.step !== 4) fails.push(`setup/ impossible d'atteindre l'étape 4 (étape ${a0.step}) — le test ne prouverait rien`);
+  if (a0.step !== 2) fails.push(`setup/ impossible d'atteindre le pas 2 (pas ${a0.step}) — le test ne prouverait rien`);
   if (a0.brouillon)  fails.push('setup/ un brouillon existe alors que RIEN n\'a été tapé — le cas du client n\'est pas celui-là, et le test retomberait dans le piège de sa version précédente');
-  if (a0.hash !== '#studio/4') fails.push(`STUDIO/ à l'étape 4, l'URL dit « ${a0.hash || '(vide)'} » au lieu de « #studio/4 » — la place n'est pas écrite, donc rien ne pourra la relire`);
+  if (a0.hash !== '#studio/2') fails.push(`STUDIO/ au pas 2, l'URL dit « ${a0.hash || '(vide)'} » au lieu de « #studio/2 » — la place n'est pas écrite, donc rien ne pourra la relire`);
   await rechargeEtBoote();
   const a1 = await etatStudio();
   if (a1.ecran !== 'screen-studio')
-    fails.push(`STUDIO/ #studio/4 ouvre « ${a1.ecran} » au lieu du studio`);
-  if (a1.step !== 4)
-    fails.push(`STUDIO/ rechargement à l'étape 4 SANS avoir rien tapé → le studio rouvre à l'étape ${a1.step}. C'EST LE BUG DU 16/07 : sans travail il n'y a pas de brouillon (le seuil a raison), donc la PLACE doit venir du hash, pas de la reprise. Le client n'a rien perdu — il n'y avait rien à perdre — mais il a perdu sa place, et un refresh n'est pas une sortie`);
+    fails.push(`STUDIO/ #studio/2 ouvre « ${a1.ecran} » au lieu du studio`);
+  if (a1.step !== 2)
+    fails.push(`STUDIO/ rechargement au pas 2 SANS avoir rien tapé → le studio rouvre à l'étape ${a1.step}. C'EST LE BUG DU 16/07 : sans travail il n'y a pas de brouillon (le seuil a raison), donc la PLACE doit venir du hash, pas de la reprise. Le client n'a rien perdu — il n'y avait rien à perdre — mais il a perdu sa place, et un refresh n'est pas une sortie`);
 
   /* ── (b) AVEC du travail : la place ET le contenu reviennent ── */
   await studioVierge();
@@ -230,7 +231,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
      ⚠️ #studio/9 mérite son test à lui : goStep clampe (Math.max(minStep, Math.min(STEP_COUNT, n))),
         donc un `goStep(9)` non validé atterrirait sur la DERNIÈRE étape — le client se retrouverait à
         l'écran final sans avoir rien demandé, et l'URL le lui promettrait. */
-  for (const h of ['studio', 'studio/0', 'studio/abc', 'studio/9', 'studio/-1', 'studio/2.5']){
+  for (const h of ['studio', 'studio/0', 'studio/abc', 'studio/4', 'studio/9', 'studio/-1', 'studio/2.5']){   // 4 : invalide depuis les trois pas
     await studioVierge();
     await p.evaluate((hh) => { history.replaceState(null, '', location.pathname + '#' + hh); }, h);
     await rechargeEtBoote();
@@ -243,23 +244,23 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       fails.push(`STUDIO/ #${h} laisse « ${r.hash || '(vide)'} » dans la barre d'adresse alors que le client est à l'étape 1 — une URL qui ment, et qu'il peut mettre en favori`);
   }
 
-  /* ── (d) LE HASH CHANGE SANS RECHARGEMENT — #studio/2 depuis l'étape 5 ──
+  /* ── (d) LE HASH CHANGE SANS RECHARGEMENT — #studio/2 depuis le dernier pas (3 depuis le bout 8) ──
      Le client tape ou corrige l'URL, la page ne recharge pas (navigation SAME-DOCUMENT). Le 26/10,
      l'URL disait #studio/2 et l'écran montrait l'étape 5 : le hash n'était lu qu'au boot, aucun
      écouteur `hashchange`. ⚠️ `location.hash = …` est EXACTEMENT ce geste (événement natif, pas un
      appel à appliquerRoute) : appeler le routeur à la main prouverait le routeur, pas l'écoute. */
   await studioVierge();
-  await p.evaluate(() => goStep(5));
+  await p.evaluate(() => goStep(3));
   await wait(SETTLE);
   const d0 = await etatStudio();
-  if (d0.step !== 5 || d0.hash !== '#studio/5') fails.push(`setup/ impossible d'atteindre l'étape 5 (étape ${d0.step}, ${d0.hash}) — le cas (d) ne prouverait rien`);
+  if (d0.step !== 3 || d0.hash !== '#studio/3') fails.push(`setup/ impossible d'atteindre le pas 3 (pas ${d0.step}, ${d0.hash}) — le cas (d) ne prouverait rien`);
   /* PAS DE BOUCLE, ET C'EST UNE PROPRIÉTÉ DU NAVIGATEUR QU'ON MESURE, PAS QU'ON SUPPOSE :
      ecrireRoute passe par replaceState, qui ne déclenche PAS `hashchange`. Si c'était faux, l'écouteur
      rejouerait le routeur à chaque goStep, qui réécrirait le hash, qui le rejouerait… */
   const viaReplace = await p.evaluate(() => new Promise(res => {
     let n = 0; const f = () => n++;
     window.addEventListener('hashchange', f);
-    ecrireRoute('studio/3'); ecrireRoute('studio/5');
+    ecrireRoute('studio/2'); ecrireRoute('studio/3');
     setTimeout(() => { window.removeEventListener('hashchange', f); res(n); }, 200);
   }));
   if (viaReplace !== 0) fails.push(`STUDIO/ replaceState a déclenché ${viaReplace} hashchange — l'écouteur bouclerait avec ecrireRoute`);
@@ -277,8 +278,8 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       });
     }, 900);
   }));
-  if (d1.step !== 2 || d1.visible !== 'type' || d1.inFinal)
-    fails.push(`STUDIO/ #studio/2 tapé depuis l'étape 5 SANS rechargement → étape ${d1.step}, écran visible « ${d1.visible} », in-final=${d1.inFinal}. L'URL dit 2, l'écran montre autre chose : c'est le bug du 26/10`);
+  if (d1.step !== 2 || d1.visible !== 'page' || d1.inFinal)
+    fails.push(`STUDIO/ #studio/2 tapé depuis le pas 3 SANS rechargement → étape ${d1.step}, écran visible « ${d1.visible} », in-final=${d1.inFinal}. L'URL dit 2, l'écran montre autre chose : c'est le bug du 26/10`);
   if (d1.hash !== '#studio/2')
     fails.push(`STUDIO/ après #studio/2 tapé, l'URL est devenue « ${d1.hash} »`);
   if (d1.evenements !== 1)
@@ -370,5 +371,5 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
 
   await b.close();
   if (fails.length){ console.error('\n❌ ROUTAGE — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log(`\n✅ ROUTAGE — ${cartes.length} éditeurs joignables au refresh · #studio/N rend LA PLACE sans rien demander au seuil (étape 4 sans frappe → étape 4) et LE CONTENU vient du brouillon · 6 étapes tordues → l'entrée, URL réécrite · ${invalides.length} cas invalides → accueil · ${jetons.length} familles de jetons intactes · déconnexion = repartir de l'accueil.\n`);
+  console.log(`\n✅ ROUTAGE — ${cartes.length} éditeurs joignables au refresh · #studio/N rend LA PLACE sans rien demander au seuil (pas 2 sans frappe → pas 2) et LE CONTENU vient du brouillon · 7 étapes tordues → l’entrée, URL réécrite · ${invalides.length} cas invalides → accueil · ${jetons.length} familles de jetons intactes · déconnexion = repartir de l'accueil.\n`);
 })();

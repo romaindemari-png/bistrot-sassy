@@ -56,6 +56,26 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   await p.evaluateOnNewDocument(() => { window.__NO_DEV_BYPASS = true; });
   const fails = [];
 
+  /* LE RÉSEAU DE LA SONDE (bout 8) :
+     · generate-caption répond une légende témoin numérotée, et chaque appel est COMPTÉ (partie D) ;
+     · le chemin `produits` (Masa, la fournée) : Sassy n'a pas de plat du jour en ligne (bloc éteint, sans section),
+       et le studio grise un sujet sans matière. La sonde l'ALLUME dans la config servie, pour garder ce chemin
+       vivant — c'est le même patron que C (config mutée), en amont du chargement. */
+  const appelsLegende = [];
+  const cfgSite = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '_data', 'config.json'), 'utf8'));
+  for (const g of Object.values(cfgSite.blocs || {})) for (const bl of Object.values(g || {})) if (bl && bl.type === 'produits') bl.actif = true;
+  const configAllumee = JSON.stringify(cfgSite);
+  await p.setRequestInterception(true);
+  p.on('request', r => {
+    if (/generate-caption/.test(r.url())){
+      appelsLegende.push(JSON.parse(r.postData() || '{}'));
+      return r.respond({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ caption: 'LÉGENDE-SONDE ' + appelsLegende.length, hashtags: ['#sonde'] }) });
+    }
+    if (/\/_data\/config\.json/.test(r.url())) return r.respond({ status: 200, contentType: 'application/json', body: configAllumee });
+    r.continue();
+  });
+
   // ── A. PIED CTA au repos après une rotation ─────────────────────────────────
   await p.goto(`http://localhost:${PORT}/admin/`, { waitUntil: 'networkidle0' });
   await p.evaluate(async () => {
@@ -150,11 +170,15 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       // On rend le DOM tel qu'on l'a trouvé, sinon tout ce qui suit mesure faux.
       delete document.documentElement.clientHeight;
       if (vraiClientHeight) Object.defineProperty(document.documentElement, 'clientHeight', vraiClientHeight);
-      studioClavierOuvert = false; studioFootKeyboard();
+      studioFootViewport();
       return { avant: Math.round(avant), apres: Math.round(apres), ecart: Math.round(Math.abs(apres - avant)) };
     });
-    if (bougeSurResize.ecart > 2)
-      fails.push(`A/ HORS CLAVIER, le pied BOUGE de ${bougeSurResize.ecart}px quand les barres de Safari se replient (${bougeSurResize.avant} → ${bougeSurResize.apres}) — c'est le DÉTACHEMENT au scroll : le repli des barres émet un `+'`resize`'+` à chaque frame. Le CSS (fixed + safe-area) suffit ; seul le clavier justifie une compensation.`);
+    /* ⚠️ RÉÉCRIT AU BOUT 8 : cette assertion exigeait que le pied NE BOUGE PAS quand les barres se déplient.
+       Le code l'a rétablie le 03/08/2026 sur constat iPhone réel (cf. « LE PIED SUIT LE VIEWPORT VISIBLE ») :
+       barres dépliées, le pied DOIT remonter de leur hauteur, sinon il tombe sous l'écran. La sonde, elle,
+       était restée sur le pari perdu — et rouge depuis (studioFootKeyboard n'existait plus). */
+    if (Math.abs(bougeSurResize.ecart - 56) > 2)
+      fails.push(`A/ barres de Safari dépliées (56 px) : le pied a bougé de ${bougeSurResize.ecart}px (${bougeSurResize.avant} → ${bougeSurResize.apres}) au lieu de les compenser (56) — il tomberait sous la zone visible`);
 
     /* ── LE CONTRE-TEST, ET IL EST INDISPENSABLE ────────────────────────────────────────────────
        Sans lui, « le pied ne bouge jamais » se satisferait d'un code qui a supprimé TOUTE compensation
@@ -173,12 +197,14 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       champ.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
       await new Promise(r => setTimeout(r, 250));
       const apres = foot.getBoundingClientRect().top;
+      /* Le clavier se FERME : la géométrie revient (layout == visible) PUIS focusout arrive. Garder la fausse
+         hauteur pendant le focusout simulait un clavier resté ouvert — la compensation avait raison de rester. */
+      delete document.documentElement.clientHeight;
+      if (vraiCH) Object.defineProperty(document.documentElement, 'clientHeight', vraiCH);
       champ.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
       await new Promise(r => setTimeout(r, 450));
       const apresFermeture = foot.getBoundingClientRect().top;
-      delete document.documentElement.clientHeight;
-      if (vraiCH) Object.defineProperty(document.documentElement, 'clientHeight', vraiCH);
-      studioClavierOuvert = false; studioFootKeyboard();
+      studioFootViewport();
       return { remonte: Math.round(avant - apres), revenu: Math.round(Math.abs(apresFermeture - avant)) };
     });
     if (clavier.pasDeChamp)      fails.push('A/ aucun champ de saisie trouvé dans le studio — le cas clavier ne peut pas être prouvé (setup KO)');
@@ -209,7 +235,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
      détecté était le prérempli de la carte. Bref, il applaudissait pendant qu'un vrai brouillon
      mourait. Avec un vrai thème, la card existe → le brouillon est rejoué → il SURVIT. */
   await p.evaluate((themeId) => localStorage.setItem('lelab_studio_draft', JSON.stringify({
-    theme: 'custom:' + themeId, kind: 'typo', fmt: 'portrait', step: 4, caption: 'Fournée du matin',
+    theme: 'custom:' + themeId, kind: 'typo', fmt: 'portrait', step: 3, caption: 'Fournée du matin',
     dishes: [{ n: 'Pain de campagne', p: '4,50', c: '' }]
   })), FOURNEE ? FOURNEE.id : '');
   await p.reload({ waitUntil: 'networkidle0' });             // boot : restoreStudioDraft restaure + pose studioResumeStep
@@ -220,7 +246,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     studioReady = true;
     handlePlusClick();                                       // retour → reprise DIRECTE (pas de question)
     return {
-      step: currentStep, detailsStep: stepNum('details'),
+      step: currentStep, detailsStep: stepNum('page'),
       bannerGone: !document.getElementById('resumeBanner'),  // le bandeau doit avoir DISPARU du DOM
       canReset: document.body.classList.contains('studio-canreset'),
       // Le CONTENU du brouillon : reprendre à la bonne étape sur du contenu ÉCRASÉ, ce n'est pas reprendre.
@@ -228,16 +254,22 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       caption: (document.getElementById('caption') || {}).value
     };
   });
-  /* ⚠️ L'ÉTAPE EXACTE, pas « ≥ détails ». Le brouillon dit step:4 → on revient À 4. Un simple
+  /* ⚠️ L'ÉTAPE EXACTE, pas « ≥ le visuel ». Le brouillon dit step:3 → on revient À 3 (trois pas depuis le bout 8). Un simple
      « ≥ détails » laissait passer studioResumeStep cassé (retomber à 3 satisfaisait le test) : le
      client repartait à la saisie au lieu de sa légende. « Reprendre » veut dire LÀ OÙ JE L'AI LAISSÉ. */
-  if (bb.step !== 4)            fails.push(`B/ reprise à l'étape ${bb.step} au lieu de 4 (l'étape LAISSÉE — « reprendre » n'est pas « revenir vaguement dans le coin »)`);
+  if (bb.step !== 3)            fails.push(`B/ reprise au pas ${bb.step} au lieu de 3 (le pas LAISSÉ — « reprendre » n'est pas « revenir vaguement dans le coin »)`);
   if (bb.step < bb.detailsStep) fails.push(`B/ reprise NON directe : atterri à l'étape ${bb.step} (< détails ${bb.detailsStep})`);
   if (!bb.bannerGone)          fails.push('B/ bandeau de reprise encore dans le DOM (devait être supprimé)');
-  if (!bb.canReset)            fails.push('B/ « Recommencer » indisponible alors qu\'on a repris à l\'étape 3+');
+  if (!bb.canReset)            fails.push('B/ « Recommencer » indisponible alors qu\'on a repris un brouillon');
   // ⚠️ LE BROUILLON DOIT AVOIR SURVÉCU — le prérempli d'un thème ne doit JAMAIS écraser du travail.
-  if (!bb.plats.includes('Pain de campagne'))
-    fails.push(`B/ les plats du brouillon ont été ÉCRASÉS par un prérempli : [${bb.plats.join(' | ')}] (attendu « Pain de campagne »)`);
+  /* ⚠️ RÉÉCRIT AU BOUT 8 — obsolète depuis le bout 5 : le studio LIT les plats dans leur source, il ne restaure
+     plus ceux d'un brouillon (une carte d'avant-hier qu'on ne pourrait même plus corriger ici). On exige donc
+     les produits DISPONIBLES de la source, pas ceux du brouillon. */
+  const platsSource = src => (JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '_data', src + '.json'), 'utf8')) || [])
+    .filter(x => x && x.nom && x.dispo !== false).map(x => x.nom);
+  const attendus = FOURNEE ? platsSource(FOURNEE.prefill) : [];
+  if (bb.plats.join('|') !== attendus.join('|'))
+    fails.push(`B/ le studio repris ne lit pas les plats de leur source : [${bb.plats.join(' | ')}] (attendu [${attendus.join(' | ')}])`);
   if (bb.caption !== 'Fournée du matin')
     fails.push(`B/ la légende du brouillon a été perdue : « ${bb.caption} » (attendu « Fournée du matin »)`);
 
@@ -246,7 +278,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   const b2 = await p.evaluate(() => {
     if (typeof studioReset === 'function') studioReset();       // repartir d'un studio VIERGE
     handlePlusClick();
-    goStep(stepNum('details'));                                 // à l'étape 3, SANS rien saisir
+    goStep(stepNum('page'));                                    // au visuel (pas 2), SANS rien saisir
     const step3NoWork = document.body.classList.contains('studio-canreset');
     const rowHidden = getComputedStyle(document.querySelector('.studio-reset-row')).display === 'none';
     const cap = document.getElementById('caption');
@@ -278,11 +310,13 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (!card) return { noCard: true };
     selectTheme(card, false);                                   // le geste de Masa : choisir la fournée (bloc `produits`)
     const apresChoixTheme = document.body.classList.contains('studio-canreset');
-    let g = 0; while (currentStepId() !== 'details' && g++ < 6) nextStep();
+    let g = 0; while (currentStepId() !== 'page' && g++ < 6) nextStep();
     const arriveeDetails = document.body.classList.contains('studio-canreset');
     const rows = document.querySelectorAll('#dishEdit .dish-row');
-    const n = rows[0] && rows[0].querySelector('.d-name');
-    if (n){ n.value = 'MODIF ' + n.value; renderStudio(); }      // UNE modif = du travail incontestable
+    /* ⚠️ Depuis le bout 5 les plats sont LUS (lecture seule) : les modifier n'est plus un geste du studio.
+       Le travail incontestable est un champ libre — la légende. */
+    const cap = document.getElementById('caption');
+    if (cap){ cap.value = 'MODIF'; renderStudio(); }
     return { arriveeStudio, apresChoixTheme, arriveeDetails,
              apresModif: document.body.classList.contains('studio-canreset'), nbRows: rows.length };
   }, FOURNEE ? FOURNEE.id : '');
@@ -292,7 +326,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (b3.arriveeStudio) fails.push('B3/ « Recommencer » dès l\'ARRIVÉE au studio, rien saisi (le prérempli du thème par défaut n\'est pas du travail)');
     if (b3.apresChoixTheme) fails.push('B3/ « Recommencer » après le seul CHOIX du thème fournée (choisir un thème n\'est pas travailler — la ligne de base doit suivre le prérempli)');
     if (b3.arriveeDetails)  fails.push('B3/ « Recommencer » à l\'arrivée étape 3 avec le PRÉREMPLI de la fournée (bloc `produits` — le chemin de Masa)');
-    if (!b3.apresModif)     fails.push('B3/ « Recommencer » absent après modif d\'un plat prérempli (doit apparaître)');
+    if (!b3.apresModif)     fails.push('B3/ « Recommencer » absent après une légende écrite (doit apparaître)');
   }
 
   // ── B4. SORTIR SANS RIEN MODIFIER → REVENIR → ÉTAPE 1. ─────────────────────────────────────────
@@ -307,7 +341,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     applyPlan('lelab_plus');
     studioReady = true;
     handlePlusClick();
-    let g = 0; while (currentStepId() !== 'details' && g++ < 6) nextStep();   // jusqu'à la saisie, SANS rien modifier
+    let g = 0; while (currentStepId() !== 'page' && g++ < 6) nextStep();      // jusqu'au visuel, SANS rien modifier
     const stepAvantSortie = currentStep;
     saveStudioDraft();                                          // ce que fait la sortie : rien saisi → doit PURGER, pas écrire
     applyScreen('home');                                        // sortie vers l'Accueil
@@ -315,7 +349,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     handlePlusClick();                                          // retour via « Publier »
     return { stepAvantSortie, stepRetour: currentStep, minStep: studioMinStep(), draftApresSortie };
   });
-  if (b4.stepAvantSortie < 3)              fails.push(`B4/ setup KO : pas monté jusqu'à la saisie avant de sortir (étape ${b4.stepAvantSortie})`);
+  if (b4.stepAvantSortie < 2)              fails.push(`B4/ setup KO : pas monté jusqu'à la saisie avant de sortir (étape ${b4.stepAvantSortie})`);
   if (b4.draftApresSortie !== null)        fails.push('B4/ un brouillon a été ÉCRIT en sortant sans rien modifier (le prérempli n\'est pas du travail → rien à sauver)');
   if (b4.stepRetour !== b4.minStep)        fails.push(`B4/ retour à l'étape ${b4.stepRetour} après une sortie SANS travail (attendu ${b4.minStep} — on ne reprend que du VRAI travail)`);
 
@@ -328,7 +362,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   await p.evaluate((themeId) => {
     localStorage.clear();
     localStorage.setItem('lelab_studio_draft', JSON.stringify({
-      theme: 'custom:' + themeId, kind: 'typo', fmt: 'portrait', step: 4,
+      theme: 'custom:' + themeId, kind: 'typo', fmt: 'portrait', step: 3,
       dishes: [{ n: 'Pain de campagne', p: '4,50', c: '' }, { n: 'Fougasse aux olives', p: '3,80', c: '' }]
     }));   // ⚠️ AUCUNE légende, volontairement : c'est tout l'objet du test.
   }, FOURNEE ? FOURNEE.id : '');
@@ -339,15 +373,15 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     applyPlan('lelab_plus');
     studioReady = true;
     handlePlusClick();
-    return { step: currentStep, detailsStep: stepNum('details'),
+    return { step: currentStep, detailsStep: stepNum('page'),
              plats: [...document.querySelectorAll('#dishEdit .dish-row')].map(r => (r.querySelector('.d-name') || {}).value),
              canReset: document.body.classList.contains('studio-canreset') };
   });
   if (b5.step < b5.detailsStep)
     fails.push(`B5/ brouillon PLATS SEULS non repris : atterri à l'étape ${b5.step} (< détails ${b5.detailsStep}) — le travail du boulanger est perdu`);
-  else if (b5.step !== 4)
-    fails.push(`B5/ brouillon PLATS SEULS repris à l'étape ${b5.step} au lieu de 4 (l'étape laissée)`);
-  if (!b5.plats.includes('Pain de campagne'))
+  else if (b5.step !== 3)
+    fails.push(`B5/ brouillon PLATS SEULS repris au pas ${b5.step} au lieu de 3 (le pas laissé)`);
+  if (b5.plats.join('|') !== attendus.join('|'))
     fails.push(`B5/ les plats du brouillon « plats seuls » ont disparu : [${b5.plats.join(' | ')}]`);
   if (!b5.canReset)
     fails.push('B5/ « Recommencer » indisponible sur un brouillon PLATS SEULS repris (c\'est bien du travail)');
@@ -371,186 +405,98 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (!c.on.slider)   fails.push('C/ slider absent alors que sliderEditable=ON (éditeur cassé)');
   }
 
-  // ── D. IA SUR CLIC (plus d'auto) + libellés qui disent la vérité + hashtag inerte ──
-  const d = await p.evaluate(() => {
+  // ── D. LA LÉGENDE : ÉCRITE À L'ARRIVÉE AU PAS 3, UNE FOIS, JAMAIS PAR-DESSUS LE CLIENT (bout 8) ──
+  /* ⚠️ RÉÉCRIT AU BOUT 8. L'ancien D exigeait « IA sur clic, plus d'auto » : LELAB-DESIGN §5 point 4 dit
+     désormais « Et la légende. Écrite pour vous, à relire », avec « Une autre / Plus court / Modifier ».
+     Ce qui reste vrai, et qu'on garde : rien ne s'écrit AILLEURS qu'au pas de la légende, on n'écrase jamais
+     un texte du client, « Mettre en forme » pour l'annonce, les hashtags fantômes sont inertes.
+     Les appels à generate-caption sont COMPTÉS (interception) : on mesure le réseau, pas une variable. */
+  appelsLegende.length = 0;
+  await p.evaluate(() => localStorage.clear());
+  await p.reload({ waitUntil: 'networkidle0' });
+  const d = await p.evaluate(async () => {
+    document.body.classList.add('authed');
+    await loadSassyData(); applyPlan('lelab_plus'); studioReady = true; window.__LELAB_TEMPS = 0.02;
+    handlePlusClick();
+    const attendre = ms => new Promise(r => setTimeout(r, ms));
     const label = id => ((document.getElementById(id) || {}).querySelector ? (document.getElementById(id).querySelector('.ia-btn-txt') || {}).textContent : '') || '';
-    const autoGone = (typeof autoGenCaption === 'undefined');          // la fonction d'auto-génération n'existe plus
-    const cap = document.getElementById('caption');
-    if (cap) cap.value = ''; refreshIaButtons(); const capEmpty = label('iaBtn');   // champ vide → « Rédiger… »
-    if (cap) cap.value = 'Un texte'; refreshIaButtons(); const capFilled = label('iaBtn');   // rempli → « Régénérer »
-    if (typeof applyInfosVariant === 'function') applyInfosVariant(true);           // mode ANNONCE
+    nextStep(); await attendre(300);                               // pas 2 : rien ne doit s'écrire
+    const auPas2 = (document.getElementById('caption') || {}).value || '';
+    nextStep(); await attendre(2500);                              // pas 3 : la légende s'écrit, une fois
+    const auPas3 = (document.getElementById('caption') || {}).value || '';
+    const gestes = [...document.querySelectorAll('#legChips .leg-chip')].map(c => c.textContent.trim());
+    document.querySelector('#legChips [data-geste="court"]').click(); await attendre(2500);
+    const apresCourt = (document.getElementById('caption') || {}).value || '';
+    // Le client écrit : revenir au pas 2 puis au 3 ne réécrit rien.
+    document.querySelector('#legChips [data-geste="modifier"]').click();
+    const modifiable = !document.getElementById('caption').readOnly;
+    document.getElementById('caption').value = 'TEXTE DU CLIENT'; renderStudio();
+    prevStep(); await attendre(200); nextStep(); await attendre(1200);
+    const apresRetour = (document.getElementById('caption') || {}).value || '';
+    if (typeof applyInfosVariant === 'function') applyInfosVariant(true);   // mode ANNONCE
     const inf = document.getElementById('infosText'); if (inf) inf.value = '';
     refreshIaButtons(); const annonceLabel = label('iaBtnInfos');
     studioHashtags = []; renderHashtagsRow();
     const ghost = document.querySelector('#hashtags .htag.ghost');
-    return { autoGone, capEmpty, capFilled, annonceLabel, hasGhost: !!ghost, ghostClickable: ghost ? !!ghost.getAttribute('onclick') : false };
+    return { auPas2, auPas3, gestes, apresCourt, modifiable, apresRetour, annonceLabel,
+             hasGhost: !!ghost, ghostClickable: ghost ? !!ghost.getAttribute('onclick') : false };
   });
-  if (!d.autoGone)                            fails.push('D/ autoGenCaption existe encore — l\'auto-génération n\'a pas été supprimée');
-  if (!d.capEmpty.startsWith('Rédiger'))      fails.push(`D/ légende vide : « ${d.capEmpty} » (attendu « Rédiger avec l'IA »)`);
-  if (d.capFilled !== 'Régénérer')            fails.push(`D/ légende remplie : « ${d.capFilled} » (attendu « Régénérer »)`);
+  if (d.auPas2)                               fails.push(`D/ une légende s'est écrite dès le pas 2 (« ${d.auPas2} ») — elle appartient au pas 3`);
+  if (!/^LÉGENDE-SONDE 1$/.test(d.auPas3))     fails.push(`D/ arrivée au pas 3 : légende « ${d.auPas3} » (attendu la 1re légende écrite pour le client)`);
+  if (d.gestes.join('|') !== 'Une autre|Plus court|Modifier') fails.push(`D/ gestes de la légende : « ${d.gestes.join(' | ')} » (attendu Une autre · Plus court · Modifier)`);
+  if (!appelsLegende[1] || appelsLegende[1].court !== true) fails.push('D/ « Plus court » n\'a pas envoyé la consigne court:true à generate-caption');
+  if (!/^LÉGENDE-SONDE 2$/.test(d.apresCourt)) fails.push(`D/ après « Plus court » : « ${d.apresCourt} » (attendu la 2e légende)`);
+  if (!d.modifiable)                          fails.push('D/ « Modifier » ne rend pas la légende modifiable');
+  if (d.apresRetour !== 'TEXTE DU CLIENT')    fails.push(`D/ revenir au pas 3 a réécrit le texte du client (« ${d.apresRetour} ») — jamais par-dessus le client`);
+  if (appelsLegende.length !== 2)             fails.push(`D/ ${appelsLegende.length} appels à generate-caption pour 1 arrivée + 1 « Plus court » (attendu 2)`);
   if (!d.annonceLabel.startsWith('Mettre en forme')) fails.push(`D/ annonce : « ${d.annonceLabel} » (attendu « Mettre en forme avec l'IA » — « Rédiger » mentirait)`);
-  if (d.hasGhost && d.ghostClickable)         fails.push('D/ hashtag fantôme cliquable (doit être inerte — le ✦ est le seul déclencheur)');
+  if (d.hasGhost && d.ghostClickable)         fails.push('D/ hashtag fantôme cliquable (doit être inerte)');
 
-  // ── E. VIGNETTE INSTAGRAM : le haut est VIDE, le statut vit dans l'APERÇU. Les DEUX niveaux. ──
-  /* La connexion est une info tertiaire : la carte verte et le bouton noir ne sont pas déplacés, ils
-     n'existent plus. Le statut se lit dans l'aperçu (point vert + @pseudo · « Connectez votre compte »).
-     ⚠️ On teste les DEUX niveaux en MUTANT LA CONFIG EN MÉMOIRE — même patron que C (sliderEditable).
-        C'est le seul moyen de garder vivant le chemin `detaillee` (Sassy, App Review Meta), qu'AUCUN
-        déploiement du master n'exerce : une branche que rien ne teste pourrit en silence. */
-  const igRender = () => {   // ce que fait loadInstagramStatus, sans le réseau (le token n'existe pas hors prod)
-    syncPreviewIdentity();
-    syncStudioIgMount();
-    const s3 = document.getElementById('igStatusSidebar');
-    if (s3) s3.innerHTML = igStatusHTML(igStatus);
-  };
-  const e = await p.evaluate((igRenderSrc) => {
-    const render = eval('(' + igRenderSrc + ')');
-    /* ⚠️ ON MESURE LE RENDU, ON NE CROIT PAS L'ATTRIBUT. La 1re version testait `!el.hidden` — et elle
-       est passée AU VERT sur un écran où le lien « Connecter » s'affichait à un client CONNECTÉ :
-       `.mp-connect` portait un `display:inline-flex` d'auteur, qui bat le `hidden` du navigateur.
-       L'attribut disait « caché », le pixel disait « visible », le test croyait l'attribut.
-       C'est la règle de la maison, appliquée à l'outil lui-même : CONSTATER, NE PAS RE-DÉDUIRE.
-       On exige donc une boîte réellement rendue (getBoundingClientRect), pas une intention. */
-    const vu = el => {
-      if (!el) return false;
-      const r = el.getBoundingClientRect();
-      return getComputedStyle(el).visibility !== 'hidden' && r.width > 0 && r.height > 0;
-    };
+  // ── E. LE COMPTE INSTAGRAM : AUCUN BOUTON TANT QUE L'APP META EST EN DÉVELOPPEMENT (27/10, bout 8) ──
+  /* ⚠️ RÉÉCRIT AU BOUT 8. L'ancien E exigeait « Connecter » et « Déconnecter » atteignables : décision du 27/10,
+     l'app Meta ne publie que pour les comptes testeurs, donc la connexion reste dans le code SANS BOUTON.
+     Ce qui reste vrai, et qu'on garde : l'aperçu dit la vérité du compte (pseudo réel connecté, jamais un faux
+     « votre_compte »), aucune image distante au repos ni après déconnexion, aucune image distante en dur. */
+  const e = await p.evaluate(() => {
+    const vu = el => { if (!el) return false; const r = el.getBoundingClientRect(); return getComputedStyle(el).visibility !== 'hidden' && r.width > 0 && r.height > 0; };
+    const actions = re => [...document.querySelectorAll('a,button')].some(el => vu(el) && re.test(el.textContent.trim()) && !el.closest('.confirm-overlay'));
     const lire = () => ({
-      studio:   (document.getElementById('igStatusStudio')  || {}).innerHTML || '',
-      sidebar:  (document.getElementById('igStatusSidebar') || {}).innerHTML || '',
-      carte:    !!document.querySelector('.ig-card'),
-      boutonNoir: !!document.querySelector('.ig-status.off'),
-      /* ⚠️ LA QUESTION N'EST PAS « la carte a-t-elle disparu » MAIS « LE CLIENT PEUT-IL AGIR ».
-         En vidant le haut, j'ai supprimé la SEULE porte de disconnectInstagram() : la fonction est
-         restée vivante, injoignable, et le client connecté ne pouvait plus se déconnecter du tout.
-         Le garde-fou n'a rien vu — il vérifiait la disparition, jamais l'atteignabilité. Dans un
-         fichier dont la 1re ligne dit « dans le DOM ≠ atteignable ». On teste donc l'ACTION. */
-      peutDeconnecter: [...document.querySelectorAll('a,button')].some(el =>
-        vu(el) && /d[ée]connecter/i.test(el.textContent) && !el.closest('.confirm-overlay')),
-      peutConnecter: [...document.querySelectorAll('a,button')].some(el =>
-        vu(el) && /^connecter$|connectez/i.test(el.textContent.trim()) && !el.closest('.confirm-overlay')),
-      nom:      (document.querySelector('#studio-unlocked .ig-name') || {}).textContent || '',
-      // ⚠️ L'APERÇU PORTE LE PSEUDO À DEUX ENDROITS : l'en-tête ET la légende (en gras, comme Instagram).
-      //    Le second était en dur — le test ne regardait que le premier et aurait laissé passer le mensonge.
+      connecter: actions(/^connecter|connectez|reconnecter/i), deconnecter: actions(/d[ée]connecter/i),
+      nom: (document.querySelector('#studio-unlocked .ig-name') || {}).textContent || '',
       nomLegende: (document.getElementById('igCapName') || {}).textContent || '',
-      pointPseudo: !!document.querySelector('#studio-unlocked .ig-name .ig-live-d'),
-      pointBandeau: vu(document.getElementById('mpLive')),
-      /* « Le point est SUR le logo » — pas juste « le point existe ». Il s'était échappé au bord droit
-         de l'écran (.mp-ig sans position:relative → l'absolu remontait à .mini-preview). Un test qui
-         ne mesure que la présence aurait signé ça les yeux fermés. */
-      pointSurLogo: (() => {
-        const d = document.getElementById('mpLive'), l = document.querySelector('.mp-ig');
-        if (!d || !l || !vu(d)) return null;
-        const a = d.getBoundingClientRect(), b = l.getBoundingClientRect();
-        const cx = a.left + a.width / 2, cy = a.top + a.height / 2;
-        return cx >= b.left - 6 && cx <= b.right + 6 && cy >= b.top - 6 && cy <= b.bottom + 6;
-      })(),
-      lienBandeau:  vu(document.getElementById('mpConnect')),
-      teteVisible:  vu(document.querySelector('.compose-head')),
-      sortieVisible: vu(document.querySelector('.ch-quit'))
+      point: !!document.querySelector('#studio-unlocked .ig-name .ig-live-d'),
+      avatar: getComputedStyle(document.querySelector('#studio-unlocked .ig-ava > div')).backgroundImage,
+      sortie: vu(document.getElementById('studioRetour')),
     });
-    const cfg = sassyData.config || (sassyData.config = {});
-    const out = {};
-    handlePlusClick();
-
-    // AVANT tout rendu : l'avatar au repos ne doit tenir AUCUNE image distante (le fond venait du CSS).
-    out.avatarNeuf = getComputedStyle(document.querySelector('#studio-unlocked .ig-ava > div')).backgroundImage;
-    // Le pied de sidebar ne doit JAMAIS afficher un faux pseudo quand la donnée manque.
-    out.pseudoSidebar = (document.querySelector('.user-plan') || {}).textContent || '';
-
-    // ── LÉGER (défaut) ──
-    delete cfg.instagram;
-    igStatus = { connected: true, username: 'lestud13', user_id: '17841445759764573',
-                 profile_picture_url: 'https://example.invalid/a.jpg' };
-    render(); out.legerOn = lire();
+    goStep(1);
+    const out = { neuf: lire() };
+    igStatus = { connected: true, username: 'lestud13', user_id: '1', profile_picture_url: 'https://example.invalid/a.jpg' };
+    syncPreviewIdentity(); out.on = lire();
     igStatus = { connected: false, username: null };
-    render(); out.legerOff = lire();
-    out.avatarFond = getComputedStyle(document.querySelector('#studio-unlocked .ig-ava > div')).backgroundImage;
-    out.ville = (document.querySelector('#studio-unlocked .ig-name .loc') || {}).textContent;
-
-    // ── DÉTAILLÉ (Sassy — App Review Meta) ──
-    cfg.instagram = { vignette: 'detaillee' };
-    igStatus = { connected: true, username: 'lestud13', user_id: '17841445759764573' };
-    render(); out.detOn = lire();
-    igStatus = { connected: false, username: null };
-    render(); out.detOff = lire();
-    delete cfg.instagram;   // on rend la config telle qu'on l'a trouvée
+    syncPreviewIdentity(); out.off = lire();
+    out.commerce = (sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '';
     return out;
-  }, igRender.toString());
+  });
+  for (const [k, v] of Object.entries({ neuf: e.neuf, connecte: e.on, deconnecte: e.off })){
+    if (v.connecter)   fails.push(`E/ ${k} : un « Connecter » est atteignable dans le studio (l'app Meta est en développement : pas de bouton)`);
+    if (v.deconnecter) fails.push(`E/ ${k} : un « Déconnecter » est atteignable dans le studio (pas de bouton tant que l'app n'est pas en Live)`);
+    if (!v.sortie)     fails.push(`E/ ${k} : le retour vers Mon site n'est pas visible au pas 1`);
+  }
+  if (!/lestud13/.test(e.on.nom) || !e.on.point) fails.push(`E/ connecté : l'aperçu ne porte pas le pseudo réel avec son point (« ${e.on.nom} »)`);
+  if (!/lestud13/.test(e.on.nomLegende))           fails.push(`E/ connecté : la légende de l'aperçu ne porte pas le pseudo réel (« ${e.on.nomLegende} »)`);
+  if (e.off.nom.trim() !== e.commerce)             fails.push(`E/ déconnecté : l'aperçu dit « ${e.off.nom} » au lieu du nom du commerce (« ${e.commerce} »)`);
+  if (/votre_compte/.test(e.off.nomLegende))       fails.push(`E/ déconnecté : la légende affiche le faux pseudo « ${e.off.nomLegende} »`);
+  if (/http/i.test(e.neuf.avatar || ''))           fails.push(`E/ l'avatar de l'aperçu porte une image DISTANTE au repos : ${e.neuf.avatar}`);
+  if (/http/i.test(e.off.avatar || ''))            fails.push(`E/ l'avatar garde une photo DISTANTE après déconnexion : ${e.off.avatar}`);
 
-  // LÉGER — rien en tête, tout dans l'aperçu
-  if (e.legerOn.studio.trim() || e.legerOn.sidebar.trim())
-    fails.push('E/ LÉGER : un bloc de statut est encore monté en tête/sidebar (le haut doit être VIDE — la carte n\'est pas déplacée, elle est supprimée)');
-  if (e.legerOn.carte)        fails.push('E/ LÉGER : la carte verte (.ig-card) est encore rendue');
-  if (e.legerOff.boutonNoir)  fails.push('E/ LÉGER : le bouton noir « Connecter Instagram » (.ig-status.off) est encore rendu');
-  if (!e.legerOn.pointPseudo) fails.push('E/ LÉGER connecté : pas de point vert collé au @pseudo dans l\'aperçu');
-  if (!/lestud13/.test(e.legerOn.nom)) fails.push(`E/ LÉGER connecté : l'aperçu ne porte pas le @pseudo réel (« ${e.legerOn.nom} »)`);
-  if (!/lestud13/.test(e.legerOn.nomLegende))
-    fails.push(`E/ connecté : la LÉGENDE de l'aperçu n'affiche pas le @pseudo réel (« ${e.legerOn.nomLegende} ») — l'en-tête et la légende doivent dire LA MÊME chose du même compte`);
-  if (/votre_compte/.test(e.legerOff.nomLegende))
-    fails.push(`E/ déconnecté : la LÉGENDE affiche le faux pseudo « ${e.legerOff.nomLegende} » (un placeholder plausible est un mensonge)`);
-  if (!e.legerOn.pointBandeau) fails.push('E/ LÉGER connecté : point vert absent du logo Instagram du bandeau (seule surface visible, tiroir fermé)');
-  if (e.legerOn.pointBandeau && e.legerOn.pointSurLogo === false)
-    fails.push('E/ LÉGER connecté : le point vert est RENDU AILLEURS que sur le logo (absolu sans ancêtre positionné → il part au bord de l\'écran)');
-  if (e.legerOn.lienBandeau)   fails.push('E/ LÉGER connecté : le lien « Connecter » s\'affiche alors que le compte EST connecté');
-  if (!/Connectez votre compte/.test(e.legerOff.nom))
-    fails.push(`E/ LÉGER déconnecté : l'aperçu doit dire « Connectez votre compte » À LA PLACE du pseudo (« ${e.legerOff.nom} »)`);
-  if (e.legerOff.pointBandeau) fails.push('E/ LÉGER déconnecté : point vert affiché alors que le compte n\'est PAS connecté');
-  if (!e.legerOff.lienBandeau) fails.push('E/ LÉGER déconnecté : lien « Connecter » absent du bandeau (seul cas qui appelle une action)');
-
-  /* Le prefill démo : plus d'inconnu en guise d'avatar, plus de ville inventée.
-     DEUX griefs DISTINCTS, deux mesures — les confondre donnerait un test qui ment sur ce qu'il prouve :
-       · au REPOS, le fond venait du CSS (une photo Unsplash en dur → le visage d'un mannequin) ;
-       · APRÈS UNE DÉCONNEXION, la photo du compte précédent restait collée (certitude périmée). */
-  if (/http/i.test(e.avatarNeuf || ''))
-    fails.push(`E/ l'avatar de l'aperçu porte une image DISTANTE EN DUR au repos (prefill démo interdit) : ${e.avatarNeuf}`);
-  if (/http/i.test(e.avatarFond || ''))
-    fails.push(`E/ l'avatar garde une photo DISTANTE alors que le compte est DÉCONNECTÉ (elle doit être effacée) : ${e.avatarFond}`);
-  if ((e.ville || '').trim())
-    fails.push(`E/ la localisation de l'aperçu affiche un placeholder (« ${e.ville} ») — du faux montré au client`);
-  /* ── E-bis. AUCUNE IMAGE DISTANTE EN DUR DANS LA SOURCE ──────────────────────────────────────
-     ⚠️ CE CONTRÔLE LIT LE FICHIER, PAS LE DOM, ET C'EST OBLIGATOIRE : l'image Unsplash de #igPhoto
-        était ÉCRASÉE au boot par une photo locale. Au runtime elle n'existait donc nulle part — un
-        test du DOM la déclarait « absente » alors qu'elle dormait dans la source, prête à revenir.
-        (Écrit d'abord en DOM, ce contrôle était CREUX : vert sur le code fautif. Encore.)
-     Une image distante en dur dans un repo client est une dette : le jour où le CDN change ou tombe,
-     c'est la page du client qui pointe dans le vide. */
+  /* ── E-bis. AUCUNE IMAGE DISTANTE EN DUR DANS LA SOURCE (lu dans le FICHIER, pas le DOM) ── */
   const CDN_LEGITIMES = [/fonts\.googleapis\.com/, /fonts\.gstatic\.com/, /www\.w3\.org/,
                          /www\.instagram\.com\/oauth/, /maps\.google\.com/];
   const srcAdmin = require('fs').readFileSync(require('path').join(__dirname, '..', 'admin', 'index.html'), 'utf8');
   const imgsDistantes = [...srcAdmin.matchAll(/url\(\s*['"]?(https?:\/\/[^'")\s]+)/g)]
     .map(m => m[1]).filter(u => !CDN_LEGITIMES.some(re => re.test(u)));
   if (imgsDistantes.length)
-    fails.push(`E/ image DISTANTE en dur dans la SOURCE de l'admin (dette : le jour où elle bouge, le client pointe dans le vide) : ${[...new Set(imgsDistantes)].join(' · ')}`);
-
-  if (/votre_compte|@\s*$/.test(e.pseudoSidebar))
-    fails.push(`E/ le pied de sidebar affiche un FAUX pseudo par défaut (« ${e.pseudoSidebar} ») — pas de donnée doit vouloir dire RIEN, pas un compte plausible`);
-
-  // La sortie « ← Accueil » ne dépend PLUS du contenu de la vignette
-  if (!e.legerOn.teteVisible || !e.legerOn.sortieVisible)
-    fails.push('E/ « ← Accueil » a disparu en mobile alors que la vignette est vide (la tête ne doit PAS dépendre du mount)');
-
-  /* ── LE CLIENT PEUT AGIR — DANS LES DEUX NIVEAUX ────────────────────────────────────────────
-     Le seuil n'est pas « le bloc a disparu » mais « l'action existe et se touche ». Une action
-     injoignable est pire qu'un lien discret : le client est coincé sans savoir pourquoi. */
-  if (!e.legerOn.peutDeconnecter)
-    fails.push('E/ LÉGER connecté : AUCUN « Déconnecter » atteignable — le client ne peut plus déconnecter son compte (la fonction existe, sans porte)');
-  if (!e.legerOff.peutConnecter)
-    fails.push('E/ LÉGER déconnecté : AUCUN « Connecter » atteignable');
-  if (e.legerOff.peutDeconnecter)
-    fails.push('E/ LÉGER déconnecté : « Déconnecter » proposé alors qu\'aucun compte n\'est connecté');
-  if (!e.detOn.peutDeconnecter)
-    fails.push('E/ DÉTAILLÉ connecté : AUCUN « Déconnecter » atteignable');
-  if (!e.detOff.peutConnecter)
-    fails.push('E/ DÉTAILLÉ déconnecté : AUCUN « Connecter » atteignable');
-
-  // DÉTAILLÉ — Sassy garde sa carte, à l'identique
-  if (!e.detOn.carte)   fails.push('E/ DÉTAILLÉ : la carte Meta (avatar + @pseudo + ID) a disparu — l\'App Review de Sassy l\'exige');
-  if (!/17841445759764573/.test(e.detOn.studio + e.detOn.sidebar))
-    fails.push('E/ DÉTAILLÉ : l\'ID du compte n\'est plus rendu (triplet Meta incomplet)');
-  if (!e.detOff.boutonNoir) fails.push('E/ DÉTAILLÉ déconnecté : le bouton « Connecter Instagram » a disparu');
-  if (e.detOn.pointBandeau) fails.push('E/ DÉTAILLÉ : point vert du bandeau affiché EN PLUS de la carte (signal doublé — il remplace la carte, il ne s\'y ajoute pas)');
+    fails.push(`E/ image DISTANTE en dur dans la SOURCE de l'admin : ${[...new Set(imgsDistantes)].join(' · ')}`);
 
   /* ── F. LE SITE PUBLIC EST ATTEIGNABLE DEPUIS L'ACCUEIL ───────────────────────────────────────
      Le client veut VOIR son site, pas seulement le modifier. Le lien existait — au bas de « Mon site »,

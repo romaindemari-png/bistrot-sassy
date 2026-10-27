@@ -1,0 +1,238 @@
+#!/usr/bin/env node
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE STUDIO EN TROIS PAS (bout 8, LELAB-DESIGN §5 point 4) — et « Envoyer sur Instagram »
+   ═══════════════════════════════════════════════════════════════════════════
+   L'ÉCRAN :
+     S1. le sujet d'entrée est le plus frais du site : le plat du jour s'il est en ligne et a des produits,
+         sinon le prochain événement, sinon la carte — et la phrase d'entrée le dit ;
+     S2. un sujet sans matière (aucun événement à venir, plat du jour éteint) se voit mais ne se choisit pas ;
+     S3. trois pas, et rien d'autre : plus d'écran 5/5, plus de post final en double, plus de tiroir d'aperçu ;
+     S4. téléphone, pas 2 : le pied ne masque jamais le bas de l'aperçu (constaté sur iPhone le 27/10) ;
+     S5. téléphone, pas 3 : la vignette ouvre l'image seule en plein écran, fond encre, fermée d'un geste ;
+     S6. desktop : l'aperçu est à droite, dans un téléphone, aux trois pas.
+   L'ENVOI (ce qui ENVOIE — rouge sur le code d'avant, vert après) :
+     E1. desktop : l'image se télécharge (un fichier par visuel) et la légende + hashtags sont copiés ;
+     E2. téléphone : la légende est copiée PUIS le partage du téléphone s'ouvre avec les fichiers, DANS le geste
+         (aucune attente entre le toucher et navigator.share — sur iPhone le geste se perdrait) ;
+     E3. ce que fait le bouton est écrit AVANT le clic ;
+     E4. un sujet photo sans photo ne part pas ;
+     E5. rien n'est publié ni écrit : ni publish-instagram, ni upload-image, ni save-data.
+   Le réseau est intercepté (generate-caption répond une légende témoin) ; le partage, le presse-papier et les
+   téléchargements sont remplacés par des enregistreurs : on mesure ce qui est APPELÉ, avec quoi.
+
+   USAGE :  node scripts/test-studio.js <port>      (serveur statique sur la racine du dépôt)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PORT   = process.argv[2] || '8080';
+const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const BASE   = `http://localhost:${PORT}/admin/`;
+const wait   = ms => new Promise(r => setTimeout(r, ms));
+const fs = require('fs'), path = require('path');
+const lire = f => JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', f), 'utf8'));
+
+let puppeteer;
+try { puppeteer = require('puppeteer-core'); }
+catch (e){ console.error('puppeteer-core manquant → npm install'); process.exit(2); }
+
+const LEGENDE = 'Ce soir, la carte change. On vous garde une table ?';
+const TAGS = ['#bistrotsassy', '#marseille'];
+
+/* Les enregistreurs posés AVANT les scripts de la page : partage, presse-papier, téléchargements. */
+function enregistreurs(telephone){
+  window.__traces = { copie: [], partage: [], telecharge: [], ordre: [] };
+  try { localStorage.setItem('lelab_plan', 'lelab_plus'); } catch (_){}
+  window.__LELAB_TEMPS = 0.02;
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+    writeText: t => { window.__traces.copie.push(t); window.__traces.ordre.push('copie'); return Promise.resolve(); } } });
+  if (telephone){
+    navigator.canShare = d => !!(d && d.files && d.files.length);
+    navigator.share = d => {
+      window.__traces.partage.push((d.files || []).map(f => ({ nom: f.name, type: f.type, taille: f.size })));
+      window.__traces.ordre.push('partage');
+      return Promise.resolve();
+    };
+  } else {
+    navigator.canShare = undefined; navigator.share = undefined;
+  }
+  const clic = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function(){
+    if (this.download){ window.__traces.telecharge.push({ nom: this.download, blob: /^blob:/.test(this.href) }); window.__traces.ordre.push('telecharge'); return; }
+    return clic.call(this);
+  };
+}
+
+(async () => {
+  const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
+  const fails = [];
+  const ecritures = [];
+
+  /* Une page neuve, dans son propre contexte (stockage vierge). `donnees` remplace des fichiers de _data. */
+  async function page(L, { telephone = L < 900, donnees = {} } = {}){
+    const ctx = await b.createBrowserContext();
+    const p = await ctx.newPage();
+    await p.setViewport({ width: L, height: L < 900 ? 844 : 900, isMobile: telephone, hasTouch: telephone });
+    await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    await p.evaluateOnNewDocument(enregistreurs, telephone);
+    await p.setRequestInterception(true);
+    p.on('request', r => {
+      const u = r.url();
+      if (/publish-instagram|upload-image|save-data/.test(u)){ ecritures.push(u); return r.respond({ status: 500, body: '{}' }); }
+      if (/generate-caption/.test(u)) return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ caption: LEGENDE, hashtags: TAGS }) });
+      const m = u.match(/\/_data\/([a-z-]+\.json)/);
+      if (m && donnees[m[1]]) return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(donnees[m[1]]) });
+      r.continue();
+    });
+    p.on('pageerror', e => fails.push(`JS/ ${L} px : ${e.message}`));
+    await p.goto(BASE, { waitUntil: 'networkidle0' });
+    await p.evaluate(() => handlePlusClick());
+    await wait(900);
+    return { p, ctx };
+  }
+  /* Une section qui casse ne doit pas taire les suivantes : l'exception devient un échec, nommé. */
+  const essai = async (nom, fn) => { try { await fn(); } catch (e){ fails.push(`${nom}/ la sonde n'a pas pu jouer : ${String(e.message).split('\n')[0]}`); } };
+  const au = async (p, n) => { await p.evaluate(n => goStep(n), n); await wait(n === 3 ? 2600 : 700); };
+
+  /* ── S1. LE SUJET D'ENTRÉE, LU DANS LES DONNÉES ── */
+  const cfg = lire('config.json');
+  const cfgDujour = JSON.parse(JSON.stringify(cfg));
+  cfgDujour.blocs.optionnels.dujour.actif = true;
+  const demain = new Date(Date.now() + 86400000);
+  const isoDemain = demain.getFullYear() + '-' + String(demain.getMonth() + 1).padStart(2, '0') + '-' + String(demain.getDate()).padStart(2, '0');
+  const evAVenir = [{ date: isoDemain, heure: '20:00', titre: 'SOIRÉE-SONDE', description: '' }];
+  await essai('S1', async () => { for (const [cas, donnees, attendu, phrase] of [
+    ['rien de frais', { 'events.json': [] }, 'sassy-carte', /carte est prête à poster/],
+    ['un événement à venir', { 'events.json': evAVenir }, 'sassy-event', /prochain événement est prêt à poster/],
+    ['le plat du jour en ligne', { 'events.json': evAVenir, 'config.json': cfgDujour }, 'sassy-dujour', /plat du jour est prêt à poster/],
+  ]){
+    const { p, ctx } = await page(390, { donnees });
+    const r = await p.evaluate(() => ({ theme: currentTheme, pas: currentStep, phrase: document.getElementById('studioEntree').textContent }));
+    if (r.theme !== 'custom:' + attendu) fails.push(`S1/ ${cas} : sujet d'entrée « ${r.theme} » au lieu de « custom:${attendu} »`);
+    if (!phrase.test(r.phrase))          fails.push(`S1/ ${cas} : la phrase d'entrée dit « ${r.phrase} »`);
+    if (r.pas !== 1)                     fails.push(`S1/ ${cas} : le studio ouvre au pas ${r.pas} au lieu du pas 1`);
+    if (cas === 'un événement à venir'){
+      const sous = await p.evaluate(() => (document.querySelector('.sujet[data-theme="custom:sassy-event"] .sujet-s') || {}).textContent || '');
+      if (!/SOIRÉE-SONDE/.test(sous)) fails.push(`S1/ le sujet événement ne dit pas lequel (« ${sous} »)`);
+    }
+    await ctx.close();
+  } });
+
+  /* ── S2 + S3 + S4 + S5 : téléphone, Sassy tel quel (plat du jour éteint, aucun événement à venir) ── */
+  await essai('S2-S5', async () => {
+    const { p, ctx } = await page(390, { donnees: { 'events.json': [] } });
+    const s2 = await p.evaluate(() => {
+      const ev = document.querySelector('.sujet[data-theme="custom:sassy-event"]');
+      const dj = document.querySelector('.sujet[data-theme="custom:sassy-dujour"]');
+      const avant = currentTheme;
+      if (ev) ev.click();
+      return { ev: ev && ev.getAttribute('aria-disabled'), dj: dj && dj.getAttribute('aria-disabled'),
+               visible: !!(ev && ev.getBoundingClientRect().height), garde: currentTheme === avant };
+    });
+    if (s2.ev !== 'true' || !s2.visible) fails.push('S2/ l\'événement sans date à venir n\'est pas affiché en sujet sans matière');
+    if (s2.dj !== 'true')               fails.push('S2/ le plat du jour, éteint sur le site, reste choisissable');
+    if (!s2.garde)                      fails.push('S2/ toucher un sujet sans matière l\'a choisi');
+
+    const s3 = await p.evaluate(() => ({
+      pas: [...document.querySelectorAll('#studio-unlocked .step-block')].map(b => b.dataset.stepId).join(','),
+      total: STEP_COUNT,
+      morts: ['finalPost', 'fpMedia', 'preview-backdrop', 'studioBar', 'igStatusStudio'].filter(id => document.getElementById(id))
+               .concat(document.querySelector('.mini-preview') ? ['.mini-preview'] : []),
+    }));
+    if (s3.pas !== 'quoi,page,legende' || s3.total !== 3) fails.push(`S3/ pas du studio : « ${s3.pas} » (${s3.total}) au lieu de quoi,page,legende`);
+    if (s3.morts.length) fails.push(`S3/ restes de l'ancien studio dans le DOM : ${s3.morts.join(', ')}`);
+
+    // S4 — pas 2, on descend au bas de la page : le bas de l'aperçu reste au-dessus du pied.
+    await au(p, 2);
+    await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await wait(500);
+    const s4 = await p.evaluate(() => {
+      const ap = document.querySelector('#apercuPlace .phone-screen'), pied = document.getElementById('studioFoot');
+      const a = ap && ap.getBoundingClientRect(), f = pied.getBoundingClientRect();
+      return a ? { bas: Math.round(a.bottom), pied: Math.round(f.top), dansLePas: true } : { dansLePas: false };
+    });
+    if (!s4.dansLePas) fails.push('S4/ téléphone : l\'aperçu n\'est pas dans le pas 2');
+    else if (s4.bas > s4.pied + 1) fails.push(`S4/ téléphone, pas 2 : le pied masque le bas de l'aperçu (${s4.bas - s4.pied} px sous le pied)`);
+
+    // S5 — pas 3 : la vignette, puis l'image seule en plein écran, fermée d'un toucher puis par Échap.
+    await au(p, 3);
+    const v = await p.evaluate(() => { const el = document.getElementById('studioVignette'); const r = el.getBoundingClientRect();
+      return { vue: !el.hidden && r.width > 0, src: (el.querySelector('img').getAttribute('src') || '').slice(0, 11) }; });
+    if (!v.vue || v.src !== 'data:image/') fails.push(`S5/ pas 3 : pas de vignette de l'image (vue=${v.vue}, src=${v.src})`);
+    await p.click('#studioVignette'); await wait(200);
+    const pe = await p.evaluate(() => { const el = document.getElementById('pleinEcran'); const r = el.getBoundingClientRect();
+      return { ouvert: !el.hidden, couvre: r.width >= innerWidth - 1 && r.height >= innerHeight - 1, fond: getComputedStyle(el).backgroundColor,
+               encre: getComputedStyle(document.documentElement).getPropertyValue('--encre').trim() }; });
+    if (!pe.ouvert || !pe.couvre) fails.push('S5/ la vignette n\'ouvre pas l\'image en plein écran');
+    if (pe.fond !== 'rgb(26, 25, 23)') fails.push(`S5/ plein écran : fond ${pe.fond} au lieu de l'encre ${pe.encre}`);
+    await p.mouse.click(195, 300); await wait(200);
+    if (await p.evaluate(() => !document.getElementById('pleinEcran').hidden)) fails.push('S5/ un toucher ne ferme pas le plein écran');
+    await p.click('#studioVignette'); await wait(150); await p.keyboard.press('Escape'); await wait(150);
+    if (await p.evaluate(() => !document.getElementById('pleinEcran').hidden)) fails.push('S5/ Échap ne ferme pas le plein écran');
+    await ctx.close();
+  });
+
+  /* ── S6. DESKTOP : l'aperçu à droite, dans un téléphone, aux trois pas ── */
+  await essai('S6-E1', async () => {
+    const { p, ctx } = await page(1280, { donnees: { 'events.json': [] } });
+    for (const n of [1, 2, 3]){
+      await au(p, n);
+      const r = await p.evaluate(() => {
+        const col = document.getElementById('apercuCol'), ph = col.querySelector('.phone');
+        const c = document.querySelector('.compose').getBoundingClientRect(), a = col.getBoundingClientRect();
+        return { dansCol: !!col.querySelector('#apercu .phone-screen'), adroite: a.left >= c.right, largeur: ph ? Math.round(ph.getBoundingClientRect().width) : 0,
+                 vignette: (() => { const v = document.getElementById('studioVignette'); return v.getBoundingClientRect().width > 0; })() };
+      });
+      if (!r.dansCol || !r.adroite) fails.push(`S6/ desktop, pas ${n} : l'aperçu n'est pas dans la colonne de droite`);
+      if (r.largeur < 360) fails.push(`S6/ desktop, pas ${n} : le téléphone de l'aperçu mesure ${r.largeur} px (attendu ≥ 360)`);
+      if (r.vignette) fails.push(`S6/ desktop, pas ${n} : la vignette du téléphone est affichée (l'aperçu est déjà permanent)`);
+    }
+    /* ── E1. DESKTOP : télécharger l'image, copier la légende ── */
+    const e3 = await p.evaluate(() => ({ promesse: document.getElementById('studioPromesse').textContent, actif: !document.getElementById('studioPrimaryFoot').disabled,
+                                          libelle: document.getElementById('studioPrimaryFoot').textContent.trim() }));
+    if (e3.libelle !== 'Envoyer sur Instagram' || !e3.actif) fails.push(`E1/ desktop, pas 3 : le bouton dit « ${e3.libelle} » (actif=${e3.actif})`);
+    if (!/télécharge/.test(e3.promesse) || !/copie/.test(e3.promesse)) fails.push(`E3/ desktop : avant le clic, le bouton ne dit pas qu'il télécharge et copie (« ${e3.promesse} »)`);
+    await p.click('#studioPrimaryFoot'); await wait(400);
+    const t = await p.evaluate(() => ({ ...window.__traces, n: (envoiPrep && envoiPrep.fichiers.length) || 0 }));
+    if (!t.n || t.telecharge.length !== t.n) fails.push(`E1/ desktop : ${t.telecharge.length} téléchargement(s) pour ${t.n} visuel(s)`);
+    if (t.telecharge.some(x => !x.blob || !/\.jpg$|\.png$/.test(x.nom))) fails.push(`E1/ desktop : fichiers téléchargés mal formés : ${JSON.stringify(t.telecharge)}`);
+    if (t.copie[0] !== LEGENDE + '\n\n' + TAGS.join(' ')) fails.push(`E1/ desktop : copié « ${t.copie[0]} » au lieu de la légende et ses hashtags`);
+    await ctx.close();
+  });
+
+  /* ── E2. TÉLÉPHONE : copier, PUIS ouvrir le partage avec les fichiers, dans le geste ── */
+  await essai('E2-E4', async () => {
+    const { p, ctx } = await page(390, { donnees: { 'events.json': [] } });
+    await au(p, 3);
+    const avant = await p.evaluate(() => document.getElementById('studioPromesse').textContent);
+    if (!/copie/.test(avant) || !/Instagram/.test(avant)) fails.push(`E3/ téléphone : avant le clic, le bouton ne dit pas ce qu'il fait (« ${avant} »)`);
+    /* Dans le geste : on mesure que share est appelé PENDANT le clic (synchrone), pas après une attente. */
+    const t = await p.evaluate(() => {
+      document.getElementById('studioPrimaryFoot').click();
+      return { ...window.__traces, n: envoiPrep.fichiers.length };
+    });
+    if (t.partage.length !== 1) fails.push(`E2/ téléphone : le partage n'est pas ouvert DANS le geste (${t.partage.length} appel(s) pendant le clic)`);
+    else {
+      if (t.partage[0].length !== t.n) fails.push(`E2/ téléphone : ${t.partage[0].length} fichier(s) partagé(s) pour ${t.n} visuel(s)`);
+      if (t.partage[0].some(f => !/^image\/(jpeg|png)$/.test(f.type) || f.taille < 1000)) fails.push(`E2/ téléphone : fichiers partagés mal formés : ${JSON.stringify(t.partage[0])}`);
+    }
+    if (t.ordre.join(',') !== 'copie,partage') fails.push(`E2/ téléphone : ordre « ${t.ordre.join(',')} » au lieu de copie puis partage`);
+    if (t.telecharge.length) fails.push('E2/ téléphone : un téléchargement est parti en plus du partage');
+
+    /* ── E4. UN SUJET PHOTO SANS PHOTO NE PART PAS ── */
+    const e4 = await p.evaluate(async () => {
+      goStep(1);
+      const c = document.querySelector('.sujet[data-theme="custom:sassy-photo"]'); if (c) c.click();
+      goStep(3); await new Promise(r => setTimeout(r, 900));
+      window.__traces.partage.length = 0;
+      const btn = document.getElementById('studioPrimaryFoot');
+      btn.click();
+      return { inactif: btn.disabled, partage: window.__traces.partage.length, libelle: btn.textContent };
+    });
+    if (!e4.inactif || e4.partage) fails.push(`E4/ sujet photo sans photo : le bouton « ${e4.libelle} » est actif ou a envoyé (${e4.partage})`);
+    await ctx.close();
+  });
+
+  if (ecritures.length) fails.push(`E5/ le studio a écrit ou publié : ${[...new Set(ecritures)].join(' · ')}`);
+
+  await b.close();
+  if (fails.length){ console.error('\n❌ STUDIO — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
+  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
+})();
