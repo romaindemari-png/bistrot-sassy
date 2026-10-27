@@ -403,9 +403,10 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 @media(min-width:961px){
   .barre{padding:20px 32px;}
   .site-cadre{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;padding:0 32px;}
-  .accueil-col{position:sticky;top:24px;align-self:start;padding:40px 0;}
+  .accueil-col{position:sticky;top:24px;align-self:start;padding:28px 0;}
   .accueil{font-size:clamp(64px,6.4vw,92px);line-height:.92;}
-  #screen-monsite .page{max-width:none;margin:0;padding:40px 0 60px;}
+  /* 28 px en tête (40 avant le 27/10) : à 1 280 × 800, les 6 cartes tiennent sous la barre sans défiler. */
+  #screen-monsite .page{max-width:none;margin:0;padding:28px 0 60px;}
 }
 
 /* ═══ LES TUILES (téléphone) ET LES CARTES (desktop) DE MON SITE — bout 4, LELAB-DESIGN §2, §4 ══════════
@@ -475,8 +476,12 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .tuile--plus .t-titre{font-size:26px;}
 .t-lien{position:relative;z-index:2;font:500 13px/1.3 var(--sans);color:var(--texte);text-decoration:underline;text-underline-offset:3px;}
 @media(min-width:961px){
-  .tuiles-site{gap:20px;}
-  .tuile{aspect-ratio:auto;min-height:250px;border-radius:28px;padding:22px 22px 0;overflow:hidden;}
+  .tuiles-site{gap:16px 20px;}
+  /* À LA HAUTEUR DE SON CONTENU (27/10) : ni hauteur fixe ni ratio. Dans une rangée, la grille étire les
+     cartes à la plus haute (align-items:stretch par défaut) et le morceau, poussé en bas (margin-top:auto),
+     s'aligne d'une carte à l'autre. L'écart titre → morceau vaut 28 px dans la plus haute, plus dans les autres. */
+  .tuile{aspect-ratio:auto;border-radius:28px;padding:22px 22px 0;overflow:hidden;}
+  .tuile > .t-titre,.tuile > .t-ouvrir{margin-bottom:22px;}   /* + le gap de 6 px de la tuile = 28 px avant le morceau */
   .tuile.grain-papier::after{border-radius:28px;}
   .t-titre{font-size:42px;}
   .t-fleche{width:42px;height:42px;}
