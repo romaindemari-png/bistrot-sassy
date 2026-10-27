@@ -11,9 +11,18 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function(){
-    if (handleAuthHash()) return;   // lien d'invitation / récupération → écran "définir le mot de passe"
+    if (handleAuthHash()){ finVerifSession(); return; }   // lien d'invitation / récupération → écran "définir le mot de passe"
     restoreSession();
   });
+  /* FILET, ET IL SE VOIT : si la vérification de session n'a rien tranché en 12 s (réseau mort, exception),
+     on lève l'écran d'attente — la porte de login réapparaît (non connecté) au lieu d'un écran vide pour
+     toujours. L'avertissement en console dit que le filet a servi : il ne doit JAMAIS servir. */
+  setTimeout(function(){
+    if (document.body && document.body.classList.contains('verif-session')){
+      console.warn('[session] vérification non tranchée après 12 s — écran d\'attente levé par le filet');
+      document.body.classList.remove('verif-session');
+    }
+  }, 12000);
 </script>
 <style>
 /* ── VARIABLES ─────────────────────────────────────────── */
@@ -183,11 +192,6 @@
 /* Zone d'action bas de Mon site : publier + indicateur */
 .lelab-actions { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .lelab-actions .lelab-site-link { margin: 0; }
-.lelab-dirty { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
-.lelab-dirty[hidden] { display: none; }
-.lelab-dirty-dot { width: 8px; height: 8px; border-radius: var(--r-round); flex-shrink: 0; }
-.plan-plus .lelab-dirty-dot { background: var(--g-toggle); }
-.plan-lab  .lelab-dirty-dot { background: var(--m-toggle); }
 
 /* Bouton actu-métier (« Publier sur Instagram ») injecté dans la card porteuse de la famille */
 /* CTA « Publier sur Instagram » — action SECONDAIRE de la card (le geste principal reste « ouvrir
@@ -379,7 +383,12 @@ a[href]:focus-visible,
   outline-offset:2px;
 }
 body{
-  background-color: var(--fond);
+  /* ⚠️ TRANSPARENT, ET C'EST CE QUI REND LES FLOUS VISIBLES (prouvé en prod le 27/10). Le fond --fond vit
+     sur <html> SEUL. Flous et grain sont des enfants fixed de <body> à z-index NÉGATIF : ils se peignent
+     sous les blocs, donc SOUS le fond de <body> s'il en a un — qui les recouvrait tous les trois. Un fond
+     ici les rendrait invisibles en silence (sonde : test-accueil, pixel au cœur du flou violet).
+     Les écrans studio / éditeurs n'en dépendent pas : .main porte leur crème. */
+  background-color: transparent;
   font-family: var(--font-admin);
   position: relative;
   color:var(--ink);
@@ -495,7 +504,15 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 /* Le bas de Mon site est désormais posé sur le fond : ses textes prennent les tokens de texte. */
 #screen-monsite .lelab-site-link,#screen-monsite .lelab-delai{color:var(--texte-2);}
 #screen-monsite .lelab-site-link:hover{color:var(--texte);}
-#screen-monsite .lelab-dirty{color:var(--texte);}
+/* Le bouton unique de Mon site (LELAB-DESIGN §4, §6) : pill 58 px, un état = une couleur. */
+#btn-publish-sections{min-height:58px;border-radius:999px;font:600 16px/1 var(--sans);box-shadow:none;transform:none;}
+#btn-publish-sections.pub--en-ligne{background:transparent;color:var(--texte);opacity:1;cursor:default;
+  border:1.5px solid var(--contour);border-color:color-mix(in srgb,var(--texte) 22%,transparent);}
+#btn-publish-sections.pub--a-voir{background:var(--a-voir);color:var(--a-voir-texte);border:0;opacity:1;}
+#btn-publish-sections.pub--envoi{background:var(--a-voir);color:var(--a-voir-texte);border:0;opacity:1;cursor:progress;}
+/* ENVOYÉ ≠ EN LIGNE (27/10). Au 200 de save-data, le changement est ÉCRIT, pas encore VISIBLE : papier, pas
+   jaune. Le jaune « ✓ C'est en ligne » est RÉSERVÉ à la confirmation réelle du déploiement (bout du remplissage). */
+#btn-publish-sections.pub--envoye{background:var(--papier);color:var(--encre);border:0;opacity:1;}
 .lelab-delai{font-size:13px;line-height:1.45;text-align:center;max-width:420px;margin:0;}
 @media(max-width:720px){
   .barre{grid-template-columns:auto 1fr;row-gap:12px;}
@@ -1049,7 +1066,6 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .btn--ghost:hover{color:var(--ink);border-color:var(--ink-3);}
 .btn--sm{min-height:36px;padding:var(--sp-2) var(--sp-4);font-size:13px;}
 .btn--block{width:100%;}
-.btn.is-dirty{box-shadow:0 8px 26px rgba(28,26,25,.20);transform:translateY(-1px);}   /* « modifications non publiées » */
 /* CTA du studio en PILULE (bouts ronds) — cohérent avec le cercle-flèche de l'accueil */
 
 /* preview pane */
@@ -1341,6 +1357,14 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 /* tant que non connecté : on masque l'app et la nav mobile */
 body:not(.authed) .app{display:none;}
 body.authed #login-gate{display:none;}
+/* ⚠️ PAS DE FLASH DE LA PORTE DE LOGIN (27/10). Tant que la session n'est pas tranchée (body.verif-session,
+   posé dans le HTML), ni la porte ni l'app : un écran neutre, le fond et le logo. boot() lève l'attente
+   côté connecté, restoreSession() côté porte, handleAuthHash() côté invitation. Sonde : test-accueil. */
+#attente{display:none;}
+body.verif-session #login-gate,body.verif-session .app{display:none!important;}
+body.verif-session #attente{display:flex;position:fixed;inset:0;z-index:310;background:var(--fond);
+  align-items:center;justify-content:center;}
+#attente img{height:44px;width:auto;}
 /* Badge MODE DEV — visible UNIQUEMENT quand le bypass localhost est actif (body.dev-local, posé
    par restoreSession sur localhost). Ne peut pas apparaître en prod : le hostname n'y est pas localhost. */
 body.dev-local::after{
@@ -1500,7 +1524,13 @@ body.dev-local::after{
   color:var(--ink-2);font-weight:700;align-self:flex-start;margin-bottom:4px;}
 </style>
 </head>
-<body>
+<body class="verif-session">
+
+<!-- Écran d'attente : le temps de vérifier la session (cf. body.verif-session). Ni porte, ni app. -->
+<div id="attente" aria-hidden="true">
+  <img class="logo-nuit" src="assets/logo-lelab-blanc-h.png" alt="">
+  <img class="logo-jour" src="assets/logo-lelab-noir-h.png" alt="">
+</div>
 
 <!-- ═══ LOGIN (passerelle Netlify Identity) ═══ -->
 <div id="login-gate">
@@ -1572,15 +1602,14 @@ body.dev-local::after{
              card ↔ bloc n'existait NULLE PART : c'est la structure `admin` de config.json. -->
         <div class="lelab-grid" id="siteGrid"></div>
         <div class="lelab-actions">
-          <div class="lelab-dirty" id="dirty-indicator" hidden><span class="lelab-dirty-dot"></span>Modifications non publiées</div>
-          <button class="btn btn--block" id="btn-publish-sections" onclick="saveBlocs()">Publier les modifications</button>
+          <!-- LE BOUTON UNIQUE (LELAB-DESIGN §6), sans animation dans ce bout : « Tout est en ligne » en contour
+               (non cliquable) tant que rien n'a changé ; « Publier » en --a-voir dès qu'un interrupteur bascule.
+               La phrase dessous dit ce qui va se passer AVANT le clic. Écrits par updateDirtyIndicator(). -->
+          <button class="btn btn--block" id="btn-publish-sections" onclick="saveBlocs()" disabled>Tout est en ligne</button>
+          <p class="lelab-delai" id="publierPhrase">Modifiez une section et le bouton s’allume.</p>
           <!-- Libellé posé par syncSiteLinks — le même que celui de l'accueil. Deux liens vers LE MÊME
                endroit qui s'écrivent différemment finissent toujours par diverger : une seule source. -->
           <a class="lelab-site-link" id="monsiteSiteLink" href="/" target="_blank" rel="noopener"></a>
-          <!-- ⚠️ « EN QUELQUES SECONDES » ÉTAIT FAUX À CHAQUE FOIS. Publier écrit un commit ; le site
-               n'est à jour qu'après un build (~30-60 s). « Moins d'une minute » est une BORNE HAUTE.
-               Ex-sous-titre de « Mon site », descendu près du bouton qu'il concerne (bout 3). -->
-          <p class="lelab-delai">Après publication, comptez moins d’une minute avant de voir les changements en ligne.</p>
         </div>
       </div>
       </div><!-- /site-cadre -->
@@ -2122,6 +2151,7 @@ function doLogout(){
 // Appelé une fois l'utilisateur authentifié
 async function boot(user){
   document.body.classList.add('authed');
+  finVerifSession();   // connecté : l'attente se lève sur l'app, jamais sur la porte
   /* ⚠️ IL Y AVAIT ICI UN `showScreen('dashboard')`, ET IL GAGNAIT LA COURSE. showScreen DIFFÈRE son
      applyScreen de 150 ms (le fondu). La route s'appliquait dans l'intervalle — l'éditeur s'ouvrait
      vraiment, titre et champs remplis — puis le timer retombait et réactivait l'accueil par-dessus.
@@ -2320,7 +2350,11 @@ async function restoreSession(){
     }
   }
   document.body.classList.remove('authed'); // → login gate visible
+  finVerifSession();                         // … et seulement maintenant : la session est absente ou invalide
 }
+
+/* La session est tranchée (connecté, porte, ou lien d'invitation) : on lève l'écran d'attente. */
+function finVerifSession(){ document.body.classList.remove('verif-session'); }
 
 /* ═══ LE ROUTEUR — « OÙ ON EST », ET RIEN D'AUTRE ═══════════════════════════════════════════════
    Le hash porte l'ÉCRAN. Il ne porte JAMAIS le travail en cours : celui-là vit dans le brouillon et
@@ -6736,14 +6770,28 @@ function currentBlocState(){
   return st;
 }
 
-// Compare l'état affiché à l'état publié → affiche/masque l'indicateur + met en avant le bouton
-function updateDirtyIndicator(){
-  const ind = document.getElementById('dirty-indicator');
-  const btn = document.getElementById('btn-publish-sections');
+/* Le bouton unique et sa phrase, selon le nombre de changements en attente (LELAB-DESIGN §6) :
+     0 → pill en contour « Tout est en ligne », NON cliquable, « Modifiez une section et le bouton s'allume. »
+     n → pill --a-voir « Publier », « n changement(s) · en ligne en moins d'une minute »
+   ⚠️ « Moins d'une minute » est une BORNE HAUTE (publier écrit un commit, le build suit en ~30-60 s) :
+      jamais « en quelques secondes », qui s'est révélé faux à chaque fois.
+   ⚠️ L'ancien indicateur « Modifications non publiées » est retiré : la phrase porte la même information. */
+function etatPublier(classe, libelle, phrase, actif){
+  const btn = document.getElementById('btn-publish-sections'), ph = document.getElementById('publierPhrase');
+  if (btn){
+    btn.classList.remove('pub--en-ligne', 'pub--a-voir', 'pub--envoi', 'pub--envoye');
+    btn.classList.add(classe); btn.textContent = libelle; btn.disabled = !actif;
+  }
+  if (ph && phrase !== null) ph.textContent = phrase;
+}
+function changementsEnAttente(){
   const cur = currentBlocState();
-  const dirty = Object.keys(cur).some(k => cur[k] !== publishedBlocState[k]);
-  if (ind) ind.hidden = !dirty;
-  if (btn) btn.classList.toggle('is-dirty', dirty);
+  return Object.keys(cur).filter(k => cur[k] !== publishedBlocState[k]).length;
+}
+function updateDirtyIndicator(){
+  const n = changementsEnAttente();
+  if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', 'Modifiez une section et le bouton s’allume.', false);
+  else etatPublier('pub--a-voir', 'Publier', n + ' changement' + (n > 1 ? 's' : '') + ' · en ligne en moins d’une minute', true);
 }
 
 // Bascule le mini-toggle (sans ouvrir l'éditeur de la card) + rafraîchit l'indicateur
@@ -6821,8 +6869,7 @@ function renderBlocs(){
 }
 
 async function saveBlocs(){
-  const btn = document.getElementById('btn-publish-sections');
-  if (btn){ btn.textContent = 'Publication…'; btn.disabled = true; btn.classList.remove('is-dirty'); }
+  etatPublier('pub--envoi', 'Publication…', null, false);
   try {
     const token = await getToken();
     if (!token) throw new Error('Non connecté');
@@ -6840,18 +6887,18 @@ async function saveBlocs(){
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
     sassyData.config = next;
     publishedBlocState = currentBlocState();   // nouvelle référence publiée
-    if (btn){ btn.textContent = '✓ Enregistré'; }
-    updateDirtyIndicator();                    // plus de diff → indicateur masqué
+    /* « ✓ Envoyé », pas « ✓ C'est en ligne » : on dit ce qui s'est produit (l'écriture), pas ce qui va se
+       produire (la mise en ligne, ~30-60 s). Le jaune viendra quand on CONSTATERA le déploiement. */
+    etatPublier('pub--envoye', '✓ Envoyé', 'En ligne dans moins d’une minute.', false);
     /* ⚠️ LE TOAST DIT CE QUI S'EST PRODUIT, PAS CE QUI VA SE PRODUIRE. Au 200, la modification est
        ÉCRITE (commit) ; elle n'est pas VISIBLE. « Publiées ! » l'affirmait quand même — le feedback
        constatait une intention, pas un résultat. On sépare : le fait acquis, puis l'attente. */
     showToast('✅ Modifications enregistrées — en ligne dans moins d’une minute');
-    setTimeout(() => { if (btn){ btn.textContent = 'Publier les modifications'; btn.disabled = false; } }, 1600);
+    setTimeout(updateDirtyIndicator, 3000);   // §6 : retour à l'état 1 après 3 s
   } catch (err){
     console.error('Erreur publication sections:', err);
     showToast('❌ Erreur : ' + err.message);
-    if (btn){ btn.textContent = 'Publier les modifications'; btn.disabled = false; }
-    updateDirtyIndicator();                    // l'indicateur reste si toujours modifié
+    updateDirtyIndicator();                    // le bouton reste « Publier » si les changements sont toujours là
   }
 }
 

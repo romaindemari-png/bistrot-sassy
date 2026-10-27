@@ -27,6 +27,7 @@
 
    USAGE :  python3 -m http.server 8080   puis   node scripts/mesure-charte.js 8080
             node scripts/mesure-charte.js 8080 /admin/ "#screen-monsite, .barre"   ← la coquille de l'admin
+            … "#screen-monsite, .barre" "document.querySelector('.lelab-mini-toggle').click()"   ← après un geste
       Page et zone en paramètres : la page de contrôle par défaut, ou l'admin (bypass dev localhost).
       Seuls les textes VISIBLES de la zone sont mesurés (les écrans masqués de l'admin sont dans le DOM).
    PRÉREQUIS : puppeteer-core + un Chrome installé.
@@ -37,6 +38,7 @@ const PORT   = process.argv[2] || '8080';
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PAGE   = process.argv[3] || '/admin/charte.html';
 const ZONE   = process.argv[4] || 'main';
+const GESTE  = process.argv[5] || '';   // JS joué dans la page avant la mesure (ex. basculer un interrupteur)
 const URL    = `http://localhost:${PORT}${PAGE}`;
 const RACINE = path.join(__dirname, '..');
 
@@ -79,6 +81,7 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
      porte `transition: color` rend encore sa couleur d'AVANT. Mesuré le 26/10 sur .lelab-site-link :
      #CDC9C2 (nuit) lu à 0 ms en jour, #2B2347 à 400 ms → un faux ❌ à 1,11:1. On mesure l'état final. */
   await p.addStyleTag({ content: '*,*::before,*::after{transition:none!important}' });
+  if (GESTE){ await p.evaluate(GESTE); await new Promise(r => setTimeout(r, 200)); console.log('\n(geste joué avant la mesure : ' + GESTE + ')'); }
   let echecs = 0;
 
   /* ── 0. LES DEUX FLOUS SE SUPERPOSENT-ILS ? MESURÉ, PAS SUPPOSÉ ──
@@ -139,7 +142,10 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
       const textes = [...document.querySelectorAll(ZONE.split(',').map(z => z.trim() + ' *').join(','))].filter(el =>
         [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && el.closest('[aria-hidden="true"]') === null && visible(el));
       return {
-        fond: couleur(document.body),
+        /* Le fond de la page : celui de <body>, ou — s'il est transparent — celui de <html>. ⚠️ Depuis le 27/10
+           le --fond de l'admin vit sur <html> SEUL (un fond sur <body> recouvrait les flous). Lire <body>
+           seul rendait « transparent », parsé en noir : de faux contrastes, dans les deux sens. */
+        fond: [document.body, document.documentElement].map(couleur).find(c => !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) || couleur(document.documentElement),
         flous: [flou('.flou-violet'), flou('.flou-jaune')],
         grainFond: grainCalque(getComputedStyle(document.querySelector('.grain-fond'))),
         surfaces: ['.tuile--a-jour', '.tuile--a-voir'].filter(sel => document.querySelector(sel)).map(sel => {
