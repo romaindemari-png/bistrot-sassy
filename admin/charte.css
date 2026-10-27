@@ -93,7 +93,10 @@ html[data-chromie="jour"]{
 /* ⚠️ isolation:isolate sur la surface : la fusion ne doit se faire qu'avec SA couleur, pas avec le fond
    et les flous qui sont derrière (cf. TECH.md, mix-blend-mode). */
 .grain-papier,.grain-a-voir{position:relative;isolation:isolate}
-.grain-papier::after,.grain-a-voir::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+/* ⚠️ LE GRAIN MODULE LA SURFACE, JAMAIS LE TEXTE (27/10). z-index:-1 DANS la surface isolée : le calque se peint
+   au-dessus du fond de la surface et SOUS tout son contenu. Posé par-dessus, il éclaircissait le texte foncé et
+   fonçait le fond à la fois — c'est ce qui faisait tomber la précision (3,89) et « Il manque le nom » (4,15). */
+.grain-papier::after,.grain-a-voir::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
   background:url('/assets/grain.png') repeat;background-size:128px;opacity:.50;mix-blend-mode:soft-light}
 .grain-a-voir::after{background-image:var(--grain-a-voir-tuile)}
 

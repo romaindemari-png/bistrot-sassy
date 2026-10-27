@@ -230,7 +230,9 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
         const g = await grainDe(it.grain);
         const variantes = c => [['', c], ...extremes(g).map(([e, v]) => [e, fondu(c, v, g)])];
         cas = [];
-        for (const [et, tt] of variantes(t)) for (const [es, ss] of variantes(s))
+        /* ⚠️ LE GRAIN MODULE LE FOND, JAMAIS LE TEXTE (27/10) : le calque est SOUS le contenu (z-index:-1 dans
+           la surface isolée). Le texte garde sa couleur nominale ; seul le fond prend les centiles du grain. */
+        for (const [et, tt] of [['', t]]) for (const [es, ss] of variantes(s))
           cas.push([[es && es + ' sur la surface', et && et + ' sur le texte'].filter(Boolean).join(', ') || 'surface', tt, ss]);
       } else {
         cas = fondsComposes.map(([n, c]) => [n, t, c]);
