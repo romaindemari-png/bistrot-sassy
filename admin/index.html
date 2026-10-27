@@ -8,6 +8,7 @@
 <!-- La charte de l'app (LELAB-DESIGN §1, §3) : tokens nuit/jour, Instrument en woff2, grain, flous.
      ⚠️ AVANT le <style> de l'admin : l'ancien CSS des écrans pas encore refaits garde la main sur eux. -->
 <link rel="stylesheet" href="/admin/charte.css">
+<link rel="stylesheet" href="/admin/composant-photo.css">
 
 <script>
   document.addEventListener('DOMContentLoaded', function(){
@@ -681,6 +682,21 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .f-tout-retirer:disabled{color:var(--papier-2);text-decoration:none;cursor:default;}
 @media(min-width:961px){ .f-ev-titre{font-size:24px;} }
 @media(prefers-reduced-motion:reduce){ .f-ferme-piste::after,.f-passes-titre::before{transition:none;} }
+/* LA FEUILLE DES PHOTOS (bout 7c-2) : des carrés, 2 par ligne au téléphone, plus en desktop. La poignée se pose sur
+   le coin de la photo (un disque papier : lisible sur n'importe quelle image, sans la teinter). */
+.f-photos{padding:0 4px;}
+.f-ph-sous{margin:-2px 0 10px 12px;font:400 13px/1.3 var(--sans);color:var(--papier-2);}
+.f-ph-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;padding:0 8px;}
+.f-ph{position:relative;min-width:0;}
+.f-ph-poignee{position:absolute;top:0;left:0;z-index:2;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  background:none;border:0;padding:0;color:var(--encre);cursor:grab;touch-action:none;}
+.f-ph-poignee::before{content:"";position:absolute;top:7px;left:7px;width:30px;height:30px;border-radius:50%;background:var(--papier);
+  box-shadow:0 1px 3px rgba(26,25,23,.25);}
+.f-ph-poignee svg{position:relative;width:14px;height:14px;}
+.f-ph-poignee:focus-visible{outline:2px solid var(--violet-encre);outline-offset:-2px;border-radius:10px;}
+.f-ph--glisse{z-index:5;opacity:.85;}
+.f-ph--glisse .cp-cadre{outline:2px solid var(--violet-encre);outline-offset:2px;}
+@media(min-width:961px){ .f-ph-grille{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 16px;} }
 @media(min-width:961px){
   .f-jour{grid-template-columns:8.5em minmax(0,1fr) auto;grid-template-areas:"nom plages ferme" ". manque .";}
   .f-j-nom,.f-plage,.f-info-val{font-size:24px;}
@@ -1576,16 +1592,6 @@ body.dev-local::after{
 .photo-upload:hover{border-color:var(--accent-bord);background:var(--accent-soft);}
 .photo-upload-icon{font-size:26px;}
 /* vignettes photos (slider + galerie) — langage unifié */
-.ph-slider-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
-.ph-thumb{width:80px;height:80px;border-radius:var(--r-sm);overflow:hidden;background:rgba(28,26,25,.06);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.ph-thumb img,.ph-galerie-item img{width:100%;height:100%;object-fit:cover;display:block;}
-.ph-info{flex:1;min-width:0;}
-.ph-info-tt{font-size:13px;font-weight:600;color:var(--ink);}
-.ph-info-dd{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ph-galerie-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
-.ph-galerie-item{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;background:rgba(28,26,25,.06);display:flex;align-items:center;justify-content:center;}
-.ph-del{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:var(--r-sm);background:rgba(33,31,30,.7);color:#fff;font-size:12px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.ph-empty{font-size:12.5px;color:var(--ink-2);}
 
 /* ── TOAST ── */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(90px);
@@ -2078,6 +2084,7 @@ body.dev-local::after{
 
 <!-- Pied d'action studio (MOBILE) — CTA en zone du pouce ; affiché via body.in-studio (cf. @media 960) -->
 
+<script src="/admin/composant-photo.js"></script>   <!-- le composant photo (bout 7c-1), pour la feuille Photos -->
 <script src="/client-tokens.js?v=1"></script>   <!-- ⚠️ nom NEUTRE : chaque fork a SON client-tokens.js, l'admin ne change pas -->
 <script src="/admin/moteur-v2.js?v=1"></script>   <!-- moteur v2 : un thème sans `template` n'en exécute AUCUNE ligne -->
 <script>
@@ -6264,7 +6271,7 @@ function lireCarte(){
 
 /* ── Contenu des écrans d'édition ── */
 /* ⚠️ editScreens ne contient plus que le repli de la carte (un fork qui n'aurait rien déclaré). Horaires et
-   contact sont des feuilles (EDITEURS_INFOS, bout 7a) ; photos, ecranPhotosHTML().
+   contact sont des feuilles (EDITEURS_INFOS, bout 7a) ; photos aussi (EDITEUR_PHOTOS, bout 7c-2).
    Les blocs de LISTE (dujour, events, cematin, arrivage…) n'y sont plus : leur écran est CONSTRUIT
    par ecranBlocHTML() depuis leur type et leurs textes. Le bloc « à catégories » (la carte) non
    plus : c'est la feuille, feuilleCadreHTML() (bout 5). Ajouter un bloc = une entrée dans config.json, ZÉRO ligne de code. */
@@ -6284,11 +6291,6 @@ const editScreens = {
       <button class="btn btn--block btn-save" onclick="saveSection()">Publier les modifications</button>
     `
   },
-  /* ⚠️ REMPLACÉ PAR ecranPhotosHTML() — cf. ecranDe(). Le SLIDER est du gabarit DA (le hero,
-     composé au design du site), pas du contenu client : il n'apparaît dans l'éditeur QUE si
-     `photos.admin.sliderEditable: true` (ouverture au cas par cas). Par défaut, seule la galerie
-     est éditable. Ce gabarit statique nommait le slider en dur ET sans condition — il ne pouvait
-     donc pas respecter le verrou. Un template unique, dérivé de la config, prend le relais. */
 };
 
 /* ── Du jour (éditeur) ── */
@@ -6373,6 +6375,8 @@ function fermerSortieEdition(){
 function confirmerSortieEdition(){
   const suite = quitEditAction;
   fermerSortieEdition();
+  /* Une feuille qui a déjà envoyé quelque chose (les photos, dans Blobs) le reprend : sortie confirmée = abandon. */
+  if (editeur && editeur.abandonner) editeur.abandonner();
   editDirty = false;          // le client a tranché : on ne redemandera pas
   if (suite) suite();
 }
@@ -6393,28 +6397,6 @@ function pictoDeLEcran(section){
    au cas par cas, sur demande). Absent/false → seule la galerie est éditable, la composition du
    hero reste protégée. La galerie, elle, est toujours éditable. bloc peut être null (fork qui n'a
    rien déclaré) → slider OFF, galerie seule : le défaut sûr. */
-function ecranPhotosHTML(bloc){
-  const sliderEditable = !!(bloc && bloc.admin && bloc.admin.sliderEditable);
-  const intro = sliderEditable
-    ? 'Gérez les photos de votre slider d\'accueil et de votre galerie.'
-    : 'Gérez les photos de votre galerie.';
-  const sliderGroup = sliderEditable ? `
-      <div class="field-group">
-        <div class="field-group-title">Slider (3 photos)</div>
-        <div id="photos-slider"><!-- injecté par prefillSection('photos') --></div>
-      </div>` : '';
-  return `
-      <p class="edit-intro">${intro}</p>${sliderGroup}
-      <div class="field-group">
-        <div class="field-group-title">Galerie (max 6 photos)</div>
-        <div id="photos-galerie"><!-- injecté par prefillSection('photos') --></div>
-        <button class="btn-add" id="btn-add-galerie" onclick="pickGaleriePhoto()">+ Ajouter une photo</button>
-      </div>
-      <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="onPhotoPicked(this)">
-      <button class="btn btn--block btn-save" onclick="saveSection()">Publier les modifications</button>
-    `;
-}
-
 /* ⚠️ Un bloc de LISTE n'a plus d'entrée dans editScreens : son écran est CONSTRUIT depuis son type
    et ses textes. C'est ce qui fait qu'ajouter un bloc = une entrée dans config.json, zéro code. */
 /* Le NOM d'un écran d'édition = le NOM DE SA CARD, déclaré dans config.json.
@@ -6436,7 +6418,11 @@ function ecranDe(section){
     const titre = nomDeLEcran(section) || EDITEURS_INFOS[section].titre;
     return { title: titre, html: feuilleCadreHTML(section, { ...EDITEURS_INFOS[section].cadre, titre }), feuille: true };
   }
-  if (section === 'photos') return { title: (bloc && bloc.label) || 'Photos', html: ecranPhotosHTML(bloc) };   // slider conditionné par config
+  /* Bout 7c-2 : les photos sont une feuille (le composant photo de 7c-1). */
+  if (section === 'photos'){
+    const titre = (bloc && bloc.label) || 'Photos';
+    return { title: titre, html: feuilleCadreHTML(section, { ...EDITEUR_PHOTOS.cadre, titre }), feuille: true };
+  }
   /* ⚠️ LE TITRE VIENT DE LA CONFIG, PLUS DE LA TABLE. `editScreens` porte des titres ÉCRITS EN DUR :
      l'écran de `contact` s'intitulait « Contact » pendant que sa card disait « Infos » — DEUX NOMS
      POUR LA MÊME SECTION, dans la même app, depuis toujours. Trouvé par le garde-fou I (le lot des
@@ -6637,6 +6623,7 @@ const EDITEUR_CARTE = {
 function editeurDe(section){
   if (estFeuille(section)) return EDITEUR_CARTE;
   if (EDITEURS_INFOS[section]) return EDITEURS_INFOS[section];
+  if (section === 'photos') return EDITEUR_PHOTOS;
   const bloc = blocDeLEcran(section);
   return bloc && bloc.type === 'evenements' ? editeurEvenements(bloc) : null;
 }
@@ -7231,6 +7218,223 @@ function editeurEvenements(bloc){
   };
 }
 
+/* ═══ LA FEUILLE DES PHOTOS (bout 7c-2) — le composant photo de 7c-1 (admin/composant-photo.js) ═══════════════
+   Deux parties : « En haut de la page d'accueil » (slider : 3 cases fixes, dans l'ordre du site — index.html en
+   a TROIS écrites en dur : une 4e ne s'afficherait jamais, une photo retirée y serait remplacée par l'image en dur)
+   et « Galerie » (sans limite : le site passe en carrousel au-delà de 4). Par photo : Remplacer, Retirer (galerie),
+   réordonner (la poignée à glisser, ou Alt + flèches, comme La carte).
+   ⚠️ ENVOYER ≠ PUBLIER (27/10). La photo part dans Blobs au choix ; photos.json ne s'écrit qu'avec Publier.
+      · une image envoyée puis abandonnée (Retirer une photo pas encore publiée, la remplacer encore, Annuler mes
+        changements, sortie confirmée, ou non retenue à la publication) est supprimée de Blobs TOUT DE SUITE :
+        le site ne l'a jamais montrée ;
+      · une image publiée puis remplacée ou retirée n'est supprimée qu'APRÈS « C'est en ligne » : avant, le
+        site la montre encore. Échec de suppression : rien n'est dit au client, elle reste orpheline ;
+      · on ne supprime JAMAIS un fichier du dépôt (hero1.png…) : seule une adresse serve-image désigne Blobs.
+   ⚠️ LE FORMAT NE CHANGE PAS : photos.json = { slider: [{ image, alt }], galerie: [{ image, legende }] }, clés
+      et ordre de clés restitués (spread de l'origine) ; une nouvelle photo de galerie écrit legende "" (le site
+      ne l'affiche pas : elle ne sert que d'alt), une nouvelle photo du haut prend pour alt le nom du commerce
+      (config.json). Publier sans rien changer réécrit le fichier à l'octet (test-photos-feuille). */
+let photosF = null;   // { origine, parties: { slider: [item], galerie: [item] }, base: { slider: [ids], galerie: [ids] }, session: Set(clés), ajout }
+let photoSeq = 0;
+const PARTIES_PHOTOS = [
+  { cle: 'slider', titre: 'En haut de la page d’accueil', sous: '3 photos, dans l’ordre du site', fixe: 3, retirable: false },
+  { cle: 'galerie', titre: 'Galerie', sous: '', fixe: 0, retirable: true },
+];
+const SVG_GRIP = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1.4"/><circle cx="11" cy="3" r="1.4"/><circle cx="5" cy="8" r="1.4"/><circle cx="11" cy="8" r="1.4"/><circle cx="5" cy="13" r="1.4"/><circle cx="11" cy="13" r="1.4"/></svg>';
+/* Extrait la clé Blobs d'une adresse serve-image (sinon null : un fichier du dépôt, qu'on ne supprime jamais). */
+function blobKeyFromUrl(url){
+  const m = typeof url === 'string' && url.match(/serve-image\?key=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+/* Supprime une image de Blobs, en silence : un échec laisse une orpheline, on l'accepte. */
+function supprimerBlob(cle){
+  if (!cle || !cle.startsWith('photos/')) return;
+  authedFetch('/.netlify/functions/upload-image', { action: 'delete', key: cle }).catch(() => {});
+}
+const nomCommerce = () => ((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '').trim();
+function modelePhotos(p){
+  const src = p || {};
+  const m = { origine: src, parties: {}, base: {}, session: new Set(), ajout: null };
+  PARTIES_PHOTOS.forEach(pt => {
+    m.parties[pt.cle] = (Array.isArray(src[pt.cle]) ? src[pt.cle] : []).map(o => ({ id: ++photoSeq, partie: pt.cle, origine: o,
+      url: (o && o.image) || '', retiree: false, etat: 'pleine', cle: null }));
+    m.base[pt.cle] = m.parties[pt.cle].map(i => i.id);
+  });
+  return m;
+}
+function lirePhotos(){
+  const out = { ...photosF.origine };
+  PARTIES_PHOTOS.forEach(pt => {
+    out[pt.cle] = photosF.parties[pt.cle].filter(i => !i.retiree && i.url).map(i => i.origine
+      ? { ...i.origine, image: i.url }
+      : (pt.cle === 'slider' ? { image: i.url, alt: nomCommerce() } : { image: i.url, legende: '' }));
+  });
+  return out;
+}
+function changementsPhotos(){
+  let n = 0;
+  PARTIES_PHOTOS.forEach(pt => {
+    const items = photosF.parties[pt.cle];
+    items.forEach(i => {
+      if (!i.origine){ if (!i.retiree) n++; return; }
+      if (i.retiree || i.url !== i.origine.image) n++;
+    });
+    const restants = items.filter(i => i.origine && !i.retiree).map(i => i.id);
+    if (restants.join() !== photosF.base[pt.cle].filter(id => restants.includes(id)).join()) n++;
+  });
+  if (photosF.ajout && photosF.ajout.etat !== 'vide') n++;   // une photo en cours d'ajout est déjà un changement
+  return n;
+}
+/* Rien ne part tant qu'une photo est en cours d'envoi ou en échec (elle n'a pas encore d'adresse). */
+function photosEnCours(){
+  if (!photosF) return 0;
+  let n = PARTIES_PHOTOS.reduce((t, pt) => t + photosF.parties[pt.cle].filter(i => !i.retiree && (i.etat === 'envoi' || i.etat === 'echec')).length, 0);
+  if (photosF.ajout && (photosF.ajout.etat === 'envoi' || photosF.ajout.etat === 'echec')) n++;
+  return n;
+}
+/* Une clé envoyée pendant la séance et plus désignée par aucune photo : jamais montrée par le site → supprimée. */
+function nettoyerSession(m){
+  const vivantes = new Set();
+  PARTIES_PHOTOS.forEach(pt => m.parties[pt.cle].forEach(i => { const k = blobKeyFromUrl(i.url); if (k) vivantes.add(k); }));
+  [...m.session].forEach(k => { if (!vivantes.has(k)){ m.session.delete(k); supprimerBlob(k); } });
+}
+function cellulePhotoHTML(i){
+  return `<div class="f-ph" data-id="${i.id}">
+    <button type="button" class="f-ph-poignee" data-action="poignee" aria-label="Déplacer cette photo (Alt + flèches)">${SVG_GRIP}</button>
+    <div class="f-ph-case"></div>
+  </div>`;
+}
+function monterCase(m, i, el){
+  const pt = PARTIES_PHOTOS.find(x => x.cle === i.partie);
+  creerCasePhoto(el.querySelector('.f-ph-case'), { cible: i.partie, url: i.url, retirable: pt.retirable, jeton: getToken,
+    alt: i.partie === 'slider' ? ((i.origine && i.origine.alt) || nomCommerce()) : ((i.origine && i.origine.legende) || nomCommerce()),
+    surChange: v => {
+      if (v.cle){ if (photosF !== m){ supprimerBlob(v.cle); return; } m.session.add(v.cle); }   // envoi fini après une sortie : orpheline évitée
+      if (photosF !== m) return;
+      i.etat = v.etat; i.url = v.url; i.retiree = v.retiree;
+      if (!i.origine && i.retiree){                       // une photo pas encore publiée qu'on retire : elle s'en va
+        m.parties[i.partie] = m.parties[i.partie].filter(x => x !== i);
+        el.remove();
+      }
+      nettoyerSession(m); etatFeuille();
+    } });
+}
+/* La case d'ajout, au bout de la galerie : à l'envoi réussi, elle devient une photo et une case neuve la remplace. */
+function monterAjout(m, partie, grille){
+  const cel = document.createElement('div'); cel.className = 'f-ph f-ph--ajout';
+  grille.appendChild(cel);
+  const etat = { etat: 'vide' }; m.ajout = etat;
+  creerCasePhoto(cel, { cible: partie, url: '', jeton: getToken, surChange: v => {
+    if (v.cle){ if (photosF !== m){ supprimerBlob(v.cle); return; } m.session.add(v.cle); }
+    if (photosF !== m) return;
+    etat.etat = v.etat;
+    if (v.etat === 'pleine'){
+      const i = { id: ++photoSeq, partie, origine: null, url: v.url, retiree: false, etat: 'pleine', cle: v.cle };
+      m.parties[partie].push(i);
+      const el = document.createElement('div'); el.innerHTML = cellulePhotoHTML(i); const c = el.firstElementChild;
+      grille.insertBefore(c, cel); monterCase(m, i, c);
+      cel.remove(); monterAjout(m, partie, grille);
+    }
+    etatFeuille();
+  } });
+}
+function rendrePhotos(){
+  const racine = document.getElementById('feuille');
+  if (!racine || !photosF) return;
+  const m = photosF;
+  racine.innerHTML = PARTIES_PHOTOS.map(pt => `<section class="f-cat f-photos" data-partie="${pt.cle}">
+      <h2 class="f-cat-titre f-cat-titre--info">${_eT(pt.titre)}</h2>
+      ${pt.sous ? `<p class="f-ph-sous">${_eT(pt.sous)}</p>` : ''}
+      <div class="f-ph-grille">${m.parties[pt.cle].map(cellulePhotoHTML).join('')}</div>
+    </section>`).join('');
+  PARTIES_PHOTOS.forEach(pt => {
+    const grille = racine.querySelector(`.f-photos[data-partie="${pt.cle}"] .f-ph-grille`);
+    m.parties[pt.cle].forEach(i => monterCase(m, i, grille.querySelector(`.f-ph[data-id="${i.id}"]`)));
+    if (!pt.fixe) monterAjout(m, pt.cle, grille);
+  });
+}
+/* Réordonner : déplacer la cellule (le DOM — les cases gardent leur état, un envoi en cours continue) et le modèle. */
+function deplacerPhoto(id, vers){
+  for (const pt of PARTIES_PHOTOS){
+    const items = photosF.parties[pt.cle], k = items.findIndex(i => i.id === id);
+    if (k < 0) continue;
+    const j = Math.max(0, Math.min(items.length - 1, vers));
+    if (j === k) return false;
+    const [i] = items.splice(k, 1); items.splice(j, 0, i);
+    const grille = document.querySelector(`.f-photos[data-partie="${pt.cle}"] .f-ph-grille`);
+    const cel = grille.querySelector(`.f-ph[data-id="${id}"]`), apres = grille.querySelector(`.f-ph[data-id="${(items[j + 1] || {}).id}"]`)
+      || grille.querySelector('.f-ph--ajout');
+    grille.insertBefore(cel, apres || null);
+    etatFeuille();
+    return true;
+  }
+  return false;
+}
+function ecouterPhotos(racine){
+  ecouterSurlignage(racine);
+  const indexDe = id => { for (const pt of PARTIES_PHOTOS){ const k = photosF.parties[pt.cle].findIndex(i => i.id === id); if (k >= 0) return k; } return -1; };
+  /* Clavier : Alt + ↑/← avance la photo, Alt + ↓/→ la recule (dans sa partie) ; le focus reste sur la poignée. */
+  racine.addEventListener('keydown', e => {
+    if (!e.altKey || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    const cel = e.target.closest('.f-ph[data-id]'); if (!cel) return;
+    e.preventDefault();
+    const id = +cel.dataset.id, k = indexDe(id);
+    if (deplacerPhoto(id, k + (e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 1))){
+      const p = racine.querySelector(`.f-ph[data-id="${id}"] .f-ph-poignee`); if (p) p.focus();
+    }
+  });
+  /* La poignée à glisser (doigt, souris) : la photo prend la place de la cellule sous le pointeur, dans sa partie. */
+  racine.addEventListener('pointerdown', e => {
+    const poignee = e.target.closest('.f-ph-poignee'); if (!poignee) return;
+    const cel = poignee.closest('.f-ph'), grille = cel.parentElement, id = +cel.dataset.id;
+    e.preventDefault(); poignee.setPointerCapture(e.pointerId);
+    cel.classList.add('f-ph--glisse');
+    const bouge = ev => {
+      const sous = document.elementsFromPoint(ev.clientX, ev.clientY).map(x => x.closest && x.closest('.f-ph[data-id]'))
+        .find(x => x && x !== cel && x.parentElement === grille);
+      if (sous) deplacerPhoto(id, indexDe(+sous.dataset.id));
+    };
+    const fin = () => { cel.classList.remove('f-ph--glisse'); poignee.removeEventListener('pointermove', bouge);
+      poignee.removeEventListener('pointerup', fin); poignee.removeEventListener('pointercancel', fin); };
+    poignee.addEventListener('pointermove', bouge);
+    poignee.addEventListener('pointerup', fin);
+    poignee.addEventListener('pointercancel', fin);
+  });
+}
+const EDITEUR_PHOTOS = {
+  fichier: 'photos',
+  cadre: { repos: 'Changez une photo et le bouton s’allume.', explic: [
+    'Touchez une photo pour la remplacer, ou ajoutez-en à la galerie.',
+    'La poignée en haut à gauche d’une photo change sa place.',
+    'Une photo choisie est envoyée tout de suite, mais rien ne change sur le site sans le bouton Publier.'] },
+  pret: () => !!photosF,
+  vider(){ photosF = null; },
+  init(racine){ photosF = modelePhotos(sassyData.photos); ecouterPhotos(racine); rendrePhotos(); },
+  /* Annuler mes changements : les images envoyées pendant la séance n'ont jamais été montrées → supprimées. */
+  annuler(){ if (photosF) [...photosF.session].forEach(supprimerBlob); photosF = modelePhotos(sassyData.photos); rendrePhotos(); },
+  /* Sortie confirmée : pareil. */
+  abandonner(){ if (photosF) [...photosF.session].forEach(supprimerBlob); photosF = null; },
+  changements: () => changementsPhotos(),
+  aCompleter: () => photosEnCours(),
+  lire: () => lirePhotos(),
+  rendre: () => {},   // rien à redessiner pour signaler : les cases disent elles-mêmes leur état
+  /* À l'envoi : les images de la séance non retenues partent tout de suite ; les images PUBLIÉES qui disparaissent
+     ne partiront qu'à « C'est en ligne » (enLigne, appelé par la confirmation de publication). */
+  apres(data, visible){
+    const avant = sassyData.photos || {};
+    const cles = d => new Set(PARTIES_PHOTOS.flatMap(pt => (d[pt.cle] || []).map(x => blobKeyFromUrl(x && x.image)).filter(Boolean)));
+    const nouvelles = cles(data), anciennes = cles(avant);
+    if (photosF) [...photosF.session].forEach(k => { if (!nouvelles.has(k)) supprimerBlob(k); });
+    this.aSupprimerEnLigne = [...anciennes].filter(k => !nouvelles.has(k));
+    sassyData.photos = data;
+    if (typeof renderSiteCards === 'function') renderSiteCards();   // la tuile Photos suit dès l'envoi
+    if (visible){ photosF = modelePhotos(data); rendrePhotos(); }
+  },
+  enLigne(){ const a = this.aSupprimerEnLigne || []; this.aSupprimerEnLigne = []; return () => a.forEach(supprimerBlob); },
+  get repos(){ return this.cadre.repos; },
+  manque: m => [m === 1 ? 'Une photo pas encore partie' : m + ' photos pas encore parties', 'Attendez la fin de l’envoi, ou réessayez la photo en échec.'],
+};
+
 /* ── Pré-remplir avec les vrais JSON (sassyData défini au bloc 6) ── */
 function prefillSection(section){
   const { carte } = sassyData;
@@ -7238,59 +7442,6 @@ function prefillSection(section){
   if (section === 'menu' && carte && !estFeuille(section)){   // la feuille se remplit elle-même (initFeuille)
     setTimeout(() => {
       prefillCarte();
-    }, 50);
-  }
-
-  if (section === 'photos'){
-    setTimeout(() => {
-      const photos  = sassyData.photos || {};
-      const slider  = photos.slider  || [];
-      const galerie = photos.galerie || [];
-
-      const thumb = (src) => src
-        ? `<img src="${src}" alt="">`
-        : `<div class="photo-upload-icon">🖼️</div>`;
-
-      // Slider : 3 slots fixes
-      const slotS = document.getElementById('photos-slider');
-      if (slotS){
-        slotS.innerHTML = [0, 1, 2].map(i => {
-          const item = slider[i];
-          return `
-            <div class="ph-slider-row" data-slot="${i}">
-              <div class="ph-thumb">${thumb(item && item.image)}</div>
-              <div class="ph-info">
-                <div class="ph-info-tt">Photo ${i + 1}</div>
-                <div class="ph-info-dd">${(item && item.alt) || '—'}</div>
-              </div>
-              <button class="btn-add" style="width:auto" onclick="pickSliderPhoto(${i})">Remplacer</button>
-            </div>`;
-        }).join('');
-      }
-
-      // Galerie : vignettes actuelles
-      const slotG = document.getElementById('photos-galerie');
-      if (slotG){
-        slotG.innerHTML = galerie.length
-          ? `<div class="ph-galerie-grid">${
-              galerie.map((item, i) => `
-                <div class="ph-galerie-item">
-                  ${thumb(item && item.image)}
-                  <button class="ph-del" onclick="deleteGaleriePhoto(${i})" title="Supprimer">✕</button>
-                </div>
-              `).join('')
-            }</div>`
-          : `<p class="ph-empty">Aucune photo dans la galerie.</p>`;
-      }
-      // état du bouton « + Ajouter » (max 6)
-      const addBtn = document.getElementById('btn-add-galerie');
-      if (addBtn){
-        const full = galerie.length >= 6;
-        addBtn.disabled = full;
-        addBtn.style.opacity = full ? '.5' : '';
-        addBtn.style.cursor  = full ? 'not-allowed' : '';
-        addBtn.textContent   = full ? 'Galerie pleine (6/6)' : `+ Ajouter une photo (${galerie.length}/6)`;
-      }
     }, 50);
   }
 
@@ -7351,18 +7502,12 @@ async function saveSection(){
       data = lireBlocListe(blocEnCours);
     }
 
-    if (currentSection === 'photos'){
-      // photos déjà sauvegardées à l'upload/suppression → re-POST de sécurité de l'état courant (idempotent, non destructif)
-      data = sassyData.photos || { slider: [], galerie: [] };
-    }
-
     const res = await authedFetch('/.netlify/functions/save-data', { section: currentSection, data });
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
 
     if (currentSection === 'menu' && !ed) sassyData.carte = data;
     if (blocEnCours && TYPES_DE_BLOC[blocEnCours.type]) sassyData[blocEnCours.cle] = data;
-    if (currentSection === 'photos') sassyData.photos = data;
 
     /* ⚠️ LE DRAPEAU RETOMBE ICI, ET SEULEMENT ICI — après un 200 du serveur, jamais avant. Le poser
        plus haut (à l'envoi) rendrait la sortie silencieuse alors que le POST peut encore échouer :
@@ -7384,6 +7529,7 @@ async function saveSection(){
        Elle repart de la carte qu'on vient d'envoyer : c'est la nouvelle référence. */
     if (ed){
       ed.apres(data, editeur === ed);  // sassyData ; et la feuille repart de l'envoi si elle est toujours ouverte
+      if (ed.enLigne) pub.enLigne = ed.enLigne();   // les photos : supprimer de Blobs ce que le site ne montre plus, une fois en ligne
       publicationEnvoyee(pub, data);   // « Envoyé · mise en ligne… », puis la relecture du fichier public
       etatFeuille();
       return;
@@ -7559,6 +7705,7 @@ async function relirePublic(pub){
 }
 function confirmerPublication(pub){
   delete statutPublication[pub.fichier];
+  if (pub.enLigne){ try { pub.enLigne(); } catch (_){} pub.enLigne = null; }   // seulement sur preuve : jamais au délai long
   renderAccueil();
   pub.etat = 'fin'; pub.tEtat = performance.now(); pub.fDepart = remplissage({ ...pub, etat: 'envoye' }, pub.tEtat);
   if (mouvementReduit() || !boutonDe(pub)){ pub.annonce = true; annoncerEnLigne(pub); }
@@ -7799,190 +7946,6 @@ async function saveBlocs(){
     showToast('❌ Erreur : ' + err.message);
     publicationEchouee(pub);                   // le bouton revient à « Publier » : les changements sont toujours là
   }
-}
-
-/* ════ PHOTOS — upload slider (étape 3) ════ */
-let photoAction = null;   // { type:'slider', index } | { type:'galerie' }
-let isUploading = false;   // verrou : empêche tout upload/suppression concurrent
-
-// File image → base64 JPEG redimensionné (max 1600px, qualité 0.82)
-// createImageBitmap décode réellement le fichier → rejette tout non-image (PDF renommé, corrompu…)
-async function fileToJpegBase64(file, maxDim = 1600, quality = 0.82){
-  let bitmap;
-  try {
-    bitmap = await createImageBitmap(file);
-  } catch {
-    throw new Error('Fichier image invalide ou corrompu');
-  }
-  let { width, height } = bitmap;
-  if (width > maxDim || height > maxDim){
-    if (width >= height){ height = Math.round(height * maxDim / width); width = maxDim; }
-    else { width = Math.round(width * maxDim / height); height = maxDim; }
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
-  if (bitmap.close) bitmap.close();
-  return canvas.toDataURL('image/jpeg', quality).split(',')[1]; // base64 sans préfixe
-}
-
-// Extrait la clé Blob d'une URL serve-image (sinon null → image legacy non supprimée)
-function blobKeyFromUrl(url){
-  const m = typeof url === 'string' && url.match(/serve-image\?key=([^&]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
-// Ouvre le sélecteur de fichier
-function triggerPhotoInput(){
-  const input = document.getElementById('photo-file-input');
-  if (input){ input.value = ''; input.click(); }
-}
-/* ⚠️ LES PHOTOS N'ONT PAS DE BOUTON « PUBLIER » — elles s'auto-sauvegardent. La garde de
-   `saveSection` ne les protège donc PAS : `onPhotoPicked` reconstruit `{slider:[], galerie:[]}` quand
-   `sassyData.photos` est nul, y pousse la nouvelle image, et `savePhotos()` écrit ce squelette —
-   les trois photos du slider et les cinq autres de la galerie disparaissent. Même défaut, autre
-   chemin. On refuse ici, AVANT l'upload, pour ne pas faire attendre le client pour rien ; et une
-   seconde fois dans `savePhotos()`, qui est le seul point de passage obligé. */
-// Clic « Remplacer » (slider)
-function pickSliderPhoto(index){
-  if (isUploading){ showToast('⏳ Un envoi est déjà en cours…'); return; }
-  if (!donneeChargee('photos')){ showToast('❌ ' + messageDonneeAbsente('photos')); return; }
-  photoAction = { type: 'slider', index };
-  triggerPhotoInput();
-}
-// Clic « + Ajouter » (galerie)
-function pickGaleriePhoto(){
-  if (isUploading){ showToast('⏳ Un envoi est déjà en cours…'); return; }
-  if (!donneeChargee('photos')){ showToast('❌ ' + messageDonneeAbsente('photos')); return; }
-  const galerie = (sassyData.photos && sassyData.photos.galerie) || [];
-  if (galerie.length >= 6){ showToast('⚠️ Galerie pleine (6 max)'); return; }
-  photoAction = { type: 'galerie' };
-  triggerPhotoInput();
-}
-
-// Supprime un blob (best-effort) via upload-image
-async function deleteBlobKey(key, token){
-  if (!key) return;
-  try {
-    await authedFetch('/.netlify/functions/upload-image', { action: 'delete', key });
-  } catch (e){ console.warn('deleteBlobKey:', e); }
-}
-
-// Fichier choisi → conversion + upload (slider ou galerie) + auto-save
-async function onPhotoPicked(input){
-  const file = input.files && input.files[0];
-  if (!file || !photoAction) return;
-  if (!file.type.startsWith('image/')){ showToast('⚠️ Choisis une image'); return; }
-  if (file.size > 20 * 1024 * 1024){ showToast('⚠️ Image trop lourde (max 20 Mo)'); return; }
-
-  const action = photoAction;
-  isUploading = true;                                   // point 1 : verrou
-  const btn = action.type === 'slider'
-    ? document.querySelector(`#photos-slider [data-slot="${action.index}"] .btn-add`)
-    : document.getElementById('btn-add-galerie');
-  if (btn){ btn.disabled = true; btn.textContent = '⏳ Envoi…'; }
-  showToast('🖼️ Préparation de la photo…');
-
-  try {
-    const dataBase64 = await fileToJpegBase64(file);
-    const token = await getToken();
-    if (!token) throw new Error('Non connecté');
-
-    if (!sassyData.photos) sassyData.photos = { slider: [], galerie: [] };
-    if (!sassyData.photos.slider)  sassyData.photos.slider  = [];
-    if (!sassyData.photos.galerie) sassyData.photos.galerie = [];
-
-    const res = await authedFetch('/.netlify/functions/upload-image', { target: action.type, dataBase64 });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error || 'Upload échoué');
-
-    // appliquer au modèle en gardant de quoi annuler (point 3)
-    let prevKey = null, revert;
-    if (action.type === 'slider'){
-      const prev = sassyData.photos.slider[action.index];
-      prevKey = blobKeyFromUrl(prev && prev.image);
-      sassyData.photos.slider[action.index] = { image: result.url, alt: (prev && prev.alt) || `Photo d'ambiance ${action.index + 1}` };
-      revert = () => { sassyData.photos.slider[action.index] = prev; };
-    } else {
-      sassyData.photos.galerie.push({ image: result.url, legende: '' });
-      revert = () => { sassyData.photos.galerie.pop(); };
-    }
-    prefillSection('photos');   // vignettes mises à jour immédiatement
-
-    // auto-save ; si échec → annuler (supprimer le nouveau blob orphelin + restaurer le modèle)
-    try {
-      await savePhotos();
-    } catch (saveErr){
-      revert();
-      prefillSection('photos');
-      await deleteBlobKey(result.key, token);
-      throw new Error('Sauvegarde échouée — modification annulée');
-    }
-
-    // succès : nettoyer l'ancienne image du slider (déplacé ici depuis le serveur)
-    if (prevKey) await deleteBlobKey(prevKey, token);
-    /* Même règle que les toasts de publication : la photo est écrite, pas encore en ligne. Un upload
-       déclenche lui aussi un commit et un build — l'écran ne doit pas dire deux choses différentes
-       selon le geste. */
-    showToast('✅ Photo enregistrée — en ligne dans moins d’une minute');
-  } catch (err){
-    console.error('upload photo:', err);
-    showToast('❌ ' + err.message);
-    prefillSection('photos');   // restaure l'état des boutons
-  } finally {
-    isUploading = false;        // point 1 : libère le verrou
-    photoAction = null;
-  }
-}
-
-// Supprime une photo de la galerie (Blob + photos.json)
-async function deleteGaleriePhoto(index){
-  if (isUploading){ showToast('⏳ Un envoi est déjà en cours…'); return; }
-  const galerie = (sassyData.photos && sassyData.photos.galerie) || [];
-  const item = galerie[index];
-  if (!item) return;
-  if (!confirm('Supprimer cette photo de la galerie ?')) return;
-
-  isUploading = true;
-  showToast('🗑️ Suppression…');
-  try {
-    const token = await getToken();
-    if (!token) throw new Error('Non connecté');
-
-    const key = blobKeyFromUrl(item.image);
-    if (key){
-      const res = await authedFetch('/.netlify/functions/upload-image', { action: 'delete', key });
-      if (!res.ok){ const r = await res.json().catch(() => ({})); throw new Error(r.error || 'Suppression Blob échouée'); }
-    }
-    // retire du modèle + auto-save (même si image legacy sans clé Blob)
-    sassyData.photos.galerie.splice(index, 1);
-    prefillSection('photos');
-    await savePhotos();
-    showToast('✅ Photo supprimée — en ligne dans moins d’une minute');
-  } catch (err){
-    console.error('delete galerie:', err);
-    showToast('❌ ' + err.message);
-  } finally {
-    isUploading = false;
-  }
-}
-
-// Écrit photos.json via save-data (auto-save)
-async function savePhotos(){
-  /* ⚠️ LE POINT DE PASSAGE OBLIGÉ. Lever ici plutôt que rendre la main : `onPhotoPicked` a déjà son
-     `catch` qui restaure le modèle ET supprime le blob orphelin — la garde s'appuie sur un chemin
-     de retour qui existe déjà et qui est testé. */
-  if (!donneeChargee('photos')) throw new Error(messageDonneeAbsente('photos'));
-  const token = await getToken();
-  if (!token) throw new Error('Non connecté');
-  const data = {
-    slider:  (sassyData.photos && sassyData.photos.slider)  || [],
-    galerie: (sassyData.photos && sassyData.photos.galerie) || []
-  };
-  const res = await authedFetch('/.netlify/functions/save-data', { section: 'photos', data });
-  const result = await res.json();
-  if (!res.ok) throw new Error(result.error || 'Sauvegarde échouée');
-  sassyData.photos = data;
 }
 
 setFmtAvailability(currentKind === 'typo' ? ['portrait'] : ['portrait','story']);

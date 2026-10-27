@@ -1,0 +1,42 @@
+{
+  "slider": [
+    {
+      "image": "/assets/photos/lettre-s.png",
+      "alt": "Le S du logo Bistrot Sassy"
+    },
+    {
+      "image": "/hero1.png",
+      "alt": "Bistrot Sassy ambiance 1"
+    },
+    {
+      "image": "/assets/photos/devanture-vitrine.webp",
+      "alt": "La vitrine du Bistrot Sassy, boulevard Chave"
+    }
+  ],
+  "galerie": [
+    {
+      "image": "/galerie3.jpeg",
+      "legende": ""
+    },
+    {
+      "image": "/assets/photos/piments.webp",
+      "legende": ""
+    },
+    {
+      "image": "/galerie2.jpeg",
+      "legende": ""
+    },
+    {
+      "image": "/galerie4.png",
+      "legende": ""
+    },
+    {
+      "image": "/.netlify/functions/serve-image?key=photos%2Fgalerie%2Fsonde-1.jpg",
+      "legende": "Le comptoir"
+    },
+    {
+      "image": "/.netlify/functions/serve-image?key=photos%2Fgalerie%2Fsonde-2.jpg",
+      "legende": ""
+    }
+  ]
+}

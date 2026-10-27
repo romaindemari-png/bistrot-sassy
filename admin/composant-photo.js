@@ -19,9 +19,10 @@
       CDN ne répond pas. Vraies couleurs : aucun filtre, aucune fusion (les tuiles de Mon site, elles, sont en
       duotone : ne pas réutiliser .mosaique ici).
 
-   creerCasePhoto(racine, { cible, url, alt, ratio, jeton, surChange }) → { etat, valeur(), afficher(etat, f) }
+   creerCasePhoto(racine, { cible, url, alt, ratio, retirable, jeton, surChange }) → { etat, valeur(), afficher(etat, f) }
      cible ..... 'slider' | 'galerie' | 'evenements' : la dimension maximale et la cible envoyée à upload-image
      url ....... la photo en ligne au départ ('' : case vide)
+     retirable . false : pas de « Retirer » (le haut de page de Sassy : 3 cases fixes)
      jeton ..... async () => jeton Identity (Authorization: Bearer)
      surChange . (valeur) => … à chaque état stable : { etat, url, cle, precedente, retiree }
      afficher .. réservé à la page de contrôle : figer un état pour le montrer (aucun envoi). */
@@ -65,7 +66,7 @@
     r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => ko(r.error); r.readAsDataURL(blob); });
 
   window.creerCasePhoto = function(racine, opts){
-    const o = Object.assign({ cible: 'galerie', url: '', alt: '', ratio: '1', jeton: async () => '', surChange: () => {} }, opts || {});
+    const o = Object.assign({ cible: 'galerie', url: '', alt: '', ratio: '1', retirable: true, jeton: async () => '', surChange: () => {} }, opts || {});
     const maxDim = DIM_MAX[o.cible] || 1600;
     const s = { etat: o.url ? 'pleine' : 'vide', url: o.url, cle: null, precedente: null, retiree: false,
                 f: 0, apercu: null, envoi: null, message: '' };
@@ -108,7 +109,8 @@
       statut.textContent = s.etat === 'envoi' ? (s.f >= 0.9 ? 'Envoyée, encore un instant…' : 'Envoi… ' + Math.round(s.f / 0.9 * 100) + ' %')
                          : s.etat === 'retiree' ? 'Retirée à la prochaine publication' : '';
       cp.querySelector('.cp-message').textContent = s.message;
-      cp.querySelector('[data-action="annuler"]').hidden = !(s.etat === 'retiree' || (s.etat === 'echec' && s.precedente !== null));
+      cp.querySelector('[data-action="annuler"]').hidden = !(s.etat === 'retiree' || s.etat === 'echec');   // échec : on revient à la photo d'avant, ou à la case vide
+      cp.querySelector('[data-action="retirer"]').hidden = !o.retirable;
     }
     function changer(){ peindre(); o.surChange(valeur()); }
     const valeur = () => ({ etat: s.etat, url: s.url, cle: s.cle, precedente: s.precedente, retiree: s.etat === 'retiree' });
@@ -158,7 +160,7 @@
       else if (a === 'retirer'){ s.etat = 'retiree'; changer(); }
       else if (a === 'annuler'){
         if (s.etat === 'retiree'){ s.etat = s.url ? 'pleine' : 'vide'; changer(); }
-        else if (s.etat === 'echec'){ s.envoi = null; s.url = s.precedente; s.precedente = null; s.etat = s.url ? 'pleine' : 'vide'; poserImage(s.url); changer(); }
+        else if (s.etat === 'echec'){ s.envoi = null; s.url = s.precedente !== null ? s.precedente : s.url; s.precedente = null; s.etat = s.url ? 'pleine' : 'vide'; poserImage(s.url); changer(); }
       }
     });
     input.addEventListener('change', () => choisi(input.files && input.files[0]));
