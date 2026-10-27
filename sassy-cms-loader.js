@@ -195,6 +195,27 @@
         iframe.src = `https://maps.google.com/maps?q=${encoded}&output=embed`;
       }
     }
+    /* Réseaux : instagram / facebook pilotent leur bouton (.soc-btn[aria-label]). Les boutons étaient en
+       dur, href="#" : ce que le client saisissait n'allait nulle part. Une URL http(s) → le lien, tel que
+       saisi ; vide ou autre chose (l'éditeur l'avertit) → bouton masqué, href jamais posé ; plus aucun bouton →
+       le bloc « réseaux » entier masqué. ⚠️ Clé ABSENTE (fork sans le champ) → on ne touche à rien. */
+    let reseauxVisibles = 0, reseauxPilotes = 0;
+    ['instagram', 'facebook'].forEach(cle => {
+      const btn = document.querySelector(`.soc-btn[aria-label="${cle}"]`);
+      if (!btn || general[cle] === undefined) { if (btn) reseauxVisibles++; return; }
+      reseauxPilotes++;
+      const url = String(general[cle] || '').trim();
+      if (!/^https?:\/\//i.test(url)) { btn.style.display = 'none'; return; }   // vide OU pas http(s) (javascript:…) → masqué, aucun href
+      btn.setAttribute('href', url);
+      btn.setAttribute('target', '_blank');
+      btn.setAttribute('rel', 'noopener');
+      reseauxVisibles++;
+    });
+    const blocReseaux = document.querySelector('.socials');
+    if (blocReseaux && reseauxPilotes && !reseauxVisibles) {
+      const ci = blocReseaux.closest('.ci-block');
+      (ci || blocReseaux).style.display = 'none';
+    }
   }
 
   /* ══════════════════════════════════════════════════
