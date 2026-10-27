@@ -1668,13 +1668,23 @@ body.dev-local::after{
 
 <!-- Écran d'attente : le temps de vérifier la session (cf. body.verif-session). Ni porte, ni app. -->
 <div id="attente" aria-hidden="true">
-  <img class="logo-nuit" src="assets/logo-lelab-blanc-h.png" alt="">
-  <img class="logo-jour" src="assets/logo-lelab-noir-h.png" alt="">
+  <!-- ⚠️ loading="lazy" sur les logos (7c-4) : un <img> masqué (display:none — l'autre chromie, l'écran qu'on ne
+       voit pas) n'est alors PAS téléchargé. Avant : les six logos partaient à chaque ouverture (157 Ko).
+       ⚠️ Pas de src ici non plus : le plan n'est pas encore lu. Le script pose celui de la dernière visite
+       (localStorage « lelab_plan », écrit par applyPlan) ; à la toute première, l'attente reste sans logo plutôt que
+       de télécharger un LeLab que la barre remplacerait par un LeLab+. -->
+  <img class="logo-nuit" data-lelab="assets/logo-lelab-blanc-h.png" data-lelab-plus="assets/logo-lelab-plus-blanc-h.png" alt="" loading="lazy">
+  <img class="logo-jour" data-lelab="assets/logo-lelab-noir-h.png" data-lelab-plus="assets/logo-lelab-plus-noir-h.png" alt="" loading="lazy">
 </div>
+<script>
+(function(){ let p = null; try { p = localStorage.getItem('lelab_plan'); } catch (_){}
+  if (p) document.querySelectorAll('#attente img[data-lelab]').forEach(el => { el.src = p === 'lelab_plus' ? el.dataset.lelabPlus : el.dataset.lelab; });
+})();
+</script>
 
 <!-- ═══ LOGIN (passerelle Netlify Identity) ═══ -->
 <div id="login-gate">
-  <img id="logo-login" src="assets/logo-lelab-noir.png" data-lelab="assets/logo-lelab-noir.png" data-lelab-plus="assets/logo-lelab-plus-noir.png" alt="LeLab">
+  <img id="logo-login" src="assets/logo-lelab-noir.png" data-lelab="assets/logo-lelab-noir.png" data-lelab-plus="assets/logo-lelab-plus-noir.png" alt="LeLab" loading="lazy">
   <h1>Votre espace</h1>
   <p>Connectez-vous pour modifier votre site et publier sur Instagram.</p>
   <form id="login-form" onsubmit="return customLogin(event)">
@@ -1700,11 +1710,13 @@ body.dev-local::after{
 <div class="app">
   <div class="main">
     <!-- ═══ BARRE HAUTE (LELAB-DESIGN §4) — logo, segment des pièces, avatar. Pas d'autre navigation. ═══
-         ⚠️ Les deux logos portent data-lelab / data-lelab-plus : applyPlan les bascule comme avant. -->
+         ⚠️ Les deux logos portent data-lelab / data-lelab-plus : applyPlan les bascule comme avant.
+         ⚠️ PAS DE src AU DÉPART (7c-4) : applyPlan la pose quand le plan est connu. Avec une src LeLab écrite ici, un
+            client LeLab+ téléchargeait les deux. loading="lazy" : la chromie qu'on ne voit pas n'est pas téléchargée. -->
     <header class="barre">
       <span class="barre-logo">
-        <img class="logo-nuit" src="assets/logo-lelab-blanc-h.png" data-lelab="assets/logo-lelab-blanc-h.png" data-lelab-plus="assets/logo-lelab-plus-blanc-h.png" alt="LeLab">
-        <img class="logo-jour" src="assets/logo-lelab-noir-h.png" data-lelab="assets/logo-lelab-noir-h.png" data-lelab-plus="assets/logo-lelab-plus-noir-h.png" alt="LeLab">
+        <img class="logo-nuit" data-lelab="assets/logo-lelab-blanc-h.png" data-lelab-plus="assets/logo-lelab-plus-blanc-h.png" alt="LeLab" loading="lazy">
+        <img class="logo-jour" data-lelab="assets/logo-lelab-noir-h.png" data-lelab-plus="assets/logo-lelab-plus-noir-h.png" alt="LeLab" loading="lazy">
       </span>
       <nav class="segment" aria-label="Pièces">
         <button type="button" class="seg seg--site" id="segSite" onclick="showScreen('monsite')" aria-current="page">Mon site</button>
@@ -2903,6 +2915,7 @@ function purgerStatsLocales(){
 /* ── PLAN : application visuelle, pilotée par la donnée ── */
 function applyPlan(plan){
   currentPlan = plan;
+  try { localStorage.setItem('lelab_plan', plan); } catch (_){}   // l'écran d'attente de la prochaine visite pose le bon logo
   const isPlus = plan === 'lelab_plus';
   document.body.classList.toggle('lelab-plus', isPlus);
 
@@ -2925,6 +2938,7 @@ function applyScreen(name) {
   /* ⚠️ Deux écrans de premier niveau depuis le bout 3 : « Mon site » (l'accueil) et le studio. Un nom
      inconnu — dont l'ancien 'dashboard' — retombe sur Mon site, jamais sur un écran vide. */
   if (name !== 'studio') name = 'monsite';
+  if (name === 'studio' && typeof prechargerDemo === 'function') prechargerDemo();   // 7c-4 : la photo de démo attend le studio
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const map = {monsite:'screen-monsite',studio:'screen-studio'};
   const s = document.getElementById(map[name]);
@@ -5689,7 +5703,14 @@ function studioPreviewUrl(p, fmt){
 
 // Précharge + décode la démo : le thème photo s'affiche instantanément à la sélection.
 // (Sans le garde, un fork sans photo de démo lancerait une requête sur src='' — donc sur la page elle-même.)
-if (DEMO_PHOTO){ const im = new Image(); im.src = DEMO_PHOTO; if (im.decode) im.decode().catch(() => {}); }
+/* ⚠️ À L'OUVERTURE DU STUDIO, PLUS AU CHARGEMENT DU SCRIPT (7c-4) : 315 Ko téléchargés à chaque ouverture de l'admin,
+   pour un client qui n'ouvre pas forcément Mon Instagram. applyScreen('studio') l'appelle (bouton et route). */
+let demoPrechargee = false;
+function prechargerDemo(){
+  if (demoPrechargee || !DEMO_PHOTO) return;
+  demoPrechargee = true;
+  const im = new Image(); im.src = DEMO_PHOTO; if (im.decode) im.decode().catch(() => {});
+}
 
 function setUploadLoading(on){
   const u = document.getElementById('studio-upload');
