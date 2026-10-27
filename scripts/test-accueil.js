@@ -25,6 +25,11 @@
       elle apparaît — l'écran d'attente ne reste jamais collé.
    8. LES FLOUS SE VOIENT : en nuit, au cœur du flou violet (contenu masqué), le pixel moyen est plus clair
       que --fond #1A1526 d'au moins 10 niveaux SUR CHAQUE CANAL. (Le fond de <body> les recouvrait.)
+   9. LES TUILES (bout 4) : autant de tuiles que d'éditeurs dont la section EXISTE dans index.html (calculé
+      ICI, indépendamment du code testé) ; ordre = ordre des sections dans le DOM ; plat du jour absent ;
+      un bloc passé en actif:false sur une COPIE de config.json (interceptée, l'original n'est pas touché)
+      devient contour sans grain et la phrase reste juste ; une bascule ne navigue pas, passe la tuile en
+      contour et allume Publier.
 
    ⚠️ Il DOIT être ROUGE sur le code d'avant le bout 3 (renderAccueil n'existe pas), VERT après.
 
@@ -261,9 +266,95 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (!ok) fails.push(`flou violet invisible : rgb(${moy.join(', ')}) au cœur, écart ${ecart.join('/')} au fond — il en faut ≥ 10 sur chaque canal`);
   }
 
+  /* 9. LES TUILES. Une page neuve par cas, bypass dev localhost (le vrai boot). */
+  const pageTuiles = async (configModifiee) => {
+    const q = await b.newPage();
+    await q.setViewport({ width: 390, height: 844, isMobile: true });
+    if (configModifiee){
+      await q.setRequestInterception(true);
+      q.on('request', r => {
+        if (r.url().endsWith('/_data/config.json')) r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(configModifiee) });
+        else r.continue();
+      });
+    }
+    await q.goto(BASE, { waitUntil: 'networkidle0' });
+    /* Pas de tuile au bout de 10 s → on continue : les cas ci-dessous ROUGISSENT avec leur verdict, au lieu
+       que la sonde plante sur une attente (vécu sur le code d'avant le bout 4). */
+    await q.waitForFunction(() => document.querySelectorAll('#siteGrid .tuile[data-bloc]').length > 0, { timeout: 10000 }).catch(() => {});
+    return q;
+  };
+  const lireTuiles = q => q.evaluate(() => [...document.querySelectorAll('#siteGrid .tuile[data-bloc]')].map(t => ({
+    bloc: t.dataset.bloc, section: t.dataset.section, masquee: t.classList.contains('tuile--masquee'),
+    grain: t.classList.contains('grain-papier'), sur: (t.querySelector('.t-sur') || {}).textContent })));
+  {
+    const q = await pageTuiles(null);
+    /* L'attendu, calculé ICI : les sections de index.html (DOM) et les blocs de config.json. */
+    const attendu = await q.evaluate(async () => {
+      const html = await (await fetch('/')).text();
+      const dom = [...new DOMParser().parseFromString(html, 'text/html').querySelectorAll('section[id]')].map(x => x.id);
+      const cfg = await (await fetch('/_data/config.json')).json();
+      const blocs = Object.entries({ ...cfg.blocs.socle, ...cfg.blocs.optionnels });
+      let n = 0; const sansSection = [];
+      for (const [cle, b] of blocs){
+        const secs = (b.sections || []).filter(id => dom.includes(id));
+        if (!secs.length){ sansSection.push(cle); continue; }
+        n += Array.isArray(b.admin) ? b.admin.filter((a, i) => dom.includes((b.sections || [])[i])).length : 1;
+      }
+      return { n, dom, sansSection };
+    });
+    const t = await lireTuiles(q);
+    const okN = t.length === attendu.n;
+    lignes.push(`| tuiles · nombre | ${t.length} tuiles | attendu ${attendu.n} (blocs sans section : ${attendu.sansSection.join(', ') || 'aucun'}) | ${okN ? '✅' : '❌'} |`);
+    if (!okN) fails.push(`tuiles : ${t.length} au lieu de ${attendu.n}`);
+    const rangs = t.map(x => attendu.dom.indexOf(x.section));
+    const okOrdre = t.length > 0 && rangs.every((r, i) => r >= 0 && (i === 0 || r > rangs[i - 1]));
+    lignes.push(`| tuiles · ordre | ${t.map(x => x.section).join(' · ')} | rangs DOM ${rangs.join(' < ')} | ${okOrdre ? '✅' : '❌'} |`);
+    if (!okOrdre) fails.push(`tuiles : ordre ${t.map(x => x.section).join(',')} ≠ ordre du DOM (rangs ${rangs.join(',')})`);
+    /* Le surtitre d'une tuile à jour ne porte que son numéro (« 01 ») : pas de mot d'état. */
+    const surAJour = t.filter(x => !x.masquee).map(x => x.sur);
+    const okSur = surAJour.length > 0 && surAJour.every(x => /^\d\d$/.test(x));
+    lignes.push(`| tuiles · surtitre à jour | ${surAJour.join(' · ')} | numéro seul | ${okSur ? '✅' : '❌'} |`);
+    if (!okSur) fails.push(`tuiles : surtitres à jour « ${surAJour.join(' / ')} » — une tuile à jour ne porte que son numéro`);
+    const okDujour = t.length > 0 && !t.some(x => x.bloc === 'dujour') && attendu.sansSection.includes('dujour');
+    lignes.push(`| tuiles · plat du jour | ${t.some(x => x.bloc === 'dujour') ? 'PRÉSENT' : 'absent'} | sans section dans index.html | ${okDujour ? '✅' : '❌'} |`);
+    if (!okDujour) fails.push('tuiles : le plat du jour a une tuile alors qu\'il n\'a aucune section sur le site');
+
+    /* La bascule : un VRAI clic sur l'interrupteur des événements. */
+    if (!(await q.$('#siteGrid .tuile[data-bloc="events"] .lelab-mini-toggle'))) fails.push('tuiles · bascule : pas d\'interrupteur sur une tuile « events »');
+    else {
+    const avant = await q.evaluate(() => ({ hash: location.hash }));
+    await q.click('#siteGrid .tuile[data-bloc="events"] .lelab-mini-toggle');
+    await pause(400);
+    const apres = await q.evaluate(() => ({
+      hash: location.hash, ecran: [...document.querySelectorAll('.screen.active')].map(s => s.id).join(','),
+      btn: document.getElementById('btn-publish-sections').textContent.trim(),
+      phrase: document.getElementById('publierPhrase').textContent,
+      evt: document.querySelector('#siteGrid .tuile[data-bloc="events"]').classList.contains('tuile--masquee'),
+    }));
+    const okBascule = apres.ecran === 'screen-monsite' && apres.hash === avant.hash && apres.btn === 'Publier'
+      && /^1 changement/.test(apres.phrase) && apres.evt;
+    lignes.push(`| tuiles · bascule « Événements » | écran ${apres.ecran}, ${apres.hash} | ${apres.btn} · ${apres.phrase} · tuile ${apres.evt ? 'contour' : 'papier'} | ${okBascule ? '✅' : '❌'} |`);
+    if (!okBascule) fails.push(`tuiles · bascule : écran ${apres.ecran}, hash ${apres.hash}, bouton « ${apres.btn} », « ${apres.phrase} », tuile masquée=${apres.evt} — la bascule ne doit pas naviguer, elle passe la tuile en contour et allume Publier`);
+    }
+    await q.close();
+  }
+  {
+    /* Une COPIE de config.json, events en actif:false, servie à la place de l'originale. */
+    const fs = require('fs'), path = require('path');
+    const copie = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '_data', 'config.json'), 'utf8'));
+    copie.blocs.optionnels.events.actif = false;
+    const q = await pageTuiles(copie);
+    const t = (await lireTuiles(q)).find(x => x.bloc === 'events');
+    const phrase = await q.evaluate(() => document.getElementById('accueilEtat').textContent);
+    const ok = t && t.masquee && !t.grain && /^\d\d · Masquée$/.test(t.sur) && phrase === 'Votre site est à jour.';
+    lignes.push(`| tuiles · events actif:false (copie) | ${t ? (t.masquee ? 'contour' : 'papier') + (t.grain ? ' + grain' : ' sans grain') + ' · « ' + t.sur + ' »' : 'ABSENTE'} | phrase « ${phrase} » | ${ok ? '✅' : '❌'} |`);
+    if (!ok) fails.push(`tuiles · actif:false : tuile ${JSON.stringify(t)}, phrase « ${phrase} » — attendu contour sans grain, « Masquée », phrase « Votre site est à jour. »`);
+    await q.close();
+  }
+
   console.log('\n| cas | phrase | chip | |\n|---|---|---|---|');
   lignes.forEach(l => console.log(l));
   await b.close();
   if (fails.length){ console.error('\n❌ ACCUEIL — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log('\n✅ ACCUEIL — la phrase et la chip suivent l\'état des sections (0 / 1 / n), une section masquée ne compte jamais, le salut suit l\'heure et le prénom, l\'avatar ouvre un volet et seul son bouton déconnecte, le bouton Publier suit les changements, la porte de login ne clignote jamais, les flous se voient.\n');
+  console.log('\n✅ ACCUEIL — la phrase et la chip suivent l\'état des sections (0 / 1 / n), une section masquée ne compte jamais, le salut suit l\'heure et le prénom, l\'avatar ouvre un volet et seul son bouton déconnecte, le bouton Publier suit les changements, la porte de login ne clignote jamais, les flous se voient, les tuiles suivent le site.\n');
 })();

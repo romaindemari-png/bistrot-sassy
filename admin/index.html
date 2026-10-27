@@ -141,40 +141,6 @@
   .lelab-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* Card rectangle verticale */
-/* ═══════════════════════════════════════════════════════════════════════
-   CARDS « MON SITE » (lot 3) — .site-card
-   AVANT : .lelab-card — le MÊME nom que les cards du studio, pour un rendu
-   TOTALEMENT différent (blanc translucide + ombre + lift au survol). Deux rendus
-   sous un seul nom : le piège relevé par l'audit. Le nom dit désormais ce qu'il rend.
-   Le rendu passe au langage de la refonte : À PLAT, crème, encre, grain — plus
-   d'ombre (« une carte blanche ombrée sur fond crème est exactement ce que le
-   principe interdit », AUDIT-DA).
-   ═══════════════════════════════════════════════════════════════════════ */
-.site-card{
-  position:relative;overflow:hidden;
-  background:var(--surface);
-  border:1px solid var(--line);
-  border-radius:var(--r-md);
-  box-shadow:none;                       /* ← l'ombre disparaît */
-  cursor:pointer;
-  display:flex;flex-direction:column;
-  min-height:140px;                      /* min-height, JAMAIS height (cf. la card annonce, tronquée en silence) */
-  padding:var(--sp-4);
-  transition:transform .08s,border-color .18s;
-}
-/* le grain de la refonte, en pseudo-élément (aucun markup en plus) */
-.site-card::before{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  opacity:var(--grain-on-cream);mix-blend-mode:multiply;background-size:120px 120px;
-  background-image:url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%22120%22%20height=%22120%22%3E%3Cfilter%20id=%22g%22%3E%3CfeTurbulence%20type=%22fractalNoise%22%20baseFrequency=%22.8%22%20numOctaves=%222%22/%3E%3C/filter%3E%3Crect%20width=%22120%22%20height=%22120%22%20filter=%22url(%23g)%22%20opacity=%22.5%22/%3E%3C/svg%3E");
-}
-.site-card:hover{border-color:var(--ink-4);}   /* plus de lift : à plat */
-.site-card:active{transform:scale(.985);}      /* press unifié (comme les tuiles) */
-.site-card--wide{grid-column:1 / -1;}
-.site-card--noedit{cursor:default;}
-.site-card--noedit:active{transform:none;}
-
 /* Lien discret vers le site public (bas de Mon site) */
 .lelab-site-link {
   display: inline-block;
@@ -193,92 +159,6 @@
 .lelab-actions { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .lelab-actions .lelab-site-link { margin: 0; }
 
-/* Bouton actu-métier (« Publier sur Instagram ») injecté dans la card porteuse de la famille */
-/* CTA « Publier sur Instagram » — action SECONDAIRE de la card (le geste principal reste « ouvrir
-   la section »). Il vit EN HAUT À DROITE, dans la même rangée que l'interrupteur : le haut-droite
-   est la zone des actions ; le reste de la card ouvre. Un tap dessus n'ouvre pas la card.
-   ⚠️ Il est JAUNE, pas violet : il quitte le domaine « site » pour le domaine « publier »
-   (LELAB.md : violet = Mon site, jaune = Instagram). La couleur dit où le tap emmène. */
-.sc-actu{
-  width:34px;height:34px;flex-shrink:0;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  border-radius:var(--r-sm);background:var(--g-color);color:var(--g-on-color);
-  transition:transform .1s,box-shadow .15s;
-}
-.sc-actu svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;}
-.sc-actu:active{transform:scale(.94);}
-
-
-/* Pastille icône sobre */
-/* ── COMPOSITION : celle des cards du studio et des tuiles de l'accueil ──
-   picto en haut à gauche · libellé + sous-titre en bas à gauche · flèche en bas à droite.
-   ⚠️ L'INTERRUPTEUR va EN HAUT À DROITE, en face du picto — le plus LOIN possible de la flèche.
-   Une flèche dit « tape-moi, je t'ouvre » ; un interrupteur dit « bascule-moi ». Côte à côte, le
-   client ne sait plus ce que fait un tap sur la card. Séparés dans l'espace, la règle se lit :
-   LE HAUT-DROITE BASCULE, LE RESTE OUVRE. */
-.sc-in{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:space-between;text-align:left;}
-/* ⚠️ Le picto (46 px) + « Affichée » + l'interrupteur ne tenaient pas dans une card de ~140 px de
-   large : −19 px à 320 px, coupés par overflow:hidden. La rangée passe à la ligne plutôt que de
-   rogner, et sous 360 px le MOT disparaît — l'interrupteur seul suffit (son aria-label reste). */
-.sc-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:var(--sp-2);}
-
-.sc-ico{width:46px;height:46px;border-radius:var(--r-sm);flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;background:var(--site-color);}
-.sc-ico svg{width:24px;height:24px;stroke:var(--site-on-color);stroke-width:1.7;fill:none;}
-
-.sc-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-2);margin-top:var(--sp-3);}
-/* ═══ LE PIED-BOUTON — l'action « ouvrir l'éditeur » ═══════════════════════════════════════════
-   ⚠️ RÉINITIALISER L'UA : un <button> n'hérite NI de la police NI de la couleur, et arrive avec un
-   fond, une bordure, un padding et `text-align:center`. Sans ce bloc, le pied change d'aspect.
-   ⚠️ ET IL FAUT L'ÉTIRER À LA MAIN — c'est le piège déjà payé six tours (LELAB.md, 16/07) :
-      « un <button> ne s'étire pas en conteneur flex sur Safari ». Le pied est un ITEM de .sc-in
-      (flex column) : un <span> y prend toute la largeur par `align-items:stretch`, un <button>
-      NON. D'où `align-self:stretch` + `width:100%`, écrits explicitement. */
-.sc-open{
-  -webkit-appearance:none;appearance:none;
-  background:none;border:0;padding:0;margin-top:var(--sp-3);
-  font:inherit;color:inherit;text-align:left;cursor:pointer;
-  align-self:stretch;width:100%;
-}
-/* La surface de clic couvre TOUTE la card, pas seulement le pied : le geste souris ne change pas.
-   ::after se positionne sur .sc-in (le premier ancêtre positionné) ; on l'étend du padding de la
-   card pour couvrir jusqu'au bord. .site-card a `overflow:hidden` → rien ne déborde. */
-.sc-open::after{content:"";position:absolute;inset:calc(-1 * var(--sp-4));z-index:1;}
-/* ⚠️ RÈGLE : TOUT CONTRÔLE POSÉ DANS UNE CARD DOIT MONTER AU-DESSUS DE CETTE SURFACE — sinon elle
-   l'avale et le tap ouvre l'éditeur au lieu de faire l'action. Ils gardaient déjà leur
-   stopPropagation ; il leur manquait le PLAN. Deux aujourd'hui : l'interrupteur de section, et le
-   bouton actu-métier qu'injecte injectActuButton() dans .sc-top. Un troisième écrit demain devra
-   être ajouté ici — d'où la règle écrite plutôt que deux valeurs isolées.
-   ⚠️ On ne monte PAS .sc-top en entier : le picto occupe le haut-gauche, et le rendre inerte
-   retirerait du geste « la card entière ouvre » un quart de sa surface. */
-.sc-switch,
-.sc-actu{position:relative;z-index:2;}
-/* L'anneau de focus se dessine sur la SURFACE (donc autour de la card), pas autour du seul pied :
-   c'est la card entière que le client active. `outline-offset` négatif : overflow:hidden le rognerait. */
-.sc-open:focus-visible{outline:none;}
-.sc-open:focus-visible::after{outline:2px solid var(--ink);outline-offset:-3px;border-radius:var(--r-md);}
-.sc-txt{display:flex;flex-direction:column;gap:3px;min-width:0;}
-.sc-label{font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.08;color:var(--ink);overflow-wrap:anywhere;}
-/* ⚠️ L'OPACITÉ MANGE LE CONTRASTE. C'était de l'encre pleine à 55 % → 3,63:1 sur le crème : ÉCHEC
-   AA (seuil 4,5 à 12 px). --ink-2 est le token du texte secondaire, et il passe (4,65:1). Même
-   défaut, même correction que .tc-sub côté studio. Trouvé par la passe de contraste du scan DA. */
-.sc-sub{font-size:12px;font-weight:500;line-height:1.25;color:var(--ink-2);overflow-wrap:anywhere;}
-
-.sc-arrow{flex-shrink:0;width:28px;height:28px;border-radius:var(--r-round);
-  border:1.6px solid var(--ink);color:var(--ink);
-  display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;}
-.sc-arrow svg{width:14px;height:14px;}
-/* le violet apparaît AU TAP (comme la tuile d'accueil : encre + glyphe violet) */
-.site-card:active .sc-arrow{background:var(--ink);color:var(--site-color);}
-.site-card--noedit .sc-arrow{display:none;}   /* rien à ouvrir → pas de flèche (elle mentirait) */
-
-/* l'interrupteur, en haut à droite */
-.sc-switch{display:flex;align-items:center;gap:var(--sp-1);flex-shrink:0;min-width:0;}
-@media(max-width:360px){ .sc-switch-lbl{display:none;} }   /* l'aria-label du bouton reste : rien n'est perdu pour un lecteur d'écran */
-.sc-switch-lbl{font-size:10px;font-weight:600;color:var(--ink-2);white-space:nowrap;}   /* --ink-3 (tertiaire) = 2,82:1 : ÉCHEC AA sur un libellé qui porte un ÉTAT (« Affichée ») */
-/* actif → violet : c'est le domaine « site » qui parle (il était encre) */
-.site-card .lelab-mini-toggle.is-on{background:var(--site-color);}
-.site-card .lelab-mini-toggle.is-on::after{background:var(--blanc);}
 /* zone de hit 44×44 sans grossir le toggle. ::after est DÉJÀ le curseur → on utilise ::before. */
 .lelab-mini-toggle::before{content:"";position:absolute;inset:-12px -6px;border-radius:inherit;}
 .lelab-mini-toggle {
@@ -526,6 +406,96 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
   .accueil-col{position:sticky;top:24px;align-self:start;padding:40px 0;}
   .accueil{font-size:clamp(64px,6.4vw,92px);line-height:.92;}
   #screen-monsite .page{max-width:none;margin:0;padding:40px 0 60px;}
+}
+
+/* ═══ LES TUILES (téléphone) ET LES CARTES (desktop) DE MON SITE — bout 4, LELAB-DESIGN §2, §4 ══════════
+   Un état = une surface : à jour → papier grainé ; masquée → transparent, contour pointillé, SANS grain.
+   Rien du site client n'apporte sa couleur ni sa typo : encre LeLab sur papier, photos en duotone violet.
+   ⚠️ La surface de clic (.t-ouvrir::after) couvre TOUTE la tuile ; l'interrupteur monte au-dessus
+      (z-index 2) : il ne peut pas ouvrir l'éditeur. Même règle que les anciennes cards. */
+.tuiles-site{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.tuile{position:relative;aspect-ratio:1;border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:6px;
+  background:var(--papier);color:var(--encre);overflow:hidden;min-width:0;}
+.tuile--masquee{background:transparent;color:var(--texte);border:1.5px dashed var(--contour);}
+.t-tete{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.t-sur{font:500 10px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--papier-2);}
+.tuile--masquee .t-sur{color:var(--texte-2);}
+.t-fleche{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--encre);color:var(--papier);
+  display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+.t-fleche svg{width:13px;height:13px;}
+.tuile--masquee .t-fleche{background:var(--texte);color:var(--fond);}
+.t-ouvrir{all:unset;display:block;cursor:pointer;text-align:left;}
+.t-ouvrir::after{content:'';position:absolute;inset:0;z-index:1;border-radius:inherit;}
+.t-ouvrir:focus-visible::after{outline:2px solid var(--violet-encre);outline-offset:-3px;}
+.t-titre{display:block;font:400 33px/.95 var(--serif);letter-spacing:-.02em;}
+.t-signe{margin-top:auto;min-width:0;font:400 12px/1.35 var(--sans);}
+.tuile--inter .t-signe{padding-right:44px;}
+/* Un numéro ne se coupe pas (« 04 91 58 83 / 03 » ne se lit plus) : à côté de l'interrupteur, il reste sur
+   une ligne, plus petit — sur téléphone seulement, la carte desktop a la place (30 px). */
+@media(max-width:960px){ .tuile--inter .s-gros{font-size:20px;white-space:nowrap;} }
+.t-inter{position:absolute;right:12px;bottom:12px;z-index:2;}
+/* L'interrupteur, compact, dans les tokens : allumé = encre plein, éteint = contour. */
+.tuile .lelab-mini-toggle{background:transparent;border:1.5px solid var(--papier-2);}
+.tuile .lelab-mini-toggle::after{background:var(--papier-2);}
+.tuile .lelab-mini-toggle.is-on{background:var(--encre);border-color:var(--encre);}
+.tuile .lelab-mini-toggle.is-on::after{background:var(--papier);}
+.tuile--masquee .lelab-mini-toggle{border-color:var(--texte);}
+.tuile--masquee .lelab-mini-toggle::after{background:var(--texte);}
+/* Les signes — un par tuile, tirés des vraies données. */
+.s-plats{list-style:none;margin:0;padding:0;}
+.s-plats li{display:flex;justify-content:space-between;gap:6px;padding:3px 0;border-bottom:1px solid var(--filet);}
+.s-plats li span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.s-plus{display:block;margin-top:3px;font-size:11px;color:var(--papier-2);}
+.tuile--masquee .s-plus{color:var(--texte-2);}
+.s-gros{display:block;font:400 26px/1 var(--serif);letter-spacing:-.01em;}
+.s-legende{display:block;font-size:11px;color:var(--papier-2);margin-bottom:2px;}
+.tuile--masquee .s-legende{color:var(--texte-2);}
+.s-evt-date{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--papier-2);}
+.s-evt-titre{display:block;font:400 18px/1.05 var(--serif);}
+.s-rien{display:inline-block;padding:5px 10px;border-radius:999px;border:1px dashed var(--papier-2);font-size:12px;}
+.tuile--masquee .s-rien{border-color:var(--texte-2);}
+/* Mosaïque en duotone : grayscale(1) + un calque --violet-encre en multiply. */
+.mosaique{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
+.mosaique span{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;isolation:isolate;background:var(--papier-2);}
+.mosaique img{width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(1);}
+.mosaique span::after{content:'';position:absolute;inset:0;background:var(--violet-encre);mix-blend-mode:multiply;}
+.tuile--photos .mosaique{width:52%;}   /* la tuile fait ~174 px : la mosaïque doit tenir SOUS le titre */
+/* Petits téléphones (≤ 380 px : la tuile tombe à ~159 px) — le titre garde ses 33 px, c'est le signe qui se resserre. */
+@media(max-width:380px){
+  .tuile{padding:12px;gap:4px;}
+  .tuile--photos .mosaique{width:44%;}
+  .s-plats li{padding:2px 0;font-size:11px;}
+  .s-plus{margin-top:1px;}
+}
+/* ≤ 340 px (320 = la largeur de reflow WCAG) : deux tuiles de 139 px ne tiennent plus un titre de 33 px et
+   son signe. UNE colonne plutôt qu'un titre réduit ou un signe coupé — mesuré le 27/10. */
+@media(max-width:340px){ .tuiles-site{grid-template-columns:1fr;} }
+/* La case « Une page en plus ? » : en contour, comme ce qui n'existe pas encore. */
+.tuile--plus{background:transparent;color:var(--texte);border:1.5px dashed var(--contour);justify-content:space-between;}
+.tuile--plus .t-titre{font-size:26px;}
+.t-lien{position:relative;z-index:2;font:500 13px/1.3 var(--sans);color:var(--texte);text-decoration:underline;text-underline-offset:3px;}
+@media(min-width:961px){
+  .tuiles-site{gap:20px;}
+  .tuile{aspect-ratio:auto;min-height:250px;border-radius:28px;padding:22px 22px 0;overflow:visible;margin-bottom:24px;}
+  .tuile.grain-papier::after{border-radius:28px;}
+  .t-titre{font-size:42px;}
+  .t-fleche{width:42px;height:42px;}
+  .t-fleche svg{width:17px;height:17px;}
+  /* LE TICKET : le morceau réel de la section, encre sur papier, qui dépasse du bas de la carte. */
+  .t-signe{margin:auto -4px -24px;padding:14px 16px;background:var(--papier);color:var(--encre);
+    border:1px solid var(--filet);border-radius:14px;position:relative;z-index:0;}
+  .tuile--masquee .t-signe{background:transparent;color:var(--texte);border:1.5px dashed var(--contour);}
+  .tuile--inter .t-signe{padding-right:60px;}
+  .t-inter{right:30px;bottom:-8px;}
+  .tuile--photos .mosaique{width:100%;grid-template-columns:repeat(4,1fr);}
+  .tuile--plus{min-height:250px;padding:22px;}
+  .s-plats li{font-size:13px;}
+  .s-gros{font-size:30px;}
+  @media(hover:hover) and (prefers-reduced-motion:no-preference){
+    .tuile:not(.tuile--plus){transition:transform .2s;}
+    .tuile:not(.tuile--plus):hover{transform:translateY(-4px);}
+    .tuile:hover .t-fleche{transform:rotate(45deg);}
+  }
 }
 
 /* ── SCREENS ───────────────────────────────────────────── */
@@ -1600,7 +1570,9 @@ body.dev-local::after{
              DUR : 7 cards, 7 pictos, 7 libellés — pour UN client. Masa n'a pas « Le plat du jour »
              mais « Fournée du jour » ; son admin devait donc être ÉDITÉ. La correspondance
              card ↔ bloc n'existait NULLE PART : c'est la structure `admin` de config.json. -->
-        <div class="lelab-grid" id="siteGrid"></div>
+        <!-- Les tuiles / cartes : écrites par renderSiteCards() SEULEMENT quand l'ordre du site est lu
+             (index.html) — rien ne s'affiche, puis ne se réordonne, sous les yeux du client. -->
+        <div class="tuiles-site" id="siteGrid"></div>
         <div class="lelab-actions">
           <!-- LE BOUTON UNIQUE (LELAB-DESIGN §6), sans animation dans ce bout : « Tout est en ligne » en contour
                (non cliquable) tant que rien n'a changé ; « Publier » en --a-voir dès qu'un interrupteur bascule.
@@ -1967,45 +1939,6 @@ const TEMPLATE_KIND = { menu: 'typo', miseEnAvant: 'photo', liste: 'typo' };
 function lelabActu(){
   const fam = sassyData && sassyData.config && sassyData.config.famille;
   return (fam && LELAB_ACTU[fam]) || null;
-}
-
-// Bouton actu-métier dans « Mon site » : sur la card de LELAB_ACTU[famille].section, en lelab ET lelab_plus.
-// Absent de toutes les autres sections. Le clic ouvre le studio guidé (sans déclencher l'édition de la card).
-function injectActuButton(){
-  const actu = lelabActu();
-  if (!actu) return;
-  const monsite = document.getElementById('screen-monsite');
-  const card = monsite && monsite.querySelector('.site-card[data-section="' + actu.section + '"]');
-  if (!card || card.querySelector('.sc-actu')) return;
-  const top = card.querySelector('.sc-top');
-  if (!top) return;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'sc-actu';
-  btn.setAttribute('aria-label', 'Publier sur Instagram');
-  btn.setAttribute('title', 'Publier sur Instagram');
-  btn.setAttribute('onclick', 'openStudioGuided(event)');   // stopPropagation dedans → n'ouvre pas la card
-  btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/>' +
-                  '<circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>';
-  top.appendChild(btn);   // haut-droite : la zone des ACTIONS. Le reste de la card OUVRE.
-}
-
-// Entrée directe depuis le bouton actu-métier : template de l'actu, plats pré-remplis, arrivée sur la saisie.
-// ⚠️ Le mode « guidé » (studioEntry / isLabGuided) est retiré au bout 3 : les templates non autorisés
-//    sont désormais TOUJOURS masqués en plan lelab (plus de version floutée + bandeau upsell).
-function openStudioGuided(e){
-  if (e) e.stopPropagation();
-  applyStudioConstraints();   // masque les templates non autorisés (lelab)
-  showScreen('studio');
-  const actu = lelabActu();
-  const kind = (actu && TEMPLATE_KIND[actu.template]) || 'typo';
-  const card = document.querySelector('#themeGrid .lelab-card[data-kind="' + kind + '"]');
-  if (card) selectTheme(card);                                  // template autorisé imposé
-  const pt = document.querySelector('#fmtRow .fmt[data-fmt="portrait"]');
-  if (pt && !pt.classList.contains('disabled')) selectFmt(pt);  // format portrait par défaut
-  if (kind === 'typo') prefillDishesFromCarte();                // champs pré-remplis depuis la carte
-  renderStudio();
-  goStep(stepNum('details'));                                   // Format + Type imposés/sautés → le guidé arrive sur la saisie pré-remplie
 }
 
 // Pré-remplit les plats du studio (template menu) depuis les données de la carte.
@@ -2600,7 +2533,30 @@ const _json = (f) => fetch('/_data/' + f + '.json')
    « cematin ». On lit CONFIG D'ABORD, puis les fichiers que la config DÉCLARE (un bloc = un
    _data/<clé>.json, plus les `fichier` explicites des cards). Un caviste ajoute « arrivage » à sa
    config : son fichier est chargé, sans une ligne de code. */
+/* ═══ L'ORDRE DU SITE — LU DANS index.html, JAMAIS ÉCRIT ICI ═══════════════════════════════════════
+   Les ids des <section> de la page publique, dans l'ordre du DOM. Il décide de deux choses :
+     · l'EXISTENCE d'une tuile : un bloc sans aucune section sur la page n'en a pas (le plat du jour) ;
+     · son RANG : celui de la première section du bloc dans la page.
+   ⚠️ LE FETCH PART EN MÊME TEMPS QUE LES DONNÉES, JAMAIS APRÈS (décision du 27/10), et les tuiles ne
+      s'écrivent qu'une fois l'ordre connu : rien ne se réordonne sous les yeux du client.
+   ⚠️ COÛT MESURÉ : index.html pèse 691 Ko, 345 Ko compressés (polices du site en base64), au premier
+      chargement ; ensuite revalidé par ETag (304) tant que la page ne change pas.
+   ⚠️ SI LA LECTURE ÉCHOUE : null → les tuiles suivent l'ordre de config.json, toutes sections réputées
+      présentes, et la console le DIT. Mon site reste utilisable ; l'écart se voit. */
+let ORDRE_SITE = null;
+function lireOrdreDuSite(html){
+  const ids = [], re = /<section\b[^>]*\bid="([^"]+)"/g;
+  let m; while ((m = re.exec(html))) ids.push(m[1]);
+  return ids;
+}
+function chargerOrdreDuSite(){
+  return fetch('/').then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
+    .then(lireOrdreDuSite)
+    .catch(e => { console.warn('[Mon site] ordre du site illisible (' + e.message + ') — ordre de config.json à la place'); return null; });
+}
+
 async function loadSassyData(){
+  const ordreSite = chargerOrdreDuSite();   // ⚠️ PARTI ICI, en parallèle des JSON — attendu juste avant les tuiles
   try {
     const config = await _json('config');
     const b = (config && config.blocs) || {};
@@ -2639,6 +2595,7 @@ async function loadSassyData(){
   // ⚠️ Les cards de « Mon site » sont CONSTRUITES depuis config.json, et tout bloc de type
   //    `produits` enregistre sa source de pré-remplissage. Les deux AVANT renderBlocs() : il a
   //    besoin des interrupteurs que renderSiteCards() vient de poser.
+  ORDRE_SITE = await ordreSite;   // l'ordre est connu AVANT la première tuile écrite
   renderSiteCards();
   enregistrerSourcesDeBlocs();
   syncSiteLinks();   // libellé du lien « site public » de Mon site — dépend de config.commerce
@@ -2647,8 +2604,6 @@ async function loadSassyData(){
   applyPlan(sassyData.config && sassyData.config.plan === 'lelab_plus' ? 'lelab_plus' : 'lelab');
   // Interrupteurs de blocs
   renderBlocs();
-  // Bouton actu-métier sur la section porteuse (lelab ET lelab_plus)
-  injectActuButton();
   // Cards des thèmes custom (générateur d'habillages)
   renderCustomThemes();
   renderAccueil();   // phrase d'accueil + chips (LELAB-DESIGN §4)
@@ -2687,9 +2642,16 @@ function fmtEventWhen(ev){
         sans une donnée réelle qui la porte. */
 const SOURCES_A_VOIR = [];
 
+/* L'état « affiché » d'un bloc : l'interrupteur de Mon site s'il existe (basculé, pas encore publié),
+   sinon la config publiée. ⚠️ C'est ce qui fait de etatDesSections la SEULE source : la phrase d'accueil
+   et les tuiles la lisent toutes les deux, et une bascule se voit sur la tuile sans recharger. */
+function actifAffiche(bloc){
+  const t = document.querySelector('#screen-monsite .lelab-mini-toggle[data-bloc="' + bloc.cle + '"]');
+  return t ? t.classList.contains('is-on') : bloc.actif !== false;
+}
 function etatDesSections(maintenant){
   return tousLesBlocs().map(bloc => {
-    if (bloc.actif === false) return { cle: bloc.cle, etat: 'masquee' };
+    if (!actifAffiche(bloc)) return { cle: bloc.cle, etat: 'masquee' };
     for (const source of SOURCES_A_VOIR){
       const raison = source(bloc, sassyData, maintenant);
       if (raison) return { cle: bloc.cle, etat: 'a-voir', raison };
@@ -6796,56 +6758,130 @@ function updateDirtyIndicator(){
 
 // Bascule le mini-toggle (sans ouvrir l'éditeur de la card) + rafraîchit l'indicateur
 function toggleBloc(el, event){
-  if (event) event.stopPropagation();
+  if (event) event.stopPropagation();   // ⚠️ une bascule n'ouvre JAMAIS l'éditeur
   el.classList.toggle('is-on');
   updateDirtyIndicator();
+  majEtatTuiles();                       // la tuile passe en contour (ou revient au papier), sans recharger
 }
 
-/* ═══ LES CARDS DE « MON SITE » — construites depuis config.json ════════════════════════════
-   Un tableau `admin` ⇒ plusieurs cards (le bloc `infos` en produit DEUX : Horaires et Infos).
-   Pas d'`edit` ⇒ card à interrupteur seul, sans éditeur (la Réservation). Les cards des blocs
-   OPTIONNELS portent l'interrupteur ; celles du socle, non. L'ordre suit l'ordre des clés JSON. */
+/* ═══ LES TUILES DE « MON SITE » — LELAB-DESIGN §2 et §4 (bout 4) ═══════════════════════════════════
+   UNE TUILE PAR ÉDITEUR d'un bloc qui a AU MOINS UNE section dans index.html (le bloc `infos` en donne
+   deux : Horaires et Infos, chacune avec son éditeur). Rangées dans l'ORDRE DU SITE (cf. ORDRE_SITE).
+   L'état vient d'etatDesSections — la même source que la phrase d'accueil.
+   Chaque tuile porte UN signe, tiré des vraies données de _data, jamais inventé (cf. signeDe). */
+function tuilesDuSite(){
+  const ordre = ORDRE_SITE;
+  const rang = id => ordre ? ordre.indexOf(id) : -1;
+  const sur = id => !ordre || ordre.includes(id);
+  const out = [];
+  tousLesBlocs().forEach((bloc, iBloc) => {
+    const sections = Array.isArray(bloc.sections) ? bloc.sections : [];
+    const presentes = sections.filter(sur);
+    if (!presentes.length) return;   // aucune section sur la page → pas de tuile (le plat du jour, au 27/10)
+    const cartes = cartesDuBloc(bloc);
+    cartes.forEach((c, i) => {
+      /* Plusieurs éditeurs (infos) : le i-ème éditeur montre la i-ème section DÉCLARÉE dans config.json.
+         Un seul : la première section du bloc DANS LA PAGE. */
+      const section = cartes.length > 1 ? sections[i] : presentes.slice().sort((a, b) => rang(a) - rang(b))[0];
+      if (!section || !sur(section)) return;
+      out.push({ ...c, section, rang: ordre ? rang(section) : iBloc * 10 + i });
+    });
+  });
+  return out.sort((a, b) => a.rang - b.rang);
+}
+
+/* Le Netlify Image CDN fait la vignette (240 px, webp) ; si sa réponse n'est pas un 200 (en local, ou
+   panne), l'<img> retombe sur l'image brute (onerror). Décidé le 27/10 : hero1.png pèse 976 Ko. */
+function vignette(url){ return '/.netlify/images?url=' + encodeURIComponent(url) + '&w=240&fm=webp'; }
+
+const JOURS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+/* Le signe d'une tuile, ou '' s'il n'y a pas de donnée honnête à montrer. */
+function signeDe(t){
+  const bloc = tousLesBlocs().find(b => b.cle === t.bloc) || {};
+  if (bloc.type === 'categories'){                       // la carte : 2 premiers plats + « + N plats »
+    const plats = categoriesCarte().flatMap(cat => ((sassyData.carte || {})[cat.cle] || [])).filter(p => p && p.nom);
+    if (!plats.length) return '<span class="s-rien">Aucun plat</span>';
+    const reste = plats.length - 2;
+    return '<ul class="s-plats">' + plats.slice(0, 2).map(p => '<li><span>' + _eT(p.nom) + '</span><span>' + _eT(p.prix || '') + '</span></li>').join('') + '</ul>'
+         + (reste > 0 ? '<span class="s-plus">+ ' + reste + ' plat' + (reste > 1 ? 's' : '') + '</span>' : '');
+  }
+  if (t.fichier === 'photos'){                           // les photos : hero puis galerie, 4 au plus, en duotone
+    const ph = sassyData.photos || {};
+    const imgs = [...(ph.slider || []), ...(ph.galerie || [])].map(x => x && x.image).filter(Boolean).slice(0, 4);
+    if (!imgs.length) return '<span class="s-rien">Aucune photo</span>';
+    return '<span class="mosaique">' + imgs.map(u => '<span><img src="' + _eA(vignette(u)) + '" data-brut="' + _eA(u)
+         + '" alt="" loading="lazy" width="120" height="120" onerror="this.onerror=null;this.src=this.dataset.brut"></span>').join('') + '</span>';
+  }
+  if (t.fichier === 'horaires'){                         // les horaires d'aujourd'hui, en gros
+    const nom = JOURS_FR[new Date().getDay()];
+    const j = ((sassyData.horaires || {}).jours || []).find(x => x && x.jour === nom);
+    if (!j) return '';
+    return '<span class="s-legende">' + nom + '</span><span class="s-gros">' + _eT(j.ouvert ? (j.heures || 'ouvert') : 'fermé') + '</span>';
+  }
+  if (t.fichier === 'general'){                          // le contact : le code postal, en gros
+    const cp = (((sassyData.general || {}).adresse || '').match(/\b\d{5}\b/) || [])[0];
+    return cp ? '<span class="s-gros">' + cp + '</span>' : '';
+  }
+  if (bloc.type === 'evenements'){                       // le prochain événement, sinon « Rien à venir »
+    const ev = nextUpcomingEvent();
+    return ev ? '<span class="s-evt-date">' + _eT(fmtEventWhen(ev)) + '</span><span class="s-evt-titre">' + _eT(ev.titre || '') + '</span>'
+              : '<span class="s-rien">Rien à venir</span>';
+  }
+  /* La réservation : la section du site est un bouton d'APPEL (tel:, alimenté par general.telephone) →
+     le numéro. ⚠️ Pas « WhatsApp » : le bouton WhatsApp du site est flottant, écrit en dur dans
+     index.html, hors de toute donnée (décision du 27/10). */
+  if (t.bloc === 'reservation'){
+    const tel = ((sassyData.general || {}).telephone || '').trim();
+    return tel ? '<span class="s-gros">' + _eT(tel) + '</span>' : '';
+  }
+  return '';
+}
+
+const FLECHE_HAUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>';
 function renderSiteCards(){
   const grid = document.getElementById('siteGrid');
   if (!grid || !sassyData.config) return;
-  const fleche = '<span class="sc-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>';
-  grid.innerHTML = toutesLesCartes().map(c => {
-    const picto = PICTOS_SITE[c.picto] || PICTOS_SITE.carte;
-    const inter = c.optionnel
-      ? `<span class="sc-switch"><span class="sc-switch-lbl">Affichée</span><button type="button" class="lelab-mini-toggle" data-bloc="${_eA(c.bloc)}" onclick="toggleBloc(this, event)" aria-label="Activer la section ${_eA(c.label)}"></button></span>`
+  const tuiles = tuilesDuSite();
+  grid.innerHTML = tuiles.map((t, i) => {
+    const kind = t.fichier === 'photos' ? ' tuile--photos' : '';
+    const inter = t.optionnel
+      ? `<button type="button" class="lelab-mini-toggle t-inter${(tousLesBlocs().find(b => b.cle === t.bloc) || {}).actif !== false ? ' is-on' : ''}" data-bloc="${_eA(t.bloc)}" aria-label="Afficher « ${_eA(t.label)} » sur le site" onclick="toggleBloc(this, event)"></button>`
       : '';
-    /* ⚠️ LE PIED EST UN <button>, ET LA CARD RESTE UN <div>. On ne peut PAS faire de la card
-       elle-même un bouton : les cards des blocs OPTIONNELS portent déjà l'interrupteur, qui est un
-       <button>. Un bouton dans un bouton est un markup invalide — les moteurs le désimbriquent, et
-       le résultat n'est ni cliquable ni focusable de façon fiable. Deux actions distinctes dans une
-       card ⇒ deux boutons FRÈRES, jamais imbriqués.
-       Le pied porte déjà le libellé et la flèche : c'est lui, l'action « ouvrir l'éditeur ». Son
-       ::after s'étend à toute la card (cf. CSS) → le clic à la souris reste possible n'importe où,
-       exactement comme avant, et le clavier atteint enfin l'éditeur. */
-    const pied  = c.editable ? `<button type="button" class="sc-foot sc-open" onclick="openEdit('${_eA(c.edit)}')">` : '<span class="sc-foot">';
-    const pFin  = c.editable ? '</button>' : '</span>';
-    return `<div class="site-card${c.editable ? '' : ' site-card--noedit'}" data-section="${_eA(c.bloc)}">
-      <span class="sc-in">
-        <span class="sc-top">
-          <span class="sc-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6">${picto}</svg></span>
-          ${inter}
-        </span>
-        ${pied}
-          <span class="sc-txt">
-            <!-- ⚠️ c.action, PAS c.label : la card porte un GESTE (« Modifier la carte »), l'écran
-                 porte le NOM (« La carte »). L'interrupteur, lui, garde le NOM dans son aria-label
-                 ci-dessus (on ACTIVE une section, on ne la « modifie » pas).
-                 ⚠️ AUCUN BACKTICK dans ce commentaire : il vit DANS un template literal — un backtick
-                    le terminerait et tuerait tout le JS de la page. (Vécu.) -->
-            <span class="sc-label">${_eT(c.action)}</span>
-            <span class="sc-sub">${_eT(c.sub)}</span>
-          </span>
-          ${c.editable ? fleche : ''}
-        ${pFin}
-      </span>
+    /* ⚠️ Le titre est DANS le bouton qui ouvre l'éditeur (son nom accessible), et son ::after couvre
+       toute la tuile. Pas d'éditeur (la Réservation) → pas de bouton, pas de flèche : elle mentirait. */
+    const titre = t.editable
+      ? `<button type="button" class="t-ouvrir" onclick="openEdit('${_eA(t.edit)}')"><span class="t-titre">${_eT(t.label)}</span></button>`
+      : `<span class="t-titre">${_eT(t.label)}</span>`;
+    return `<div class="tuile${kind}${t.optionnel ? ' tuile--inter' : ''}" data-section="${_eA(t.section)}" data-bloc="${_eA(t.bloc)}" data-num="${String(i + 1).padStart(2, '0')}">
+      <div class="t-tete"><span class="t-sur"></span>${t.editable ? '<span class="t-fleche" aria-hidden="true">' + FLECHE_HAUT + '</span>' : ''}</div>
+      ${titre}
+      <div class="t-signe">${signeDe(t)}</div>
+      ${inter}
     </div>`;
-  }).join('');
-  if (typeof injectActuButton === 'function') injectActuButton();
+  }).join('') + caseUnePageEnPlus();
+  majEtatTuiles();
+}
+
+/* La dernière case : ce que le site n'a pas encore. Le contact studio est celui de LeStud (27/10). */
+function caseUnePageEnPlus(){
+  const nom = ((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '').trim();
+  const sujet = encodeURIComponent('Une page en plus' + (nom ? ' — ' + nom : ''));
+  return `<div class="tuile tuile--plus"><span class="t-titre">Une page en plus ?</span>
+      <a class="t-lien" href="mailto:contact@lestudmarseille.fr?subject=${sujet}">Demander au studio</a></div>`;
+}
+
+/* L'état de chaque tuile, relu à chaque bascule : surface, grain, et le mot du surtitre (§2). */
+function majEtatTuiles(){
+  const etats = Object.fromEntries(etatDesSections(new Date()).map(e => [e.cle, e.etat]));
+  document.querySelectorAll('#siteGrid .tuile[data-bloc]').forEach(el => {
+    const masquee = etats[el.dataset.bloc] === 'masquee';
+    el.classList.toggle('tuile--masquee', masquee);
+    el.classList.toggle('grain-papier', !masquee);   // pas de grain sur ce qui est masqué (§1)
+    const sur = el.querySelector('.t-sur');
+    /* Le mot d'état n'apparaît que quand la tuile N'EST PAS à jour (« 04 · Masquée », plus tard « · À refaire ») :
+       un soir normal, la tuile ne dit que son numéro. */
+    if (sur) sur.textContent = el.dataset.num + (masquee ? ' · Masquée' : '');
+  });
 }
 
 // Applique l'état "actif" enregistré aux mini-toggles + fixe la référence "publié"
@@ -6866,6 +6902,7 @@ function renderBlocs(){
   });
   publishedBlocState = currentBlocState();   // référence = état enregistré au chargement
   updateDirtyIndicator();
+  majEtatTuiles();
 }
 
 async function saveBlocs(){

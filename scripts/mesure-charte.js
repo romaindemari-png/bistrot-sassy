@@ -65,7 +65,8 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
 (async () => {
   const b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
   const p = await b.newPage();
-  await p.setViewport({ width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 });
+  const LARGEUR = +(process.env.LARGEUR || 390);   // LARGEUR=1280 : la mise en page desktop (cartes, tickets)
+  await p.setViewport({ width: LARGEUR, height: LARGEUR > 960 ? 900 : 844, isMobile: LARGEUR <= 960, deviceScaleFactor: 2 });
   const cdp = await p.target().createCDPSession();
   await cdp.send('Network.enable');
   await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
