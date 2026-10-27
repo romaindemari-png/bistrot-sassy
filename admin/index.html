@@ -392,7 +392,34 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .btn.btn-pub.pub--envoi{background:var(--a-voir);color:var(--a-voir-texte);border:0;opacity:1;cursor:progress;}
 /* ENVOYÉ ≠ EN LIGNE (27/10). Au 200 de save-data, le changement est ÉCRIT, pas encore VISIBLE : papier, pas
    jaune. Le jaune « ✓ C'est en ligne » est RÉSERVÉ à la confirmation réelle du déploiement (bout du remplissage). */
-.btn.btn-pub.pub--envoye{background:var(--papier);color:var(--encre);border:0;opacity:1;}
+.btn.btn-pub.pub--envoye{background:var(--a-voir);color:var(--a-voir-texte);border:0;opacity:1;cursor:progress;}
+/* PUBLIER JUSQU'AU BOUT (bout 6, LELAB-DESIGN §6). Le jaune monte du bas pendant l'envoi puis la mise en ligne :
+   ::after est LE REMPLISSAGE — fond --en-ligne + copie du libellé en encre (attr(data-libelle)), découpé par un
+   masque (vague en surface + aplat dessous). Le texte sous la vague est donc TOUJOURS encre sur jaune, et
+   au-dessus le libellé de base sur le violet : jamais un texte clair sur du jaune, en nuit comme en jour.
+   La position du masque (--masque-pos) est écrite par animerPublications() ; ⚠️ pas d'apostrophe dans url(). */
+.btn.btn-pub{position:relative;isolation:isolate;}
+.btn.btn-pub.remplit::after{content:attr(data-libelle);position:absolute;inset:-1px;border-radius:inherit;
+  display:flex;align-items:center;justify-content:center;padding:inherit;
+  background:var(--en-ligne);color:var(--encre);pointer-events:none;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%228%22%3E%3Cpath d=%22M0 4Q10 0 20 4T40 4V8H0z%22/%3E%3C/svg%3E"),linear-gradient(#000,#000);
+          mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%228%22%3E%3Cpath d=%22M0 4Q10 0 20 4T40 4V8H0z%22/%3E%3C/svg%3E"),linear-gradient(#000,#000);
+  -webkit-mask-repeat:repeat-x,no-repeat;mask-repeat:repeat-x,no-repeat;
+  -webkit-mask-size:40px 8px,100% 100%;mask-size:40px 8px,100% 100%;
+  -webkit-mask-position:var(--masque-pos,0 120px,0 120px);mask-position:var(--masque-pos,0 120px,0 120px);}
+/* « ✓ C'est en ligne » : aplat jaune (preuve reçue), saut du libellé, anneau qui s'échappe. */
+.btn.btn-pub.pub--confirme{background:var(--en-ligne);color:var(--encre);border:0;opacity:1;cursor:default;}
+.pub--confirme .pub-txt{display:inline-block;animation:pub-saut .5s ease-out;}
+.pub-anneau{position:absolute;inset:0;border-radius:inherit;pointer-events:none;}
+.pub--confirme .pub-anneau{border:2px solid var(--en-ligne);animation:pub-anneau 1.2s ease-out forwards;}
+@keyframes pub-saut{0%{transform:scale(.6);}60%{transform:scale(1.15);}100%{transform:scale(1);}}
+@keyframes pub-anneau{from{transform:scale(1);opacity:1;}to{transform:scale(1.18,1.6);opacity:0;}}
+@media (prefers-reduced-motion:reduce){
+  .btn.btn-pub{transition:none;}   /* même les fondus de couleur : les textes changent, rien ne bouge */
+  .btn.btn-pub.remplit::after{display:none;}
+  .pub--confirme .pub-txt,.pub--confirme .pub-anneau{animation:none;}
+  .pub--confirme .pub-anneau{border:0;}
+}
 .lelab-delai{font-size:13px;line-height:1.45;text-align:center;max-width:420px;margin:0;}
 @media(max-width:720px){
   .barre{grid-template-columns:auto 1fr;row-gap:12px;}
@@ -2778,7 +2805,8 @@ function renderAccueil(maintenant){
   const etat = document.getElementById('accueilEtat');
   const chip = document.getElementById('chipAVoir');
   if (salut) salut.textContent = salutation(quand);
-  if (etat) etat.textContent = phraseEtat(n);
+  /* Une publication envoyée mais pas encore constatée en ligne prime sur l'état des sections (bout 6). */
+  if (etat) etat.textContent = (typeof publicationEnCours === 'function' && publicationEnCours()) ? 'Une publication est en cours.' : phraseEtat(n);
   if (chip){ chip.hidden = n <= 0; chip.textContent = n > 0 ? n + ' à voir' : ''; }
 }
 
@@ -6676,10 +6704,14 @@ function etatFeuille(){
   const n = changementsFeuille(), m = aCompleterFeuille();
   editDirty = n > 0;   // la garde (#quitConfirm) ne protège QUE de vrais changements
   const chip = document.getElementById('feuilleEtat');
-  if (chip){ chip.className = 'chip ' + (n ? 'chip--a-voir' : 'chip--en-ligne'); chip.textContent = n ? 'Pas encore publié' : 'En ligne'; }
+  /* Envoyé sans preuve (en cours ou délai long) : ni la puce ni le bouton ne disent « en ligne ». */
+  const envoyeSansPreuve = !!statutPublication.carte;
+  if (chip){ chip.className = 'chip ' + (n ? 'chip--a-voir' : 'chip--en-ligne'); chip.textContent = n ? 'Pas encore publié' : (envoyeSansPreuve ? 'Envoyé' : 'En ligne'); }
   const annuler = document.getElementById('feuilleAnnuler');
   if (annuler) annuler.disabled = n === 0;
-  if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', 'Modifiez un plat et le bouton s’allume.', false, IDS_FEUILLE);
+  if (n === 0 && publicationAffichee('carte')) return;
+  if (n === 0 && envoyeSansPreuve) etatPublier('pub--en-ligne', 'Envoyé', 'Envoyé. La mise en ligne prend plus de temps que d’habitude, elle se fera seule.', false, IDS_FEUILLE);
+  else if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', 'Modifiez un plat et le bouton s’allume.', false, IDS_FEUILLE);
   else if (m > 0) etatPublier('pub--a-voir', m + ' ligne' + (m > 1 ? 's' : '') + ' à compléter',
     'Il manque un nom : rien ne part tant qu’un plat n’en a pas.', false, IDS_FEUILLE);
   else etatPublier('pub--a-voir', 'Publier', n + ' changement' + (n > 1 ? 's' : '') + ' · en ligne en moins d’une minute', true, IDS_FEUILLE);
@@ -6923,8 +6955,8 @@ async function saveSection(){
   const enFeuille = estFeuille(currentSection) && !!feuille;
   if (enFeuille){
     if (aCompleterFeuille() > 0){ renderFeuille(); etatFeuille(); return; }
-    etatPublier('pub--envoi', 'Publication…', null, false, IDS_FEUILLE);
   }
+  const pub = enFeuille ? debutPublication('carte', IDS_FEUILLE) : null;
   const btn = enFeuille ? null : document.querySelector('#screen-edit .btn-save');
   const origLabel = btn ? btn.textContent : '';
   if (btn){ btn.textContent = 'Publication…'; btn.disabled = true; }
@@ -7039,8 +7071,8 @@ async function saveSection(){
     if (enFeuille){
       feuille = modeleFeuille(data);
       renderFeuille();
-      etatPublier('pub--envoye', '✓ Envoyé', 'En ligne dans moins d’une minute.', false, IDS_FEUILLE);
-      setTimeout(() => { if (feuille) etatFeuille(); }, 3000);
+      publicationEnvoyee(pub, data);   // « Envoyé · mise en ligne… », puis la relecture du fichier public
+      etatFeuille();
       return;
     }
     const sectionEnregistree = currentSection;
@@ -7052,7 +7084,7 @@ async function saveSection(){
     console.error('Erreur save:', err);
     showToast('❌ Erreur : ' + err.message);
     if (btn){ btn.textContent = origLabel; btn.disabled = false; }
-    if (enFeuille) etatFeuille();
+    if (pub) publicationEchouee(pub);
   }
 }
 
@@ -7082,10 +7114,178 @@ function etatPublier(classe, libelle, phrase, actif, ids){
   const ou = ids || IDS_MON_SITE;
   const btn = document.getElementById(ou.btn), ph = document.getElementById(ou.phrase);
   if (btn){
-    btn.classList.remove('pub--en-ligne', 'pub--a-voir', 'pub--envoi', 'pub--envoye');
-    btn.classList.add(classe); btn.textContent = libelle; btn.disabled = !actif;
+    btn.classList.remove('pub--en-ligne', 'pub--a-voir', 'pub--envoi', 'pub--envoye', 'pub--confirme', 'remplit');
+    btn.classList.add(classe); btn.disabled = !actif;
+    delete btn.dataset.pub;   // une publication se ré-attache explicitement (peindrePublication)
+    /* Le libellé vit dans un span (le saut de « ✓ C'est en ligne ») ; l'anneau est vide : btn.textContent
+       reste exactement le libellé. data-libelle nourrit la copie encre du remplissage (::after). */
+    btn.innerHTML = '<span class="pub-txt"></span><span class="pub-anneau" aria-hidden="true"></span>';
+    btn.firstChild.textContent = libelle;
+    btn.dataset.libelle = libelle;
   }
   if (ph && phrase !== null) ph.textContent = phrase;
+}
+
+/* ═══ PUBLIER JUSQU'AU BOUT (bout 6, LELAB-DESIGN §6) ═══════════════════════════════════════════════
+   ⚠️ « EN LIGNE » SE CONSTATE, IL NE SE PRÉDIT PAS. Au 200 de save-data, le changement est ÉCRIT (commit) ;
+      il n'est VISIBLE qu'une fois le site redéployé. On relit donc le fichier PUBLIC (/_data/<fichier>.json,
+      cache:'no-store' + paramètre anti-cache — servi en max-age=0, vérifié en prod le 27/10) toutes les 3 s.
+      « En ligne » = le JSON public égal, clé par clé, à ce qu'on a envoyé. Rien d'autre ne l'affiche.
+   ⚠️ 120 s sans preuve → le bouton revient au repos SANS dire « en ligne » (« Envoyé »), avec la phrase du
+      délai long. La publication se fera seule ; on ne ment pas pour autant.
+   ⚠️ LA RELECTURE NE DÉPEND PAS DE L'ÉCRAN : elle continue si l'on quitte l'éditeur ; l'accueil dit « Une
+      publication est en cours. » jusqu'à la preuve. Le bouton n'est peint que s'il est à l'écran.
+   Remplissage : courbe en temps, 0,85 × (1 − e^(−t/τ)), τ = PUBLIER_COURBE (40 s) / ln 20 → ~81 % à 40 s puis presque plat ;
+   il ne dépasse JAMAIS 85 % sans preuve. Les 15 derniers pour cent ne viennent qu'avec la confirmation. */
+const PUBLIER_INTERVALLE = 3000, PUBLIER_DELAI_MAX = 120000, PUBLIER_COURBE = 40000;   // durées NOMINALES
+const PUBLIER_PLAFOND = 0.85;
+/* HORLOGE DE TEST : window.__LELAB_TEMPS (0 < k ≤ 1) multiplie les trois durées (courbe, relecture, délai max)
+   pour que la sonde (test-publier) joue 120 s en 2,4 s. ⚠️ ABSENTE EN PROD → facteur 1, durées nominales :
+   test-publier le relit directement. Lue UNE fois par publication (pub.duree), jamais en cours de route. */
+function echelleTemps(){
+  const k = window.__LELAB_TEMPS;
+  return typeof k === 'number' && k > 0 && k <= 1 ? k : 1;
+}
+function dureesPublier(){
+  const k = echelleTemps();
+  return { courbe: PUBLIER_COURBE * k, intervalle: PUBLIER_INTERVALLE * k, delaiMax: PUBLIER_DELAI_MAX * k };
+}
+const publications = {};   // { <fichier>: { ids, attendu, t0, etat:'envoi'|'envoye'|'fin'|'chute', ... } }
+const statutPublication = {};   // { <fichier>: 'en-cours' | 'longue' } — ce que les états de repos doivent savoir
+function mouvementReduit(){ return matchMedia('(prefers-reduced-motion: reduce)').matches; }
+function egalCleParCle(a, b){
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every(k => Object.prototype.hasOwnProperty.call(b, k) && egalCleParCle(a[k], b[k]));
+}
+function publicationEnCours(){ return Object.values(statutPublication).some(s => s === 'en-cours'); }
+function remplissage(pub, t){
+  if (pub.etat === 'fin')   return Math.min(1, pub.fDepart + (1 - pub.fDepart) * Math.min(1, (t - pub.tEtat) / 350));
+  if (pub.etat === 'chute') return Math.max(0, pub.fDepart * (1 - Math.min(1, (t - pub.tEtat) / 500)));
+  return PUBLIER_PLAFOND * (1 - Math.exp(-(t - pub.t0) / (pub.duree.courbe / Math.log(20))));
+}
+/* Le bouton n'est peint que s'il porte encore CETTE publication (data-pub) et un état de remplissage. */
+function boutonDe(pub){
+  const btn = document.getElementById(pub.ids.btn);
+  return btn && btn.dataset.pub === pub.fichier ? btn : null;
+}
+function peindreRemplissage(btn, f, t){
+  const h = btn.offsetHeight || 58, s = (1 - f) * (h + 8) - 8, vx = (t / 25) % 40;
+  btn.style.setProperty('--masque-pos', vx.toFixed(1) + 'px ' + s.toFixed(1) + 'px, 0px ' + (s + 7).toFixed(1) + 'px');
+  btn.dataset.remplissage = String(f);   // valeur brute : un arrondi afficherait 85 % qui n'a jamais été atteint
+}
+let boucleRemplissage = 0;
+function animerPublications(){
+  boucleRemplissage = 0;
+  const t = performance.now();
+  let encore = false;
+  Object.values(publications).forEach(pub => {
+    const f = remplissage(pub, t);
+    pub.f = f;
+    const btn = boutonDe(pub);
+    if (btn && btn.classList.contains('remplit')) peindreRemplissage(btn, f, t);
+    if (pub.etat === 'fin' && f >= 1 && !pub.annonce){ pub.annonce = true; annoncerEnLigne(pub); }
+    if (pub.etat === 'chute' && f <= 0){ if (btn) btn.classList.remove('remplit'); delete publications[pub.fichier]; return; }
+    encore = true;
+  });
+  if (encore) boucleRemplissage = requestAnimationFrame(animerPublications);
+}
+function relancerBoucle(){ if (!boucleRemplissage) boucleRemplissage = requestAnimationFrame(animerPublications); }
+/* Pose l'état visible d'une publication sur son bouton, s'il est à l'écran (y compris à la réouverture). */
+function peindrePublication(pub){
+  const btn = document.getElementById(pub.ids.btn);
+  if (!btn) return;
+  if (pub.etat === 'envoi') etatPublier('pub--envoi', 'Publication…', null, false, pub.ids);
+  else etatPublier('pub--envoye', 'Envoyé · mise en ligne…', 'En ligne dans moins d’une minute.', false, pub.ids);
+  btn.dataset.pub = pub.fichier;
+  if (!mouvementReduit()){ btn.classList.add('remplit'); peindreRemplissage(btn, remplissage(pub, performance.now()), performance.now()); }
+}
+/* Les états de repos (etatFeuille, updateDirtyIndicator) demandent d'abord : une publication tient-elle ce bouton ? */
+function publicationAffichee(fichier){
+  const pub = publications[fichier];
+  if (!pub || (pub.etat !== 'envoi' && pub.etat !== 'envoye')) return false;
+  peindrePublication(pub);
+  return true;
+}
+function debutPublication(fichier, ids){
+  const pub = { fichier, ids, t0: performance.now(), etat: 'envoi', f: 0, duree: dureesPublier() };
+  publications[fichier] = pub;
+  peindrePublication(pub);
+  relancerBoucle();
+  return pub;
+}
+function reposApres(pub){
+  if (pub.ids === IDS_FEUILLE){ if (feuille) etatFeuille(); }
+  else updateDirtyIndicator();
+}
+/* save-data a répondu 200 : on sait ce qui doit apparaître ; on va le constater. */
+function publicationEnvoyee(pub, attendu){
+  if (publications[pub.fichier] !== pub) return;
+  pub.etat = 'envoye'; pub.attendu = attendu; pub.tEnvoi = Date.now();
+  statutPublication[pub.fichier] = 'en-cours';
+  peindrePublication(pub);
+  renderAccueil();
+  pub.minuteur = setTimeout(() => relirePublic(pub), pub.duree.intervalle);
+}
+async function relirePublic(pub){
+  if (publications[pub.fichier] !== pub) return;   // remplacée par une publication plus récente
+  let lu = null;
+  try {
+    const r = await fetch('/_data/' + pub.fichier + '.json?t=' + Date.now(), { cache: 'no-store' });
+    if (r.ok) lu = await r.json();
+  } catch (_) { lu = null; }
+  if (publications[pub.fichier] !== pub) return;
+  if (lu !== null && egalCleParCle(lu, pub.attendu)) return confirmerPublication(pub);
+  if (Date.now() - pub.tEnvoi + pub.duree.intervalle > pub.duree.delaiMax) return publicationLongue(pub);
+  pub.minuteur = setTimeout(() => relirePublic(pub), pub.duree.intervalle);
+}
+function confirmerPublication(pub){
+  delete statutPublication[pub.fichier];
+  renderAccueil();
+  pub.etat = 'fin'; pub.tEtat = performance.now(); pub.fDepart = remplissage({ ...pub, etat: 'envoye' }, pub.tEtat);
+  if (mouvementReduit() || !boutonDe(pub)){ pub.annonce = true; annoncerEnLigne(pub); }
+  else relancerBoucle();
+}
+/* Le remplissage est à 100 % : « ✓ C'est en ligne », saut, anneau ; repos 3 s plus tard. */
+function annoncerEnLigne(pub){
+  delete publications[pub.fichier];
+  const btn = boutonDe(pub);
+  if (!btn) return;
+  btn.classList.remove('remplit');
+  etatPublier('pub--confirme', '✓ C’est en ligne', null, false, pub.ids);
+  btn.dataset.pub = pub.fichier;
+  setTimeout(() => {
+    const b = document.getElementById(pub.ids.btn);
+    if (b && b.dataset.pub === pub.fichier && b.classList.contains('pub--confirme')){ delete b.dataset.pub; reposApres(pub); }
+  }, 3000);
+}
+function publicationLongue(pub){
+  delete publications[pub.fichier];
+  statutPublication[pub.fichier] = 'longue';
+  renderAccueil();
+  const btn = boutonDe(pub);
+  if (btn){ btn.classList.remove('remplit'); delete btn.dataset.pub; }
+  reposApres(pub);
+  const ph = document.getElementById(pub.ids.phrase);
+  if (ph && btn && !btn.classList.contains('pub--a-voir'))
+    ph.textContent = 'Envoyé. La mise en ligne prend plus de temps que d’habitude, elle se fera seule.';
+}
+/* save-data a échoué : le jaune redescend, retour à « Publier » ; rien n'est relu, rien n'est perdu. */
+function publicationEchouee(pub){
+  if (publications[pub.fichier] !== pub) return;
+  delete statutPublication[pub.fichier];
+  const btn = boutonDe(pub);
+  pub.etat = 'chute'; pub.tEtat = performance.now(); pub.fDepart = pub.f || 0;
+  if (btn) delete btn.dataset.pub;
+  reposApres(pub);
+  const b = document.getElementById(pub.ids.btn);
+  if (b && !mouvementReduit() && pub.fDepart > 0){ b.dataset.pub = pub.fichier; b.classList.add('remplit'); relancerBoucle(); }
+  else delete publications[pub.fichier];
+  const ph = document.getElementById(pub.ids.phrase);
+  if (ph) ph.textContent = 'Ça n’est pas parti. Vos changements sont gardés, réessayez.';
 }
 function changementsEnAttente(){
   const cur = currentBlocState();
@@ -7093,7 +7293,9 @@ function changementsEnAttente(){
 }
 function updateDirtyIndicator(){
   const n = changementsEnAttente();
-  if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', 'Modifiez une section et le bouton s’allume.', false);
+  if (n === 0 && publicationAffichee('config')) return;
+  if (n === 0 && statutPublication.config) etatPublier('pub--en-ligne', 'Envoyé', 'Envoyé. La mise en ligne prend plus de temps que d’habitude, elle se fera seule.', false);
+  else if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', 'Modifiez une section et le bouton s’allume.', false);
   else etatPublier('pub--a-voir', 'Publier', n + ' changement' + (n > 1 ? 's' : '') + ' · en ligne en moins d’une minute', true);
 }
 
@@ -7247,7 +7449,7 @@ function renderBlocs(){
 }
 
 async function saveBlocs(){
-  etatPublier('pub--envoi', 'Publication…', null, false);
+  const pub = debutPublication('config', IDS_MON_SITE);
   try {
     const token = await getToken();
     if (!token) throw new Error('Non connecté');
@@ -7265,18 +7467,17 @@ async function saveBlocs(){
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
     sassyData.config = next;
     publishedBlocState = currentBlocState();   // nouvelle référence publiée
-    /* « ✓ Envoyé », pas « ✓ C'est en ligne » : on dit ce qui s'est produit (l'écriture), pas ce qui va se
-       produire (la mise en ligne, ~30-60 s). Le jaune viendra quand on CONSTATERA le déploiement. */
-    etatPublier('pub--envoye', '✓ Envoyé', 'En ligne dans moins d’une minute.', false);
+    /* « Envoyé · mise en ligne… », pas « ✓ C'est en ligne » : on dit ce qui s'est produit (l'écriture). Le
+       « en ligne » viendra quand on CONSTATERA le déploiement (relecture de /_data/config.json). */
+    publicationEnvoyee(pub, next);
     /* ⚠️ LE TOAST DIT CE QUI S'EST PRODUIT, PAS CE QUI VA SE PRODUIRE. Au 200, la modification est
        ÉCRITE (commit) ; elle n'est pas VISIBLE. « Publiées ! » l'affirmait quand même — le feedback
        constatait une intention, pas un résultat. On sépare : le fait acquis, puis l'attente. */
     showToast('✅ Modifications enregistrées — en ligne dans moins d’une minute');
-    setTimeout(updateDirtyIndicator, 3000);   // §6 : retour à l'état 1 après 3 s
   } catch (err){
     console.error('Erreur publication sections:', err);
     showToast('❌ Erreur : ' + err.message);
-    updateDirtyIndicator();                    // le bouton reste « Publier » si les changements sont toujours là
+    publicationEchouee(pub);                   // le bouton revient à « Publier » : les changements sont toujours là
   }
 }
 

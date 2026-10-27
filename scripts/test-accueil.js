@@ -144,13 +144,18 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   await new Promise(r => setTimeout(r, 400));
   const env = await pub();
   const fondEnvoye = await p.evaluate(() => getComputedStyle(document.getElementById('btn-publish-sections')).backgroundColor);
-  const papier = await p.evaluate(() => { const t = document.createElement('i'); t.style.color = 'var(--papier)'; document.body.appendChild(t); const c = getComputedStyle(t).color; t.remove(); return c; });
-  verifPub('envoi réussi', env, '✓ Envoyé', true, 'pub--envoye', 'En ligne dans moins d’une minute.');
+  const jaune = await p.evaluate(() => { const t = document.createElement('i'); t.style.color = 'var(--en-ligne)'; document.body.appendChild(t); const c = getComputedStyle(t).color; t.remove(); return c; });
+  /* Bout 6 : au 200 de save-data, « Envoyé · mise en ligne… » ; le « en ligne » ne vient qu'avec la relecture
+     du fichier public (test-publier). Ici config.json n'a pas changé : le bouton ne doit JAMAIS conclure. */
+  verifPub('envoi réussi', env, 'Envoyé · mise en ligne…', true, 'pub--envoye', 'En ligne dans moins d’une minute.');
   if (envois !== 1) fails.push(`publier · envoi réussi : ${envois} appel(s) à save-data au lieu d'un`);
-  if (fondEnvoye !== papier) fails.push(`publier · « ✓ Envoyé » sur ${fondEnvoye} au lieu du papier ${papier} — le jaune est réservé au déploiement constaté`);
-  if (/en ligne/i.test(env.txt)) fails.push(`publier · le bouton annonce « ${env.txt} » au 200 de save-data : c'est écrit, pas encore en ligne`);
+  if (fondEnvoye === jaune) fails.push(`publier · « Envoyé » sur le jaune ${jaune} — le jaune plein est réservé au déploiement constaté`);
+  const ditEnLigne = t => /C’est en ligne|Tout est en ligne/.test(t);
+  if (ditEnLigne(env.txt)) fails.push(`publier · le bouton annonce « ${env.txt} » au 200 de save-data : c'est écrit, pas encore en ligne`);
   await new Promise(r => setTimeout(r, 3100));
-  verifPub('3 s après l’envoi', await pub(), 'Tout est en ligne', true, 'pub--en-ligne', 'Modifiez une section et le bouton s’allume.');
+  const apres = await pub();
+  if (ditEnLigne(apres.txt)) fails.push(`publier · 3 s après l’envoi, « ${apres.txt} » sans que le fichier public ait changé`);
+  lignes.push(`| publier · 3 s après l’envoi (fichier public inchangé) | ${apres.txt} | ${apres.phrase} | ${ditEnLigne(apres.txt) ? '❌' : '✅'} |`);
   p.off('request', intercepte);
   await p.setRequestInterception(false);
 

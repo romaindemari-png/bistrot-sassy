@@ -87,7 +87,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
       const exact = !!e && e.section === 'menu' && JSON.stringify(e.data) === JSON.stringify(ATTENDU);
       verdict('JSON envoyé == feuille-attendu.json', exact, e ? `section « ${e.section} », ${exact ? 'identique, clé par clé et dans l\'ordre' : 'DIFFÉRENT :\n' + JSON.stringify(e.data, null, 1)}` : 'RIEN n\'a été envoyé');
       const apres = await p.evaluate(() => ({ btn: document.getElementById('btnFeuille').textContent.trim(), ecran: document.getElementById('screen-edit').classList.contains('active') }));
-      verdict('après l\'envoi', apres.btn === '✓ Envoyé' && apres.ecran, `« ${apres.btn} », feuille ${apres.ecran ? 'toujours ouverte' : 'FERMÉE'}`);
+      verdict('après l\'envoi', apres.btn === 'Envoyé · mise en ligne…' && apres.ecran, `« ${apres.btn} », feuille ${apres.ecran ? 'toujours ouverte' : 'FERMÉE'}`);
 
       /* ── 2. Un plat sans nom bloque l'envoi ─────────────────────────────────────────────────── */
       await p.click('.f-cat[data-cat="plats"] .f-ajouter');
