@@ -79,7 +79,7 @@ async function ouvrir({ fichier, publicBon, saveStatus = 200, reduit = false, ec
         const an = btn.getAnimations ? btn.getAnimations({ subtree: true }) : [];
         window.__echantillons.push({ t: Date.now(), b, txt: btn.textContent, cls: btn.className,
           f: btn.classList.contains('remplit') ? +(btn.dataset.remplissage || 0) : null,
-          phrase: ex ? ex.textContent : '', bg: getComputedStyle(btn).backgroundColor, accueil: acc ? acc.textContent : '',
+          phrase: ex ? ex.textContent : '', phraseVue: !!ex && ex.getClientRects().length > 0, bg: getComputedStyle(btn).backgroundColor, accueil: acc ? acc.textContent : '',
           anims: an.length, animNoms: an.map(a => a.animationName || a.transitionProperty).join(',') });
       });
     }, 10);
@@ -142,6 +142,11 @@ async function casA(){
   avantPreuve(cas, ech, tBonne, b);
   const seq = suite(ech, b);
   verdict(cas, 'enchaînement', JSON.stringify(seq) === JSON.stringify(['Publication…', 'Envoyé · mise en ligne…', '✓ C’est en ligne', 'Tout est en ligne']), seq.join(' → '));
+  /* 7a-ter : sous le bouton, pendant l'envoi, le délai ; dans l'état Envoyé, sa propre phrase (rien d'ajouté). */
+  const lignesDe = re => [...new Set(ech.filter(e => e.b === b && re.test(e.txt)).map(e => e.phraseVue ? e.phrase : '(invisible)'))];
+  const pEnvoi = lignesDe(/^Publication/), pEnvoye = lignesDe(/^Envoyé · mise en ligne/);
+  verdict(cas, 'ligne pendant l’envoi', pEnvoi.join() === 'En ligne en moins d’une minute.' && pEnvoye.join() === 'En ligne dans moins d’une minute.',
+    `« Publication… » → ${pEnvoi.map(x => '« ' + x + ' »').join(', ')} · « Envoyé » → ${pEnvoye.map(x => '« ' + x + ' »').join(', ')}`);
   /* À la preuve, les 15 derniers pour cent se remplissent (350 ms) puis le bouton est jaune plein. */
   const fFin = Math.max(...ech.filter(e => e.b === b && e.f != null).map(e => e.f));
   const conf = ech.find(e => e.b === b && /C’est en ligne/.test(e.txt));
@@ -186,6 +191,19 @@ async function casC(){
   const actif = await p.$eval('#btnFeuille', e => !e.disabled);
   verdict(cas, 'changement gardé', prix === '11€' && actif, `prix « ${prix} », bouton ${actif ? 'cliquable' : 'non cliquable'}`);
   verdict(cas, 'rien relu', journal.relectures.length === 0, `${journal.relectures.length} relecture(s) du fichier public`);
+  /* 7a-ter : la phrase d'erreur est VISIBLE (elle prend la ligne sous le bouton, pas « n changements · Annuler »)…
+     puis, au geste suivant, le lien revient. */
+  const ligne = () => p.evaluate(() => { const vu = e => !!e && e.getClientRects().length > 0;
+    const ph = document.getElementById('feuillePhrase'), l = document.getElementById('feuilleLien');
+    return { phrase: vu(ph) ? ph.textContent : null, lien: vu(l) ? l.textContent : null }; });
+  const l1 = await ligne();
+  verdict(cas, 'phrase d’erreur visible', l1.phrase === 'Ça n’est pas parti. Vos changements sont gardés, réessayez.' && l1.lien === null,
+    `phrase ${l1.phrase === null ? 'INVISIBLE' : '« ' + l1.phrase + ' »'} · lien ${l1.lien === null ? 'masqué' : 'VISIBLE « ' + l1.lien + ' »'}`);
+  await p.$eval(sel, e => e.scrollIntoView({ block: 'center' })); await p.click(sel); await p.keyboard.press('End'); await p.keyboard.type('0');
+  await pause(100);
+  const l2 = await ligne();
+  verdict(cas, 'le lien revient au geste suivant', l2.lien === '1 changement · Annuler' && l2.phrase === null,
+    `lien ${l2.lien === null ? 'MASQUÉ' : '« ' + l2.lien + ' »'} · phrase ${l2.phrase === null ? 'masquée' : 'VISIBLE'}`);
   const tErr = (ech.find(x => x.b === b && x.phrase.startsWith('Ça n’est')) || { t: 1e15 }).t;
   const chute = ech.filter(e => e.b === b && e.f != null && e.t >= tErr);
   verdict(cas, 'le jaune redescend', chute.length === 0 || chute[chute.length - 1].f <= chute[0].f, chute.length ? `${(chute[0].f * 100).toFixed(1)} % → ${(chute[chute.length - 1].f * 100).toFixed(1)} %` : 'déjà vide');

@@ -553,7 +553,20 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 /* Le bouton en bas sur téléphone, collé au bord du pouce (sticky), sur le fond de l'app. */
 .f-pub{grid-area:pub;position:sticky;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:stretch;gap:8px;
   padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:var(--fond);}
+/* Téléphone : 7 + 13 + 12 = les 12 + 8 + 12 d'avant — le pied collant garde sa hauteur. Le bas reste à 12 : la cible
+   d'« Annuler » (44 px centrés sur une ligne de 19 px) déborde de 12,6 px sous la ligne et doit tenir dans l'écran. */
+@media(max-width:960px){ .f-pub{padding:7px 0 calc(12px + env(safe-area-inset-bottom));} }
 .f-pub .lelab-delai{color:var(--texte-2);max-width:none;}
+/* La ligne sous le bouton (7a-ter) : la phrase au repos OU « n changements · Annuler », à la HAUTEUR DU TEXTE (le
+   même gabarit que la phrase : passer de l'une à l'autre ne déplace pas le bouton, et le pied collant garde sa
+   hauteur). La cible de 44 px d'« Annuler » est un ::before qui déborde du mot, sans toucher à la ligne ; l'écart
+   bouton-ligne (13 px) le loge sans qu'il morde sur Publier, qui reste au-dessus en cas de doute. */
+.f-pub{gap:13px;}
+.f-pub .btn-pub{z-index:1;}
+.f-sous-bouton [hidden]{display:none;}
+.f-annuler-tout{position:relative;display:inline;margin:0;padding:0;background:none;border:0;color:var(--texte);cursor:pointer;
+  font:inherit;font-weight:600;line-height:inherit;text-decoration:underline;text-underline-offset:3px;}
+.f-annuler-tout::before{content:"";position:absolute;left:-10px;right:-10px;top:50%;height:44px;transform:translateY(-50%);}
 .feuille{background:var(--papier);color:var(--encre);border-radius:24px;padding:16px 8px 10px;}
 .f-alerte{padding:12px 16px;}
 .f-cat + .f-cat{margin-top:22px;}
@@ -605,8 +618,6 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
   .f-titre{font-size:clamp(64px,6.4vw,92px);line-height:.92;}
   .f-explic{display:block;grid-area:explic;color:var(--texte-2);font:400 15px/1.5 var(--sans);}
   .f-explic p{margin:0 0 6px;}
-  .f-annuler-tout{margin-top:10px;min-height:44px;padding:0;background:none;border:0;color:var(--texte);cursor:pointer;
-    font:500 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px;}
   .f-pub{position:static;background:none;padding:0;}
   .feuille{padding:22px 16px 14px;}
   .f-nom,.f-prix{font-size:24px;}
@@ -6591,11 +6602,13 @@ function feuilleCadreHTML(section, opts){
     </div>
     <div class="f-explic">
       ${opts.explic.map(p => '<p>' + _eT(p) + '</p>').join('')}
-      <button type="button" class="f-annuler-tout" id="feuilleAnnuler" onclick="annulerFeuille()" hidden>Annuler mes changements</button>
     </div>
     <div class="f-pub">
       <button type="button" class="btn btn--block btn-pub pub--en-ligne" id="btnFeuille" onclick="saveSection()" disabled>Tout est en ligne</button>
-      <p class="lelab-delai" id="feuillePhrase">${_eT(opts.repos)}</p>
+      <div class="f-sous-bouton">
+        <p class="lelab-delai" id="feuillePhrase">${_eT(opts.repos)}</p>
+        <p class="lelab-delai" id="feuilleLien" hidden><span id="feuilleCompte"></span><button type="button" class="f-annuler-tout" id="feuilleAnnuler" onclick="annulerFeuille()">Annuler</button></p>
+      </div>
     </div>
     <div class="f-droite">
       <div class="feuille grain-papier" id="feuille"></div>
@@ -6680,7 +6693,15 @@ function renderFeuille(focus){
     if (el){ el.focus(); if (el.setSelectionRange && focus.fin) el.setSelectionRange(el.value.length, el.value.length); }
   }
 }
-/* L'état autour de la feuille : chip, bouton, phrase, « Annuler mes changements », et la garde de sortie. */
+/* La ligne sous le bouton : n > 0 → « n changements · Annuler » (seul « Annuler » est cliquable) ; sinon la phrase
+   (texte donné, ou celui déjà posé par etatPublier). */
+function ligneFeuille(n, texte){
+  const ph = document.getElementById('feuillePhrase'), lien = document.getElementById('feuilleLien'), compte = document.getElementById('feuilleCompte');
+  if (!ph || !lien) return;
+  if (n > 0){ if (compte) compte.textContent = n + ' changement' + (n > 1 ? 's' : '') + ' · '; lien.hidden = false; ph.hidden = true; }
+  else { if (texte != null) ph.textContent = texte; ph.hidden = false; lien.hidden = true; }
+}
+/* L'état autour de la feuille : chip, bouton, la ligne sous le bouton, et la garde de sortie. */
 function etatFeuille(){
   if (!editeur || !editeur.pret()) return;
   const n = editeur.changements(), m = editeur.aCompleter();
@@ -6689,8 +6710,12 @@ function etatFeuille(){
   /* Envoyé sans preuve (en cours ou délai long) : ni la puce ni le bouton ne disent « en ligne ». */
   const envoyeSansPreuve = !!statutPublication[editeur.fichier];
   if (chip){ chip.className = 'chip ' + (n ? 'chip--a-voir' : 'chip--en-ligne'); chip.textContent = n ? 'Pas encore publié' : (envoyeSansPreuve ? 'Envoyé' : 'En ligne'); }
-  const annuler = document.getElementById('feuilleAnnuler');
-  if (annuler) annuler.hidden = n === 0;   // n'apparaît que s'il y a des changements pas encore envoyés
+  /* Sous le bouton, UNE ligne : la phrase d'aide au repos, « n changements · Annuler » dès qu'il y a des
+     changements pas encore envoyés, la phrase du délai pendant l'envoi — jamais deux choses à la fois, dans le même
+     gabarit (7a-ter : le bouton ne bouge pas).
+     Après un envoi raté, publicationEchouee() remet la phrase d'erreur : elle reste jusqu'au geste suivant. */
+  const enEnvoi = !!(publications[editeur.fichier] && publications[editeur.fichier].etat === 'envoi');
+  ligneFeuille(n > 0 && !enEnvoi ? n : 0);
   if (n === 0 && publicationAffichee(editeur.fichier)) return;
   if (n === 0 && envoyeSansPreuve) etatPublier('pub--en-ligne', 'Envoyé', 'Envoyé. La mise en ligne prend plus de temps que d’habitude, elle se fera seule.', false, IDS_FEUILLE);
   else if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', editeur.repos, false, IDS_FEUILLE);
@@ -7488,6 +7513,8 @@ function peindrePublication(pub){
   if (!btn) return;
   if (pub.etat === 'envoi') etatPublier('pub--envoi', 'Publication…', null, false, pub.ids);
   else etatPublier('pub--envoye', 'Envoyé · mise en ligne…', 'En ligne dans moins d’une minute.', false, pub.ids);
+  /* Sur une feuille, la ligne sous le bouton : pendant l'envoi, le délai (l'état Envoyé le dit déjà, on n'ajoute rien). */
+  if (pub.ids === IDS_FEUILLE) ligneFeuille(0, pub.etat === 'envoi' ? 'En ligne en moins d’une minute.' : null);
   btn.dataset.pub = pub.fichier;
   if (!mouvementReduit()){ btn.classList.add('remplit'); peindreRemplissage(btn, remplissage(pub, performance.now()), performance.now()); }
 }
@@ -7573,7 +7600,12 @@ function publicationEchouee(pub){
   if (b && !mouvementReduit() && pub.fDepart > 0){ b.dataset.pub = pub.fichier; b.classList.add('remplit'); relancerBoucle(); }
   else delete publications[pub.fichier];
   const ph = document.getElementById(pub.ids.phrase);
-  if (ph) ph.textContent = 'Ça n’est pas parti. Vos changements sont gardés, réessayez.';
+  if (ph){
+    ph.textContent = 'Ça n’est pas parti. Vos changements sont gardés, réessayez.';
+    if (pub.ids === IDS_FEUILLE){   // la phrase d'erreur prend la ligne sous le bouton, jusqu'au geste suivant
+      ligneFeuille(0);   // le geste suivant appelle etatFeuille(), qui rend le lien
+    }
+  }
 }
 function changementsEnAttente(){
   const cur = currentBlocState();

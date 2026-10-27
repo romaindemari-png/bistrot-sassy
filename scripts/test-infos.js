@@ -68,7 +68,37 @@ const remplacer = async (p, sel, texte) => { await clic(p, sel, { clickCount: 3 
 /* 7a-bis : le cadre. Le surtitre nomme la section comme le client (jamais la clé d'édition), pas de légende
    « Ce que vos clients liront. » sous cette feuille, et « Annuler mes changements » absent tant que rien n'a changé. */
 const cadre = p => p.evaluate(() => ({ sur: document.querySelector('.f-sur').textContent, note: !!document.querySelector('.f-note'),
-  annuler: (b => b ? !b.hidden && getComputedStyle(b).display !== 'none' : null)(document.getElementById('feuilleAnnuler')) }));
+  annuler: (b => b ? b.getClientRects().length > 0 : null)(document.getElementById('feuilleAnnuler')) }));
+/* 7a-ter : le bouton Publier ne bouge pas au premier changement. Sous lui, UNE ligne à la hauteur du texte : la
+   phrase d'aide au repos, « 1 changement · Annuler » dès un changement, jamais les deux. À 390, le pied collant
+   garde la hauteur de HEAD (12 + 8 + 12 autour du bouton et de la phrase). « Annuler » se touche sur 44 px de
+   haut : elementFromPoint à ±20 px de son centre tombe sur lui. Mesuré page en haut. */
+async function sansSaut(nom, p, geste){
+  const lire = () => p.evaluate(() => { window.scrollTo(0, 0);
+    const vu = e => !!e && e.getClientRects().length > 0 && e.getBoundingClientRect().height > 0;
+    const pub = document.querySelector('.f-pub'), b = document.getElementById('btnFeuille'), ph = document.getElementById('feuillePhrase'), a = document.getElementById('feuilleAnnuler');
+    const sous = document.querySelector('.f-sous-bouton') || ph.parentElement;
+    let zone = null;
+    if (vu(a)){ const r = a.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const touche = dy => { const el = document.elementFromPoint(x, y + dy); return !!el && (el === a || a.contains(el)); };
+      zone = { haut: touche(-20), bas: touche(20), centre: touche(0) }; }
+    return { haut: b.getBoundingClientRect().top, phrase: vu(ph), annuler: vu(a), pied: pub.getBoundingClientRect().height,
+      btnH: b.getBoundingClientRect().height, ligneH: sous.getBoundingClientRect().height, texteH: vu(ph) ? ph.getBoundingClientRect().height : null,
+      compte: (document.getElementById('feuilleCompte') || {}).textContent || '', zone, large: innerWidth }; });
+  const avant = await lire(); await geste(); await pause(120); const apres = await lire();
+  const ecart = Math.round((apres.haut - avant.haut) * 100) / 100;
+  verdict(`${nom} · Publier ne bouge pas`, ecart === 0, `haut ${avant.haut.toFixed(1)} → ${apres.haut.toFixed(1)} px (écart ${ecart} px)`);
+  verdict(`${nom} · la phrase OU « 1 changement · Annuler »`, avant.phrase && !avant.annuler && !apres.phrase && apres.annuler && apres.compte === '1 changement · ',
+    `repos : ${[avant.phrase && 'phrase', avant.annuler && 'Annuler'].filter(Boolean).join(' + ') || '—'} · après : ${[apres.phrase && 'phrase', apres.annuler && '« ' + apres.compte + 'Annuler »'].filter(Boolean).join(' + ') || '—'}`);
+  verdict(`${nom} · ligne à la hauteur du texte`, avant.texteH != null && Math.abs(avant.ligneH - avant.texteH) < 0.5 && Math.abs(apres.ligneH - avant.texteH) < 0.5,
+    `ligne ${avant.ligneH.toFixed(1)} → ${apres.ligneH.toFixed(1)} px, texte ${avant.texteH == null ? '—' : avant.texteH.toFixed(1)} px`);
+  const z = apres.zone;
+  verdict(`${nom} · « Annuler » touchable sur 44 px`, !!z && z.haut && z.centre && z.bas, z ? `±20 px : dessus ${z.haut ? 'oui' : 'NON'}, centre ${z.centre ? 'oui' : 'NON'}, dessous ${z.bas ? 'oui' : 'NON'}` : 'lien invisible');
+  if (avant.large < 900){
+    const attendu = avant.btnH + avant.texteH + 32;   // HEAD : 12 (haut) + 8 (écart) + 12 (bas) autour du bouton et de la phrase
+    verdict(`${nom} · pied collant = HEAD`, Math.abs(avant.pied - attendu) < 0.5, `${avant.pied.toFixed(2)} px (HEAD : ${avant.btnH.toFixed(0)} + ${avant.texteH.toFixed(2)} + 32 = ${attendu.toFixed(2)} px)`);
+  }
+}
 const etat = p => p.evaluate(() => ({ btn: document.getElementById('btnFeuille').textContent.trim(), actif: !document.getElementById('btnFeuille').disabled,
   phrase: document.getElementById('feuillePhrase').textContent, chip: document.getElementById('feuilleEtat').textContent }));
 const jour = (i, q = '') => `.f-jour[data-i="${i}"] ${q}`;
@@ -197,7 +227,14 @@ async function allerRetour(section, source){
 
 (async () => {
   b = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
-  for (const f of [horaires, contact, () => allerRetour('horaires', HORAIRES), () => allerRetour('contact', GENERAL)])
+  const sauts = [];
+  for (const L of [390, 1280]){
+    sauts.push(async () => { const { ctx, p } = await page(L); await ouvrir(p, 'horaires');
+      await sansSaut(`horaires ${L}`, p, async () => { await clic(p, jour(1, '.f-plage')); await p.keyboard.type('0'); }); await ctx.close(); });
+    sauts.push(async () => { const { ctx, p } = await page(L); await ouvrir(p, 'contact');
+      await sansSaut(`contact ${L}`, p, async () => { await clic(p, '#fi-adresse'); await p.keyboard.press('End'); await p.keyboard.type('!'); }); await ctx.close(); });
+  }
+  for (const f of [horaires, contact, () => allerRetour('horaires', HORAIRES), () => allerRetour('contact', GENERAL), ...sauts])
     await f().catch(e => fails.push('exception : ' + e.message));
   await b.close();
   console.log('\n═══ LES FEUILLES DES INFOS — horaires et contact ═══\n\n| Contrôle | Mesuré | |\n|---|---|---|\n' + lignes.join('\n'));
