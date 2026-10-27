@@ -476,17 +476,20 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .t-lien{position:relative;z-index:2;font:500 13px/1.3 var(--sans);color:var(--texte);text-decoration:underline;text-underline-offset:3px;}
 @media(min-width:961px){
   .tuiles-site{gap:20px;}
-  .tuile{aspect-ratio:auto;min-height:250px;border-radius:28px;padding:22px 22px 0;overflow:visible;margin-bottom:24px;}
+  .tuile{aspect-ratio:auto;min-height:250px;border-radius:28px;padding:22px 22px 0;overflow:hidden;}
   .tuile.grain-papier::after{border-radius:28px;}
   .t-titre{font-size:42px;}
   .t-fleche{width:42px;height:42px;}
   .t-fleche svg{width:17px;height:17px;}
-  /* LE TICKET : le morceau réel de la section, encre sur papier, qui dépasse du bas de la carte. */
-  .t-signe{margin:auto -4px -24px;padding:14px 16px;background:var(--papier);color:var(--encre);
-    border:1px solid var(--filet);border-radius:14px;position:relative;z-index:0;}
-  .tuile--masquee .t-signe{background:transparent;color:var(--texte);border:1.5px dashed var(--contour);}
+  /* LE MORCEAU DU SITE : encre sur papier, COLLÉ au bord du bas et COUPÉ par la carte (overflow:hidden) —
+     une feuille glissée dans une pochette, pas deux cartes empilées (correction de DA du 27/10).
+     Coins du haut seuls arrondis, pas de bord bas : c'est le bord de la carte qui le termine. Rien ne
+     dépasse plus sous la carte. */
+  .t-signe{margin:auto 0 0;padding:14px 16px;background:var(--papier);color:var(--encre);
+    border:1px solid var(--filet);border-bottom:0;border-radius:14px 14px 0 0;position:relative;z-index:0;}
+  .tuile--masquee .t-signe{background:transparent;color:var(--texte);border:1.5px dashed var(--contour);border-bottom:0;}
   .tuile--inter .t-signe{padding-right:60px;}
-  .t-inter{right:30px;bottom:-8px;}
+  .t-inter{right:34px;bottom:14px;}
   .tuile--photos .mosaique{width:100%;grid-template-columns:repeat(4,1fr);}
   .tuile--plus{min-height:250px;padding:22px;}
   .s-plats li{font-size:13px;}
