@@ -360,6 +360,13 @@ export const handler = async (event) => {
       jsonInstruction;
   }
 
+  /* « Plus court » (studio, bout 8) : UNE consigne de plus, rien d'autre — même prompt, même modèle, même réponse. */
+  if (body.court === true) {
+    const COURT = '\n\nVERSION COURTE demandée : une à deux phrases au plus, environ la moitié de ta longueur habituelle.';
+    if (Array.isArray(userContent)) userContent[userContent.length - 1].text += COURT;
+    else userContent += COURT;
+  }
+
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
