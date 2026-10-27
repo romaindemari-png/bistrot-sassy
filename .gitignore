@@ -1,3 +1,6 @@
 node_modules/
 .DS_Store
 .netlify/
+
+# Photos de test du composant photo (11 Mo) : générées par scripts/gen-photos-test.py, jamais commitées
+scripts/fixtures/photos/

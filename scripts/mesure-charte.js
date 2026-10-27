@@ -76,8 +76,9 @@ const hex = c => '#' + c.map(v => Math.round(v * 255).toString(16).padStart(2, '
   await p.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
   await p.goto(URL, { waitUntil: 'networkidle0' });
   await p.evaluate(() => document.fonts.ready);
-  /* L'admin écrit sa phrase d'accueil APRÈS le chargement des données : on attend qu'elle soit posée. */
-  if (PAGE !== '/admin/charte.html') await p.waitForFunction(() => document.body.classList.contains('authed') && !!document.querySelector('#avatarInit') && document.querySelector('#avatarInit').textContent.trim() !== '', { timeout: 15000 });
+  /* L'admin écrit sa phrase d'accueil APRÈS le chargement des données : on attend qu'elle soit posée. Les pages de
+     contrôle (/admin/charte.html, /admin/photo.html…) ne chargent pas l'admin : rien à attendre. */
+  if (!/^\/admin\/[\w-]+\.html$/.test(PAGE)) await p.waitForFunction(() => document.body.classList.contains('authed') && !!document.querySelector('#avatarInit') && document.querySelector('#avatarInit').textContent.trim() !== '', { timeout: 15000 });
   /* ⚠️ TRANSITIONS COUPÉES PENDANT LA MESURE. On bascule la chromie puis on lit aussitôt : un élément qui
      porte `transition: color` rend encore sa couleur d'AVANT. Mesuré le 26/10 sur .lelab-site-link :
      #CDC9C2 (nuit) lu à 0 ms en jour, #2B2347 à 400 ms → un faux ❌ à 1,11:1. On mesure l'état final. */

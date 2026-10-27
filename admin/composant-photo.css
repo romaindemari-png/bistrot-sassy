@@ -1,0 +1,41 @@
+/* ═══ LE COMPOSANT PHOTO (bout 7c-1) — cf. admin/composant-photo.js ═══════════════════════════════════════
+   Posé sur le papier d'une feuille : encre, --papier-2, --violet-encre pour un message, --en-ligne pour la
+   montée de l'envoi. La photo elle-même n'est JAMAIS filtrée ni fusionnée : vraies couleurs. */
+.cp{display:flex;flex-direction:column;gap:2px;min-width:0;color:var(--encre);}
+.cp-cadre{position:relative;aspect-ratio:var(--cp-ratio,1);border-radius:10px;overflow:hidden;background:var(--papier);}
+.cp-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
+.cp[data-etat="pleine"] .cp-img,.cp[data-etat="retiree"] .cp-img,.cp[data-etat="envoi"] .cp-img{display:block;}
+
+/* Vide (et échec) : la case est un cadre en pointillés ; vide, toute la case est le bouton. */
+.cp[data-etat="vide"] .cp-cadre,.cp[data-etat="echec"] .cp-cadre{border:1.5px dashed var(--papier-2);}
+.cp-ajouter{display:none;position:absolute;inset:0;width:100%;min-height:44px;padding:8px;background:none;border:0;cursor:pointer;
+  color:var(--encre);font:500 14px/1.3 var(--sans);}
+.cp[data-etat="vide"] .cp-ajouter{display:flex;align-items:center;justify-content:center;}
+.cp-ajouter:focus-visible,.cp-lien:focus-visible{outline:2px solid var(--violet-encre);outline-offset:2px;}
+.cp-echec{display:none;position:absolute;inset:0;align-items:center;justify-content:center;padding:8px;text-align:center;
+  font:500 13px/1.3 var(--sans);color:var(--violet-encre);}
+.cp[data-etat="echec"] .cp-echec{display:flex;}
+
+/* L'envoi : la case se remplit par le bas, comme Publier, en plus discret (un voile jaune, pas un aplat). */
+.cp-remplissage{display:none;position:absolute;left:0;right:0;bottom:0;height:100%;transform-origin:bottom;
+  transform:scaleY(var(--cp-f,0));background:var(--en-ligne);opacity:.6;transition:transform .2s linear;}
+.cp[data-etat="envoi"] .cp-remplissage{display:block;}
+
+/* Retirée : la vignette barrée (un trait d'encre sur un liseré papier, lisible sur toute photo). */
+.cp-barre{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.cp-barre line{stroke:var(--encre);stroke-width:2.5;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2px var(--papier));}
+.cp[data-etat="retiree"] .cp-barre{display:block;}
+
+/* Les actions : des mots soulignés, 44 px de haut. Chacune n'apparaît que dans son état. */
+.cp-actions{display:flex;flex-wrap:wrap;align-items:center;column-gap:16px;min-height:44px;}
+.cp-lien{display:none;min-height:44px;padding:0;background:none;border:0;cursor:pointer;color:var(--encre);
+  font:500 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px;}
+.cp[data-etat="pleine"] [data-action="remplacer"],.cp[data-etat="pleine"] [data-action="retirer"],
+.cp[data-etat="echec"] [data-action="reessayer"],.cp[data-etat="retiree"] [data-action="annuler"],
+.cp[data-etat="echec"] [data-action="annuler"]{display:inline-flex;align-items:center;}
+.cp-lien[hidden]{display:none!important;}
+.cp-statut{font:400 13px/1.3 var(--sans);color:var(--papier-2);}
+.cp-statut:empty{display:none;}
+.cp-message{margin:0;font:500 13px/1.35 var(--sans);color:var(--violet-encre);}
+.cp-message:empty{display:none;}
+@media (prefers-reduced-motion:reduce){.cp-remplissage{transition:none;}}
