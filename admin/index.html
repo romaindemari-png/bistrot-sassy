@@ -546,7 +546,7 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .f-retour{min-height:44px;padding:0 16px;border-radius:999px;background:transparent;color:var(--texte);cursor:pointer;
   border:1.5px solid var(--contour);border-color:color-mix(in srgb,var(--texte) 22%,transparent);font:500 14px/1 var(--sans);}
 .f-sur{margin:0 0 6px;font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--texte-2);}
-.f-titre{margin:0;font:400 54px/.93 var(--serif);letter-spacing:-.028em;color:var(--texte);}
+.f-titre{margin:0;padding-top:.12em;font:400 54px/.93 var(--serif);letter-spacing:-.028em;color:var(--texte);}   /* .12em : l'accent d'une capitale (« É ») ne touche pas le surtitre */
 .f-explic{display:none;}
 .f-droite{grid-area:feuille;min-width:0;}
 .f-note{margin:10px 0 0;text-align:center;font:400 13px/1.4 var(--sans);color:var(--texte-2);}
@@ -640,7 +640,36 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .f-sous{margin-top:14px;}
 .f-cat-titre--info{margin-left:12px;}
 .f-lignes + .f-cat{margin-top:22px;}
-@media(prefers-reduced-motion:reduce){ .f-ferme-piste::after{transition:none;} }
+/* LA FEUILLE DES ÉVÉNEMENTS (bout 7b). La date se lit en toutes lettres ; les champs date et heure natifs
+   n'apparaissent que sur la ligne active. Pas de poignée : l'ordre, c'est la date. */
+.f-ev{grid-template-columns:minmax(0,1fr) 44px;padding-left:12px;}
+.f-quand{display:block;width:100%;min-height:44px;margin:0;padding:8px 2px 0;text-align:left;background:none;border:0;
+  color:var(--encre);cursor:pointer;font:400 18px/1.25 var(--serif);}   /* la date, en toutes lettres, en serif */
+.f-quand::first-letter{text-transform:uppercase;}
+.f-quand--vide{color:var(--violet-encre);}
+.f-quand-champs{display:none;gap:12px;padding-top:4px;}
+.f-ligne--active .f-quand{display:none;}
+.f-ligne--active .f-quand-champs{display:flex;}
+.f-date,.f-heure{font:400 16px/1.2 var(--sans);}
+.f-date{flex:1;min-width:0;}
+.f-heure{width:7.5em;flex-shrink:0;}
+.f-ev-titre{width:100%;font:400 20px/1.2 var(--serif);}
+.f-ev-photo{display:none;padding:2px 2px 6px;font:400 13px/1.3 var(--sans);color:var(--papier-2);}
+.f-ligne--active .f-ev-photo{display:block;}
+.f-vide{margin:0;padding:12px;font:400 16px/1.4 var(--sans);color:var(--papier-2);}
+.f-ajouter--info{padding-left:12px;}
+.f-passes{margin-top:22px;}
+.f-passes-titre{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;cursor:pointer;list-style:none;
+  font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--papier-2);}
+.f-passes-titre::-webkit-details-marker{display:none;}
+.f-passes-titre::before{content:"›";font-size:16px;transition:transform .15s;}
+.f-passes[open] .f-passes-titre::before{transform:rotate(90deg);}
+.f-passes-n{font-variant-numeric:tabular-nums;}
+.f-tout-retirer{min-height:44px;margin:0 0 4px 12px;padding:0;background:none;border:0;color:var(--encre);cursor:pointer;
+  font:500 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px;}
+.f-tout-retirer:disabled{color:var(--papier-2);text-decoration:none;cursor:default;}
+@media(min-width:961px){ .f-ev-titre{font-size:24px;} }
+@media(prefers-reduced-motion:reduce){ .f-ferme-piste::after,.f-passes-titre::before{transition:none;} }
 @media(min-width:961px){
   .f-jour{grid-template-columns:8.5em minmax(0,1fr) auto;grid-template-areas:"nom plages ferme" ". manque .";}
   .f-j-nom,.f-plage,.f-info-val{font-size:24px;}
@@ -5939,23 +5968,6 @@ const TYPES_DE_BLOC = {
       { cle:'dispo', label:'Disponible',  type:'interrupteur', defaut:true, groupe:'a' },
     ],
   },
-  evenements: {
-    max: 5,
-    textes: {
-      intro: 'Annoncez vos soirées, concerts et événements spéciaux.',
-      titreGroupe: 'Vos événements à venir',
-      unite: 'Événement',
-      ajouter: '+ Ajouter un événement',
-      max: '⚠️ Maximum {max} événements',
-    },
-    ordreDonnees: ['date', 'heure', 'titre', 'description'],   // ⚠️ l'ordre du fichier existant : on ne le change pas
-    champs: [
-      { cle:'titre',       label:'Titre',       exemple:'Ex. soirée jazz' },
-      { cle:'date',        label:'Date',        type:'date', groupe:'a' },
-      { cle:'heure',       label:'Heure',       type:'time', largeur:130, groupe:'a' },
-      { cle:'description', label:'Description', exemple:'Quelques mots', multi:true, facultatif:true },
-    ],
-  },
 };
 
 /* ═══ LA LECTURE DE LA CONFIG — un seul endroit qui sait lire un bloc ═══════════════════════
@@ -6404,6 +6416,8 @@ function nomDeLEcran(section){
 }
 function ecranDe(section){
   const bloc = blocDeLEcran(section);
+  /* Bout 7b : un bloc d'événements est une feuille (l'ancien type de liste « evenements » est retiré). */
+  if (bloc && bloc.type === 'evenements') return { title: bloc.label, html: feuilleCadreHTML(section, editeurEvenements(bloc).cadre), feuille: true };
   if (bloc && TYPES_DE_BLOC[bloc.type]) return { title: bloc.label, html: ecranBlocHTML(bloc) };
   if (bloc && bloc.type === 'categories')  return { title: bloc.label, html: feuilleCadreHTML(section, cadreCarte(bloc)), feuille: true };
   /* Bout 7a : horaires et contact sont des feuilles, dérivées de celle de la carte (même cadre, même bouton). */
@@ -6563,7 +6577,8 @@ function feuilleCadreHTML(section, opts){
   const tuiles = (typeof tuilesDuSite === 'function') ? tuilesDuSite() : [];
   const i = tuiles.findIndex(t => t.edit === section);
   const num = i >= 0 ? String(i + 1).padStart(2, '0') + ' · ' : '';
-  const mot = section.charAt(0).toUpperCase() + section.slice(1);   // la clé d'édition de la config (« menu » → « Menu »)
+  // la clé d'édition de la config (« menu » → « Menu »), sauf si le cadre nomme la section (« events » n'est pas un mot du client)
+  const mot = opts.mot || (section.charAt(0).toUpperCase() + section.slice(1));
   return `<div class="feuille-cadre">
     <div class="f-tete">
       <div class="f-barre">
@@ -6605,7 +6620,12 @@ const EDITEUR_CARTE = {
   repos: 'Modifiez un plat et le bouton s’allume.',
   manque: m => [m + ' ligne' + (m > 1 ? 's' : '') + ' à compléter', 'Il manque un nom : rien ne part tant qu’un plat n’en a pas.'],
 };
-function editeurDe(section){ return estFeuille(section) ? EDITEUR_CARTE : (EDITEURS_INFOS[section] || null); }
+function editeurDe(section){
+  if (estFeuille(section)) return EDITEUR_CARTE;
+  if (EDITEURS_INFOS[section]) return EDITEURS_INFOS[section];
+  const bloc = blocDeLEcran(section);
+  return bloc && bloc.type === 'evenements' ? editeurEvenements(bloc) : null;
+}
 function initFeuille(section){
   const racine = document.getElementById('feuille');
   if (!racine) return;
@@ -6978,6 +6998,211 @@ const EDITEURS_INFOS = {
     manque: () => ['', ''],
   },
 };
+
+/* ═══ LA FEUILLE DES ÉVÉNEMENTS (bout 7b, LELAB-DESIGN §4) ═════════════════════════════════════════════════
+   Deux parties : « À venir », triée par date, puis « Passés », repliée, avec « Tout retirer ». Une ligne : la
+   date (input date natif, écrite en toutes lettres en serif quand la ligne n'est pas active) et l'heure
+   (facultative), le titre en serif, la précision. Un événement sans date ou sans titre ne part pas.
+   ⚠️ LE FORMAT NE CHANGE PAS : events.json = [{ date: "AAAA-MM-JJ", heure: "HH:MM", titre, description, photo }].
+      Les événements gardent l'ORDRE DU FICHIER (le site trie lui-même) ; les nouveaux s'ajoutent à la fin avec
+      date, heure, titre, description — sans photo. Les clés d'un événement existant (dont `photo`, que la
+      feuille ne modifie pas avant 7c) sont restituées. Une heure qu'on n'a pas touchée est rendue telle
+      quelle, même si <input type="time"> ne sait pas l'afficher. Publier sans rien changer réécrit le
+      fichier à l'octet (test-evenements). */
+let evtF = null;   // { lignes: [{ id, origine, date, heure, titre, description, retire, neuf }], base, passesOuverts }
+let evtSeq = 0;
+function isoLocal(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function vendrediProchain(maintenant){
+  const d = new Date(maintenant || Date.now()); d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + (((5 - d.getDay() + 7) % 7) || 7));   // strictement après aujourd'hui
+  return isoLocal(d);
+}
+/* « vendredi 31 octobre » (l'année seulement si ce n'est pas celle-ci). */
+function dateEnLettres(iso){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+  const d = new Date(iso + 'T12:00:00');
+  const o = { weekday: 'long', day: 'numeric', month: 'long' };
+  if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+  return d.toLocaleDateString('fr-FR', o);
+}
+function modeleEvenements(liste){
+  const lignes = (Array.isArray(liste) ? liste : []).map(e => ({ id: ++evtSeq, origine: e,
+    date: typeof e.date === 'string' ? e.date : '', heure: typeof e.heure === 'string' ? e.heure : '',
+    titre: typeof e.titre === 'string' ? e.titre : '', description: typeof e.description === 'string' ? e.description : '',
+    retire: false, neuf: false }));
+  const base = Object.fromEntries(lignes.map(l => [l.id, { date: l.date, heure: l.heure, titre: l.titre, description: l.description }]));
+  return { lignes, base, passesOuverts: false };
+}
+function lireEvenements(){
+  return evtF.lignes.filter(l => !l.retire).map(l => {
+    if (l.neuf) return { date: l.date, heure: l.heure, titre: l.titre, description: l.description };
+    const o = { ...l.origine };
+    for (const k of ['date', 'heure', 'titre', 'description']) if (k in o || l[k]) o[k] = l[k];
+    return o;
+  });
+}
+function changementsEvenements(){
+  return evtF.lignes.reduce((n, l) => {
+    if (l.neuf) return n + (l.retire ? 0 : 1);
+    if (l.retire) return n + 1;
+    const b = evtF.base[l.id];
+    return n + (['date', 'heure', 'titre', 'description'].some(k => l[k] !== b[k]) ? 1 : 0);
+  }, 0);
+}
+function manqueEvenement(l){
+  const d = !l.date.trim(), t = !l.titre.trim();
+  return d && t ? 'Il manque la date et le titre' : d ? 'Il manque la date' : t ? 'Il manque le titre' : '';
+}
+function evenementsACompleter(){ return evtF ? evtF.lignes.filter(l => !l.retire && manqueEvenement(l)).length : 0; }
+const estPasse = l => !!l.date && l.date < isoLocal(new Date());
+function ligneEvenementHTML(l){
+  const titre = l.titre.trim() || 'cet événement';
+  if (l.retire) return `<li class="f-ligne f-ligne--retiree f-ev" data-id="${l.id}"><span></span>
+      <div class="f-champs"><span class="f-barre-txt">${_eT(l.titre || 'Événement sans titre')}${l.date ? ' — ' + _eT(dateEnLettres(l.date)) : ''}</span>
+      <span class="f-retire-mot">Retiré à la prochaine publication</span></div>
+      <button type="button" class="f-annuler" data-action="annuler">Annuler</button></li>`;
+  const manque = manqueEvenement(l);
+  const quand = l.date ? dateEnLettres(l.date) + (l.heure ? ', ' + l.heure : '') : 'Choisir une date';
+  return `<li class="f-ligne f-ev${manque ? ' f-ligne--manque' : ''}" data-id="${l.id}">
+    <div class="f-champs">
+      <button type="button" class="f-quand${l.date ? '' : ' f-quand--vide'}" data-action="quand" aria-label="Date de ${_eA(titre)} : ${_eA(quand)}">${_eT(quand)}</button>
+      <div class="f-quand-champs">
+        <input class="f-champ f-date" type="date" data-champ="date" value="${_eA(l.date)}" aria-label="Date de ${_eA(titre)}">
+        <input class="f-champ f-heure" type="time" data-champ="heure" value="${_eA(/^\d{2}:\d{2}$/.test(l.heure) ? l.heure : '')}" aria-label="Heure de ${_eA(titre)} (facultative)">
+      </div>
+      <input class="f-champ f-ev-titre" data-champ="titre" value="${_eA(l.titre)}" placeholder="Titre de l’événement" aria-label="Titre de l’événement" autocomplete="off">
+      <textarea class="f-champ f-desc" data-champ="description" rows="1" placeholder="Ajouter une précision" aria-label="Précision sur ${_eA(titre)}">${_eT(l.description)}</textarea>
+      ${(l.neuf || !(l.origine && l.origine.photo)) ? '<span class="f-ev-photo">Photo : bientôt ici</span>' : ''}
+      <span class="f-manque">${_eT(manque)}</span>
+    </div>
+    <button type="button" class="f-retirer" data-action="retirer" aria-label="Retirer ${_eA(titre)}">${SVG_CROIX}</button>
+  </li>`;
+}
+/* « À venir » par date croissante (sans date : à la fin), « Passés » du plus récent au plus ancien. */
+function partiesEvenements(){
+  const ordre = (a, b) => (a.date || '9999') < (b.date || '9999') ? -1 : (a.date || '9999') > (b.date || '9999') ? 1 : 0;
+  return { aVenir: evtF.lignes.filter(l => !estPasse(l) || l.neuf).slice().sort(ordre),
+           passes: evtF.lignes.filter(l => estPasse(l) && !l.neuf).slice().sort((a, b) => -ordre(a, b)) };
+}
+function rendreEvenements(focus){
+  const racine = document.getElementById('feuille');
+  if (!racine || !evtF) return;
+  const { aVenir, passes } = partiesEvenements();
+  const tousRetires = passes.length && passes.every(l => l.retire);
+  racine.innerHTML = `<section class="f-cat" data-partie="avenir">
+      <h2 class="f-cat-titre f-cat-titre--info">À venir</h2>
+      ${aVenir.length ? `<ul class="f-lignes">${aVenir.map(ligneEvenementHTML).join('')}</ul>` : '<p class="f-vide">Rien à venir.</p>'}
+      <button type="button" class="f-ajouter f-ajouter--info" data-action="ajouter">+ Ajouter un événement</button>
+    </section>
+    ${passes.length ? `<details class="f-passes"${evtF.passesOuverts ? ' open' : ''}>
+      <summary class="f-passes-titre">Passés <span class="f-passes-n">${passes.length}</span></summary>
+      <button type="button" class="f-tout-retirer" data-action="tout-retirer"${tousRetires ? ' disabled' : ''}>Tout retirer</button>
+      <ul class="f-lignes">${passes.map(ligneEvenementHTML).join('')}</ul>
+    </details>` : ''}`;
+  racine.querySelectorAll('.f-desc').forEach(autoGrowTextarea);
+  if (focus){
+    const el = racine.querySelector(`.f-ligne[data-id="${focus.id}"] [data-champ="${focus.champ || 'titre'}"]`)
+            || racine.querySelector(`.f-ligne[data-id="${focus.id}"] .f-annuler`);
+    if (el) el.focus();
+  }
+}
+function ecouterEvenements(racine){
+  ecouterSurlignage(racine);
+  /* La date en toutes lettres est la porte du champ date : la toucher (ou y arriver au clavier) active la ligne,
+     qui la remplace par les champs natifs — le focus passe aussitôt au champ date (sinon il resterait sur un
+     bouton qu'on vient de masquer, et le clic se perdrait). */
+  racine.addEventListener('focusin', e => {
+    if (!e.target.matches('.f-quand')) return;
+    const li = e.target.closest('.f-ev'); if (!li) return;
+    li.classList.add('f-ligne--active');
+    const d = li.querySelector('.f-date');
+    if (d){ d.focus(); try { d.showPicker && d.showPicker(); } catch (_){} }
+  });
+  const trouver = id => evtF.lignes.find(l => l.id === id);
+  racine.addEventListener('input', e => {
+    const champ = e.target.closest('.f-champ'), li = e.target.closest('.f-ligne');
+    if (!champ || !li) return;
+    const l = trouver(+li.dataset.id); if (!l) return;
+    l[champ.dataset.champ] = champ.value;   // tel que saisi : l'heure n'est jamais reformatée
+    if (champ.tagName === 'TEXTAREA') autoGrowTextarea(champ);
+    const m = manqueEvenement(l);
+    li.classList.toggle('f-ligne--manque', !!m);
+    li.querySelector('.f-manque').textContent = m;
+    const q = li.querySelector('.f-quand');
+    if (q){ q.textContent = l.date ? dateEnLettres(l.date) + (l.heure ? ', ' + l.heure : '') : 'Choisir une date'; q.classList.toggle('f-quand--vide', !l.date); }
+    etatFeuille();
+  });
+  /* Une date changée peut déplacer la ligne (ou la faire passer dans « Passés ») : on re-range quand on QUITTE
+     la ligne — jamais pendant la frappe — et seulement si l'ordre affiché n'est plus le bon. Le focus suit. */
+  racine.addEventListener('focusout', e => {
+    const li = e.target.closest('.f-ev');
+    if (!li || li.contains(e.relatedTarget)) return;
+    const vers = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.f-ev');
+    const cible = vers ? { id: +vers.dataset.id, champ: e.relatedTarget.dataset.champ } : null;
+    setTimeout(() => {
+      if (!evtF) return;
+      const affiche = [...racine.querySelectorAll('.f-ev')].map(x => +x.dataset.id).join();
+      const { aVenir, passes } = partiesEvenements();
+      if (aVenir.concat(passes).map(l => l.id).join() !== affiche) rendreEvenements(cible);
+    }, 0);
+  });
+  racine.addEventListener('toggle', e => { if (e.target.matches('.f-passes')) evtF.passesOuverts = e.target.open; }, true);
+  racine.addEventListener('click', e => {
+    const b = e.target.closest('[data-action]'); if (!b) return;
+    const act = b.dataset.action;
+    if (act === 'ajouter'){
+      const l = { id: ++evtSeq, origine: {}, date: vendrediProchain(), heure: '', titre: '', description: '', retire: false, neuf: true };
+      evtF.lignes.push(l);
+      rendreEvenements({ id: l.id, champ: 'titre' }); etatFeuille();
+      return;
+    }
+    if (act === 'tout-retirer'){
+      evtF.lignes.forEach(l => { if (estPasse(l) && !l.neuf) l.retire = true; });
+      evtF.passesOuverts = true;
+      rendreEvenements(); etatFeuille();
+      return;
+    }
+    const li = b.closest('.f-ligne'); if (!li) return;
+    const l = trouver(+li.dataset.id); if (!l) return;
+    if (act === 'retirer'){
+      if (l.neuf && !l.titre.trim() && !l.description.trim()) evtF.lignes = evtF.lignes.filter(x => x !== l);   // une ligne vide qu'on vient d'ajouter s'en va
+      else l.retire = true;
+      rendreEvenements(l.retire ? { id: l.id } : null); etatFeuille();
+    } else if (act === 'annuler'){
+      l.retire = false;
+      rendreEvenements({ id: l.id }); etatFeuille();
+    }
+  });
+}
+/* Un descripteur par bloc de type « evenements » (un fork peut en avoir un autre nom) : toujours le même objet. */
+const EDITEURS_EVENEMENTS = {};
+function editeurEvenements(bloc){
+  if (EDITEURS_EVENEMENTS[bloc.cle]) return EDITEURS_EVENEMENTS[bloc.cle];
+  const fichier = (cartesDuBloc(bloc)[0] || {}).fichier || bloc.cle;
+  return EDITEURS_EVENEMENTS[bloc.cle] = {
+    fichier,
+    cadre: { titre: bloc.label || 'Événements', mot: bloc.label || 'Événements', repos: 'Modifiez un événement et le bouton s’allume.', explic: [
+      'Touchez une date, un titre ou une précision, et tapez.',
+      'Les événements passés ne s’affichent plus sur le site : retirez-les quand vous voulez.',
+      'Rien ne part sans le bouton Publier.'] },
+    pret: () => !!evtF,
+    vider(){ evtF = null; },
+    init(racine){ evtF = modeleEvenements(sassyData[bloc.cle]); ecouterEvenements(racine); rendreEvenements(); },
+    annuler(){ evtF = modeleEvenements(sassyData[bloc.cle]); rendreEvenements(); },
+    changements: () => changementsEvenements(),
+    aCompleter: () => evenementsACompleter(),
+    lire: () => lireEvenements(),
+    rendre: () => rendreEvenements(),
+    /* « Rien à venir » sur la tuile se met à jour dès l'envoi : les tuiles relisent sassyData. */
+    apres(data, visible){
+      sassyData[bloc.cle] = data;
+      if (typeof renderSiteCards === 'function') renderSiteCards();
+      if (visible){ evtF = modeleEvenements(data); rendreEvenements(); }
+    },
+    get repos(){ return this.cadre.repos; },
+    manque: m => [m + ' événement' + (m > 1 ? 's' : '') + ' à compléter', 'Il manque une date ou un titre : rien ne part tant qu’un événement n’en a pas.'],
+  };
+}
 
 /* ── Pré-remplir avec les vrais JSON (sassyData défini au bloc 6) ── */
 function prefillSection(section){
