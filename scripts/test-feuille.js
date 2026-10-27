@@ -60,7 +60,16 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (!ok){ verdict('feuille ouverte sur #edit/menu', false, 'aucune ligne de feuille — la feuille n\'existe pas'); }
     else {
       await p.evaluate(() => { session = { access_token: 'sonde', refresh_token: 'sonde', expires_at: Date.now() + 3600e3 }; });
+      /* 7a-bis : le surtitre nomme la section comme le client (« La carte », pas la clé « menu ») ; la carte garde
+         sa légende ; « Annuler mes changements » n'apparaît qu'avec un changement pas encore envoyé. */
+      const annulerVu = () => p.evaluate(() => { const b = document.getElementById('feuilleAnnuler'); return !!b && !b.hidden && getComputedStyle(b).display !== 'none'; });
+      const c0 = await p.evaluate(() => ({ sur: document.querySelector('.f-sur').textContent, note: (document.querySelector('.f-note') || {}).textContent }));
+      verdict('surtitre sans nom technique', /^02 · La carte · /.test(c0.sur), `« ${c0.sur} »`);
+      verdict('la carte garde sa légende', c0.note === 'Ce que vos clients liront.', `« ${c0.note || '(absente)'} »`);
+      const a0 = await annulerVu();
       await remplacer(p, champ('entrees', 1, 'nom'), 'Salade d\'automne');
+      const a1 = await annulerVu();
+      verdict('« Annuler » seulement avec des changements', !a0 && a1, `repos : ${a0 ? 'VISIBLE' : 'absent'} · après un changement : ${a1 ? 'visible' : 'ABSENT'}`);
       await remplacer(p, champ('entrees', 2, 'prix'), '10€');
       await p.click('.f-cat[data-cat="desserts"] .f-ajouter');
       await p.keyboard.type('Riz au lait'); await p.keyboard.press('Tab');

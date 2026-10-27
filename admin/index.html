@@ -607,7 +607,6 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
   .f-explic p{margin:0 0 6px;}
   .f-annuler-tout{margin-top:10px;min-height:44px;padding:0;background:none;border:0;color:var(--texte);cursor:pointer;
     font:500 14px/1 var(--sans);text-decoration:underline;text-underline-offset:3px;}
-  .f-annuler-tout:disabled{color:var(--texte-2);cursor:default;text-decoration:none;}
   .f-pub{position:static;background:none;padding:0;}
   .feuille{padding:22px 16px 14px;}
   .f-nom,.f-prix{font-size:24px;}
@@ -632,6 +631,7 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .f-ferme input:checked + .f-ferme-piste{background:var(--encre);border-color:var(--encre);}
 .f-ferme input:checked + .f-ferme-piste::after{transform:translateX(16px);background:var(--papier);}
 .f-ferme input:checked ~ .f-ferme-mot{color:var(--encre);}
+.f-ferme input:not(:checked) ~ .f-ferme-mot{display:none;}   /* « Fermé » ne se lit que sur un jour fermé */
 .f-ferme input:focus-visible + .f-ferme-piste{outline:2px solid var(--violet-encre);outline-offset:2px;}
 .f-info{grid-template-columns:minmax(0,1fr);}
 .f-role{display:block;padding-top:8px;font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--papier-2);}
@@ -6566,9 +6566,9 @@ const SVG_POIGNEE = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="t
 const SVG_CROIX = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2 2 12"/></svg>';
 
 /* Le cadre de l'écran : tête (retour, état, surtitre, titre), explication (desktop), bouton, la feuille.
-   Commun aux feuilles (carte, horaires, contact) : opts = { titre, explic: [3 phrases], repos }. */
+   Commun aux feuilles (carte, horaires, contact, événements) : opts = { titre, explic: [3 phrases], repos, note?, mot? }. */
 function cadreCarte(bloc){
-  return { titre: bloc.label || 'La carte', repos: 'Modifiez un plat et le bouton s’allume.', explic: [
+  return { titre: bloc.label || 'La carte', note: 'Ce que vos clients liront.', repos: 'Modifiez un plat et le bouton s’allume.', explic: [
     'Touchez un nom, une précision ou un prix, et tapez.',
     'La poignée à gauche d’un plat change son ordre dans la catégorie.',
     'Rien ne part sans le bouton Publier.'] };
@@ -6577,8 +6577,9 @@ function feuilleCadreHTML(section, opts){
   const tuiles = (typeof tuilesDuSite === 'function') ? tuilesDuSite() : [];
   const i = tuiles.findIndex(t => t.edit === section);
   const num = i >= 0 ? String(i + 1).padStart(2, '0') + ' · ' : '';
-  // la clé d'édition de la config (« menu » → « Menu »), sauf si le cadre nomme la section (« events » n'est pas un mot du client)
-  const mot = opts.mot || (section.charAt(0).toUpperCase() + section.slice(1));
+  /* Le nom de la section TEL QUE LE CLIENT LE LIT (le libellé de sa tuile, dans config.json), jamais la clé
+     d'édition : « menu », « contact », « events » sont des noms techniques (7a-bis). */
+  const mot = opts.mot || nomDeLEcran(section) || opts.titre;
   return `<div class="feuille-cadre">
     <div class="f-tete">
       <div class="f-barre">
@@ -6590,7 +6591,7 @@ function feuilleCadreHTML(section, opts){
     </div>
     <div class="f-explic">
       ${opts.explic.map(p => '<p>' + _eT(p) + '</p>').join('')}
-      <button type="button" class="f-annuler-tout" id="feuilleAnnuler" onclick="annulerFeuille()" disabled>Annuler mes changements</button>
+      <button type="button" class="f-annuler-tout" id="feuilleAnnuler" onclick="annulerFeuille()" hidden>Annuler mes changements</button>
     </div>
     <div class="f-pub">
       <button type="button" class="btn btn--block btn-pub pub--en-ligne" id="btnFeuille" onclick="saveSection()" disabled>Tout est en ligne</button>
@@ -6598,7 +6599,7 @@ function feuilleCadreHTML(section, opts){
     </div>
     <div class="f-droite">
       <div class="feuille grain-papier" id="feuille"></div>
-      <p class="f-note">Ce que vos clients liront.</p>
+      ${opts.note ? '<p class="f-note">' + _eT(opts.note) + '</p>' : ''}
     </div>
   </div>`;
 }
@@ -6689,7 +6690,7 @@ function etatFeuille(){
   const envoyeSansPreuve = !!statutPublication[editeur.fichier];
   if (chip){ chip.className = 'chip ' + (n ? 'chip--a-voir' : 'chip--en-ligne'); chip.textContent = n ? 'Pas encore publié' : (envoyeSansPreuve ? 'Envoyé' : 'En ligne'); }
   const annuler = document.getElementById('feuilleAnnuler');
-  if (annuler) annuler.disabled = n === 0;
+  if (annuler) annuler.hidden = n === 0;   // n'apparaît que s'il y a des changements pas encore envoyés
   if (n === 0 && publicationAffichee(editeur.fichier)) return;
   if (n === 0 && envoyeSansPreuve) etatPublier('pub--en-ligne', 'Envoyé', 'Envoyé. La mise en ligne prend plus de temps que d’habitude, elle se fera seule.', false, IDS_FEUILLE);
   else if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', editeur.repos, false, IDS_FEUILLE);
@@ -6862,7 +6863,7 @@ function jourHTML(j, i){
   return `<li class="f-ligne f-jour${j.ouvert ? '' : ' f-jour--ferme'}${manque ? ' f-ligne--manque' : ''}" data-i="${i}">
     <span class="f-j-nom">${_eT(nom)}${auj ? '<span class="f-auj" aria-hidden="true"></span><span class="sr-only"> (aujourd’hui)</span>' : ''}</span>
     <div class="f-plages">${plages}</div>
-    <label class="f-ferme"><input type="checkbox" role="switch" data-action="ferme"${j.ouvert ? '' : ' checked'} aria-label="Fermé le ${_eA(nom.toLowerCase())}">
+    <label class="f-ferme"><input type="checkbox" role="switch" data-action="ferme"${j.ouvert ? '' : ' checked'} aria-label="${j.ouvert ? 'Fermer' : 'Ouvrir'} le ${_eA(nom.toLowerCase())}">
       <span class="f-ferme-piste" aria-hidden="true"></span><span class="f-ferme-mot">Fermé</span></label>
     <span class="f-manque">Il manque les heures</span>
   </li>`;
@@ -6891,6 +6892,7 @@ function ecouterHoraires(racine){
     if (e.target.dataset.action !== 'ferme') return;
     const li = e.target.closest('.f-jour'), j = horairesF.jours[+li.dataset.i];
     j.ouvert = !e.target.checked;                     // les plages restent dans le modèle : masquées, pas effacées
+    e.target.setAttribute('aria-label', (j.ouvert ? 'Fermer' : 'Ouvrir') + ' le ' + String(j.origine.jour || '').toLowerCase());
     li.classList.toggle('f-jour--ferme', !j.ouvert);
     li.classList.toggle('f-ligne--manque', j.ouvert && !j.plages.some(p => p.trim()));
     etatFeuille();
@@ -6983,7 +6985,7 @@ const EDITEURS_INFOS = {
     titre: 'Infos', fichier: 'general',
     cadre: { repos: 'Modifiez une information et le bouton s’allume.', explic: [
       'Touchez une information et tapez.',
-      'Le téléphone et l’adresse s’affichent partout sur le site ; la carte suit l’adresse.',
+      'Le téléphone et l’adresse s’affichent partout sur le site ; le plan suit l’adresse.',
       'Rien ne part sans le bouton Publier.'] },
     pret: () => !!contactF,
     vider(){ contactF = null; },

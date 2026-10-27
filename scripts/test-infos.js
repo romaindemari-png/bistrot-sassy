@@ -65,6 +65,10 @@ async function ouvrir(p, section){
    recevrait un clic destiné à une ligne qu'il recouvre (constaté : le samedi publiait la feuille). */
 const clic = async (p, sel, opts) => { await p.$eval(sel, el => el.scrollIntoView({ block: 'center' })); await p.click(sel, opts); };
 const remplacer = async (p, sel, texte) => { await clic(p, sel, { clickCount: 3 }); await p.keyboard.type(texte); };
+/* 7a-bis : le cadre. Le surtitre nomme la section comme le client (jamais la clé d'édition), pas de légende
+   « Ce que vos clients liront. » sous cette feuille, et « Annuler mes changements » absent tant que rien n'a changé. */
+const cadre = p => p.evaluate(() => ({ sur: document.querySelector('.f-sur').textContent, note: !!document.querySelector('.f-note'),
+  annuler: (b => b ? !b.hidden && getComputedStyle(b).display !== 'none' : null)(document.getElementById('feuilleAnnuler')) }));
 const etat = p => p.evaluate(() => ({ btn: document.getElementById('btnFeuille').textContent.trim(), actif: !document.getElementById('btnFeuille').disabled,
   phrase: document.getElementById('feuillePhrase').textContent, chip: document.getElementById('feuilleEtat').textContent }));
 const jour = (i, q = '') => `.f-jour[data-i="${i}"] ${q}`;
@@ -80,8 +84,20 @@ async function horaires(){
   const auj = await p.evaluate(() => [...document.querySelectorAll('.f-jour')].filter(li => li.querySelector('.f-auj')).map(li => li.querySelector('.f-j-nom').textContent.trim()));
   const attenduAuj = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'][(new Date().getDay() + 6) % 7];
   verdict('horaires · point du jour même', auj.length === 1 && auj[0].startsWith(attenduAuj), `${auj.join(', ') || 'aucun'} (attendu ${attenduAuj})`);
+  /* 7a-bis : cadre au repos */
+  const c0 = await cadre(p);
+  verdict('horaires · surtitre', /^05 · Horaires · /.test(c0.sur), `« ${c0.sur} »`);
+  verdict('horaires · pas de légende sous la feuille', !c0.note, c0.note ? '« Ce que vos clients liront. » PRÉSENTE' : 'absente');
+  verdict('horaires · « Annuler » absent au repos', c0.annuler === false, c0.annuler ? 'VISIBLE sans changement' : 'absent');
+  /* 7a-bis : « Fermé » ne se lit que sur un jour fermé ; l'interrupteur dit le geste */
+  const ferme = await p.evaluate(() => [...document.querySelectorAll('.f-jour')].map(li => ({ j: li.querySelector('.f-j-nom').textContent.replace(/\s*\(aujourd’hui\)/, '').trim(),
+    mot: getComputedStyle(li.querySelector('.f-ferme-mot')).display !== 'none', aria: li.querySelector('input[type=checkbox]').getAttribute('aria-label') })));
+  const okF = ferme.every(f => f.j === 'Samedi' ? (f.mot && f.aria === 'Ouvrir le samedi') : (!f.mot && f.aria === 'Fermer le ' + f.j.toLowerCase()));
+  verdict('horaires · « Fermé » seulement sur un jour fermé', okF, ferme.map(f => `${f.j} ${f.mot ? '« Fermé »' : '—'} [${f.aria}]`).join(' · '));
   /* 1. Les gestes */
   await remplacer(p, jour(1, '.f-plage'), '12h – 23h');                       // mardi
+  const c1 = await cadre(p);
+  verdict('horaires · « Annuler » dès un changement', c1.annuler === true, c1.annuler ? 'visible' : 'ABSENT');
   await clic(p, jour(5, '.f-ferme'));                                         // samedi : rouvert, sans heures
   await pause(80);
   const bloque = await etat(p);
@@ -92,6 +108,9 @@ async function horaires(){
     `« ${manque.msg} » · bouton « ${bloque.btn} » ${bloque.actif ? 'cliquable' : 'non cliquable'} · ${envois.length} envoi(s)`);
   await clic(p, jour(5, '.f-plage')); await p.keyboard.type('18h – 2h');
   await clic(p, jour(6, '.f-ferme'));                                         // dimanche : fermé
+  const dimF = await p.evaluate(() => { const li = document.querySelector('.f-jour[data-i="6"]');
+    return { mot: getComputedStyle(li.querySelector('.f-ferme-mot')).display !== 'none', aria: li.querySelector('input[type=checkbox]').getAttribute('aria-label') }; });
+  verdict('horaires · fermer fait paraître « Fermé »', dimF.mot && dimF.aria === 'Ouvrir le dimanche', `${dimF.mot ? '« Fermé » affiché' : 'RIEN'} · [${dimF.aria}]`);
   await clic(p, jour(0, '.f-ferme')); await clic(p, jour(0, '.f-ferme'));     // lundi : fermé puis rouvert
   const dim = await p.evaluate(() => { const li = document.querySelector('.f-jour[data-i="6"]'), i = li.querySelector('.f-plage');
     return { visible: getComputedStyle(li.querySelector('.f-plages')).display !== 'none', valeur: i.value, ferme: li.querySelector('input[type=checkbox]').checked }; });
@@ -116,6 +135,13 @@ async function horaires(){
 async function contact(){
   const { ctx, p, envois } = await page();
   if (!await ouvrir(p, 'contact')){ verdict('contact · feuille ouverte', false, 'aucune ligne de feuille — l’éditeur n’est pas une feuille'); return ctx.close(); }
+  /* 7a-bis : cadre au repos, et l'explication dit « le plan » (la carte, c'est le menu) */
+  const c0 = await cadre(p);
+  const explic = await p.$eval('.f-explic', el => el.textContent);
+  verdict('contact · surtitre', /^06 · Infos · /.test(c0.sur), `« ${c0.sur} »`);
+  verdict('contact · « le plan suit l’adresse »', /le plan suit l’adresse/.test(explic) && !/la carte suit/.test(explic), /le plan suit/.test(explic) ? 'oui' : 'NON');
+  verdict('contact · pas de légende sous la feuille', !c0.note, c0.note ? '« Ce que vos clients liront. » PRÉSENTE' : 'absente');
+  verdict('contact · « Annuler » absent au repos', c0.annuler === false, c0.annuler ? 'VISIBLE sans changement' : 'absent');
   /* 6. inputmode, tailles */
   const m = await p.evaluate(() => ({
     tel: document.getElementById('fi-telephone').getAttribute('inputmode'), mail: document.getElementById('fi-email').getAttribute('inputmode'),
@@ -140,6 +166,8 @@ async function contact(){
     verdict(`contact · avertit « ${val} »`, r.vu && re.test(r.msg) && r.couleur === violet && e.btn === 'Publier' && e.actif,
       `« ${r.msg} » (${r.couleur === violet ? '--violet-encre' : r.couleur}) · bouton « ${e.btn} » ${e.actif ? 'cliquable' : 'BLOQUÉ'}`);
   }
+  const c1 = await cadre(p);
+  verdict('contact · « Annuler » dès un changement', c1.annuler === true, c1.annuler ? 'visible' : 'ABSENT');
   await remplacer(p, '#fi-email', 'bonjour@bistrotsassy.fr');
   await remplacer(p, '#fi-instagram', 'https://www.instagram.com/bistrotsassy/');
   const ok = await av('instagram');

@@ -65,6 +65,10 @@ async function ouvrir(p){
 const clic = async (p, sel, opts) => { await p.$eval(sel, el => el.scrollIntoView({ block: 'center' })); await p.click(sel, opts); };
 const ligneDe = titre => `xpath/.//li[contains(@class,"f-ev")][.//input[@data-champ="titre" and @value="${titre}"]]`;
 const idDe = (p, titre) => p.evaluate(t => { const i = [...document.querySelectorAll('.f-ev input[data-champ="titre"]')].find(x => x.value === t); return i ? i.closest('.f-ev').dataset.id : null; }, titre);
+/* 7a-bis : le cadre. Le surtitre nomme la section comme le client (jamais la clé d'édition), pas de légende
+   « Ce que vos clients liront. » sous cette feuille, et « Annuler mes changements » absent tant que rien n'a changé. */
+const cadre = p => p.evaluate(() => ({ sur: document.querySelector('.f-sur').textContent, note: !!document.querySelector('.f-note'),
+  annuler: (b => b ? !b.hidden && getComputedStyle(b).display !== 'none' : null)(document.getElementById('feuilleAnnuler')) }));
 const etat = p => p.evaluate(() => ({ btn: document.getElementById('btnFeuille').textContent.trim(), actif: !document.getElementById('btnFeuille').disabled,
   phrase: document.getElementById('feuillePhrase').textContent, chip: document.getElementById('feuilleEtat').textContent }));
 const avenir = p => p.$$eval('.f-cat[data-partie="avenir"] .f-ev', ls => ls.map(l => (l.querySelector('[data-champ="titre"]') || {}).value || l.textContent.trim()));
@@ -72,6 +76,11 @@ const avenir = p => p.$$eval('.f-cat[data-partie="avenir"] .f-ev', ls => ls.map(
 async function gestes(){
   const { ctx, p, envois } = await page();
   if (!await ouvrir(p)){ verdict('feuille ouverte', false, 'pas de feuille « À venir » — l’éditeur n’est pas une feuille'); return ctx.close(); }
+  /* 7a-bis : cadre au repos */
+  const c0 = await cadre(p);
+  verdict('surtitre', /^04 · Événements · /.test(c0.sur), `« ${c0.sur} »`);
+  verdict('pas de légende sous la feuille', !c0.note, c0.note ? '« Ce que vos clients liront. » PRÉSENTE' : 'absente');
+  verdict('« Annuler » absent au repos', c0.annuler === false, c0.annuler ? 'VISIBLE sans changement' : 'absent');
   /* 2. Tri et repli */
   const a0 = await avenir(p);
   const passes = await p.evaluate(() => { const d = document.querySelector('.f-passes'); return d ? { ouvert: d.open, n: d.querySelector('.f-passes-n').textContent, lignes: d.querySelectorAll('.f-ev').length } : null; });
@@ -96,6 +105,8 @@ async function gestes(){
   await clic(p, `.f-ev[data-id="${idCon}"] [data-champ="description"]`, { clickCount: 3 });
   await p.keyboard.down('Meta'); await p.keyboard.press('KeyA'); await p.keyboard.up('Meta');
   await p.keyboard.type('Guitare, contrebasse et une voix.');
+  const c1 = await cadre(p);
+  verdict('« Annuler » dès un changement', c1.annuler === true, c1.annuler ? 'visible' : 'ABSENT');
   /* Passés : on déplie, « Tout retirer » */
   await clic(p, '.f-passes-titre'); await pause(80);
   await clic(p, '.f-tout-retirer'); await pause(80);
