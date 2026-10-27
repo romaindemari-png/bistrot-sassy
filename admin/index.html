@@ -612,6 +612,39 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
   .feuille{padding:22px 16px 14px;}
   .f-nom,.f-prix{font-size:24px;}
 }
+/* LES FEUILLES DES INFOS (bout 7a) : horaires et contact, sur le même papier, mêmes filets, même surlignage.
+   Pas de poignée ni de croix : une ligne = un jour ou une information, qu'on ne réordonne pas. */
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
+.f-jour,.f-info{padding:4px 12px 6px;}
+.f-jour{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nom ferme" "plages plages" "manque manque";align-items:center;column-gap:12px;}
+.f-j-nom{grid-area:nom;display:flex;align-items:center;gap:8px;min-height:44px;font:400 20px/1.2 var(--serif);}
+/* Le jour même : un point --en-ligne, cerclé d'encre pour se voir sur le papier (le jaune seul n'y tient pas). */
+.f-auj{width:10px;height:10px;border-radius:50%;background:var(--en-ligne);box-shadow:0 0 0 1.5px var(--encre);flex-shrink:0;}
+.f-plages{grid-area:plages;display:flex;gap:16px;min-width:0;}
+.f-plage{flex:1;min-width:0;font:400 20px/1.2 var(--serif);}
+.f-jour--ferme .f-plages{display:none;}   /* masquées, pas effacées : le modèle garde les heures */
+.f-jour .f-manque{grid-area:manque;}
+.f-ferme{grid-area:ferme;display:inline-flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;
+  font:500 14px/1 var(--sans);color:var(--papier-2);}
+.f-ferme input{position:absolute;opacity:0;width:1px;height:1px;}
+.f-ferme-piste{position:relative;width:38px;height:22px;border-radius:999px;border:1.5px solid var(--papier-2);flex-shrink:0;}
+.f-ferme-piste::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:var(--papier-2);transition:transform .15s;}
+.f-ferme input:checked + .f-ferme-piste{background:var(--encre);border-color:var(--encre);}
+.f-ferme input:checked + .f-ferme-piste::after{transform:translateX(16px);background:var(--papier);}
+.f-ferme input:checked ~ .f-ferme-mot{color:var(--encre);}
+.f-ferme input:focus-visible + .f-ferme-piste{outline:2px solid var(--violet-encre);outline-offset:2px;}
+.f-info{grid-template-columns:minmax(0,1fr);}
+.f-role{display:block;padding-top:8px;font:500 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--papier-2);}
+.f-info-val{width:100%;font:400 20px/1.2 var(--serif);}
+.f-info-texte{width:100%;resize:none;overflow:hidden;font:400 16px/1.35 var(--sans);}
+.f-sous{margin-top:14px;}
+.f-cat-titre--info{margin-left:12px;}
+.f-lignes + .f-cat{margin-top:22px;}
+@media(prefers-reduced-motion:reduce){ .f-ferme-piste::after{transition:none;} }
+@media(min-width:961px){
+  .f-jour{grid-template-columns:8.5em minmax(0,1fr) auto;grid-template-areas:"nom plages ferme" ". manque .";}
+  .f-j-nom,.f-plage,.f-info-val{font-size:24px;}
+}
 /* Le studio LIT les plats (bout 5) : plus d'ajout ni de suppression ; un lien ouvre l'éditeur de la source. */
 .dish-edit .inp[readonly]{cursor:default;}
 .studio-modifier{display:inline-flex;align-items:center;min-height:44px;margin-top:6px;padding:0;background:none;border:0;
@@ -969,13 +1002,13 @@ body.in-final .mini-preview{display:none;}
 /* ═══════════════════════════════════════════════════════════════════════
    CHAMPS DE SAISIE — UNE SEULE DÉFINITION (lot B)
    Il y en avait QUATRE pour le même geste : .inp (studio), .field-input (Mon site),
-   .hours-input (horaires) et les champs du login. Padding, police, hauteur et focus
+   .hours-input (horaires, remplacé par la feuille au bout 7a) et les champs du login. Padding, police, hauteur et focus
    tous différents. Mesuré : .inp 10/12 en Inter · .field-input 12/16 en Bricolage ·
    .hours-input 6/9 en Bricolage et haut de 37 px seulement (sous la cible de 44).
    Les NOMS de classe restent — ce sont des hooks JS (12 références) — mais ils ne
    portent plus AUCUN style propre : la règle ci-dessous les définit tous.
    ═══════════════════════════════════════════════════════════════════════ */
-.inp, .field-input, .hours-input,
+.inp, .field-input,
 #login-form input, #setpw-form input{
   min-height:44px;                                  /* cible tactile — .hours-input était à 37 px */
   border:1px solid var(--line);border-radius:var(--r-sm);
@@ -986,30 +1019,15 @@ body.in-final .mini-preview{display:none;}
   color:var(--ink);background:var(--blanc);
   transition:border-color .15s,box-shadow .15s;
 }
-/* Pleine largeur SAUF .hours-input : il vit dans une rangée flex (heure de début / de fin). */
 .inp, .field-input,
 #login-form input, #setpw-form input{width:100%;}
-/* Rangée des horaires = conteneur DENSE (case + jour + 2 heures sur UNE ligne). Les champs y sont
-   COMPRESSIBLES : ils prennent la place restante au lieu d'imposer leur largeur — sinon la rangée
-   déborde (mesuré : 376 px réclamés pour 340 disponibles). Hauteur, bordure, police et focus
-   restent ceux de tous les autres champs : seule la LARGEUR s'adapte au conteneur. */
-/* min-width EXPLICITE (2 champs de 56 px + l'écart) : `min-content` sur un input[type=time] est
-   bien plus large que sa largeur utile — il déclenchait le passage à la ligne sur TOUS les écrans,
-   y compris ceux où la rangée tient. Avec 120 px, elle ne wrappe que si elle ne peut vraiment pas. */
-.hours-inputs{flex:1 1 120px;min-width:120px;}   /* BASE 120px, pas `auto` : dans un conteneur qui
-   wrappe, le passage à la ligne se décide sur la taille de BASE (le contenu : ~228 px pour deux
-   input[type=time]), AVANT toute compression. Avec `auto`, la rangée wrappait sur TOUS les écrans. */
-.hours-input{flex:1;min-width:56px;padding-left:var(--sp-2);padding-right:var(--sp-2);}
-/* Écran étroit : plutôt que d'écraser les heures jusqu'à l'illisible (mesuré : 24 px à 320 px de
-   large), la rangée passe à la ligne. On ne sacrifie jamais la lisibilité d'une heure. */
-.hours-row{flex-wrap:wrap;}
 
-.inp::placeholder, .field-input::placeholder, .hours-input::placeholder,
+.inp::placeholder, .field-input::placeholder,
 #login-form input::placeholder, #setpw-form input::placeholder{color:var(--ink-2);}
 
 /* UN SEUL mécanisme de focus : les tokens --accent-*, qui basculent DÉJÀ avec le plan
    (cf. .lelab-plus dans :root). Les rgba() écrits en dur dans .plan-plus/.plan-lab sont morts. */
-.inp:focus, .field-input:focus, .hours-input:focus,
+.inp:focus, .field-input:focus,
 #login-form input:focus, #setpw-form input:focus{
   outline:none;border-color:var(--accent-bord);box-shadow:0 0 0 3px var(--accent-glow);
 }
@@ -1511,22 +1529,6 @@ body.dev-local::after{
 .btn-add{color:var(--accent-txt);}
 .btn-add:hover{border-color:var(--accent);background:var(--accent-soft);}
 .btn-save{margin-top:var(--sp-2);}   /* .btn-save : plus qu'un HOOK JS + une marge — le style vient de .btn */
-
-/* horaires (réutilise .toggle de la maquette) */
-/* ⚠️ JAMAIS D'OPACITY SUR DU TEXTE. Un jour fermé affichait ses heures à 30 % d'opacité : le tiret
-   tombait à 1,46:1 — illisible. Et l'opacité, posée sur le CONTENEUR, se multipliait en silence
-   avec l'alpha du token : invisible à la lecture du CSS.
-   Un jour fermé n'a pas d'heures GRISÉES. Il n'a PAS D'HEURES : il dit « Fermé ». C'est plus court
-   à lire, et ça se lit en plein soleil. Les <input> restent dans le DOM (masqués) : la sauvegarde
-   les relit inchangés, et rouvrir le jour restitue les heures saisies. */
-.hours-row{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-3) 0;border-bottom:1px solid var(--line);}
-.hours-closed{display:none;margin-left:auto;font-size:13px;font-weight:600;color:var(--ink-2);}
-.hours-row.is-closed .hours-inputs{display:none;}
-.hours-row.is-closed .hours-closed{display:block;}
-.hours-row:last-child{border-bottom:none;}
-.day-label{font-size:13.5px;font-weight:600;width:72px;flex-shrink:0;}   /* 92 px étaient réservés pour un mot qui en fait 65 */
-.hours-inputs{display:flex;align-items:center;gap:8px;margin-left:auto;}
-.hours-sep{color:var(--ink-2);}
 
 /* upload photo (simulation) */
 .photo-upload{border:1.5px dashed var(--line);border-radius:var(--r-sm);padding:24px;
@@ -5878,28 +5880,6 @@ function menuItem(num, nom, desc, prix, cat, origine){
     </div>`;
 }
 
-function hoursRow(day, open, from, to){
-  return `
-    <div class="hours-row${open ? '' : ' is-closed'}">
-      <span class="day-label">${day}</span>
-      <label class="toggle">
-        <input type="checkbox" ${open ? 'checked' : ''} onchange="toggleHours(this)" />
-        <span class="toggle-slider"></span>
-      </label>
-      <span class="hours-closed">Fermé</span>
-      <div class="hours-inputs">
-        <input class="hours-input" type="time" value="${from}" aria-label="${day} — heure d'ouverture" />
-        <span class="hours-sep" aria-hidden="true">–</span>
-        <input class="hours-input" type="time" value="${to}" aria-label="${day} — heure de fermeture" />
-      </div>
-    </div>`;
-}
-
-function toggleHours(checkbox){
-  // Masqué, PAS grisé : les <input> restent dans le DOM, la sauvegarde les relit, rouvrir restitue.
-  checkbox.closest('.hours-row').classList.toggle('is-closed', !checkbox.checked);
-}
-
 /* ═══ REGISTRE DE PICTOS — la config y pioche par NOM ═══════════════════════════════════════
    ⚠️ OUVERT PAR CONSTRUCTION. Ajouter un picto = ajouter UNE entrée ici, et l'appeler depuis
    config.json. Aucun autre code à toucher — ni les cards, ni les écrans, ni les garde-fous.
@@ -6260,7 +6240,8 @@ function lireCarte(){
 }
 
 /* ── Contenu des écrans d'édition ── */
-/* ⚠️ editScreens ne contient plus QUE les écrans SUR MESURE du socle (photos, horaires, contact).
+/* ⚠️ editScreens ne contient plus que le repli de la carte (un fork qui n'aurait rien déclaré). Horaires et
+   contact sont des feuilles (EDITEURS_INFOS, bout 7a) ; photos, ecranPhotosHTML().
    Les blocs de LISTE (dujour, events, cematin, arrivage…) n'y sont plus : leur écran est CONSTRUIT
    par ecranBlocHTML() depuis leur type et leurs textes. Le bloc « à catégories » (la carte) non
    plus : c'est la feuille, feuilleCadreHTML() (bout 5). Ajouter un bloc = une entrée dans config.json, ZÉRO ligne de code. */
@@ -6280,58 +6261,11 @@ const editScreens = {
       <button class="btn btn--block btn-save" onclick="saveSection()">Publier les modifications</button>
     `
   },
-  horaires: {
-    title: 'Horaires',
-    html: `
-      <p class="edit-intro">Indiquez vos jours et horaires d'ouverture.</p>
-      <div class="field-group">
-        <div class="field-group-title">Jours d'ouverture</div>
-        ${hoursRow('Lundi', false, '', '')}
-        ${hoursRow('Mardi', true, '12:00', '22:00')}
-        ${hoursRow('Mercredi', true, '12:00', '22:00')}
-        ${hoursRow('Jeudi', true, '12:00', '22:30')}
-        ${hoursRow('Vendredi', true, '12:00', '23:00')}
-        ${hoursRow('Samedi', true, '11:30', '23:30')}
-        ${hoursRow('Dimanche', true, '11:30', '22:00')}
-      </div>
-      <div class="field-group">
-        <div class="field-group-title">Message spécial</div>
-        <label class="field-label">Fermeture exceptionnelle / info</label>
-        <textarea class="field-input field-textarea" placeholder="Ex : Fermé le 25 décembre…"></textarea>
-      </div>
-      <button class="btn btn--block btn-save" onclick="saveSection()">Publier les modifications</button>
-    `
-  },
   /* ⚠️ REMPLACÉ PAR ecranPhotosHTML() — cf. ecranDe(). Le SLIDER est du gabarit DA (le hero,
      composé au design du site), pas du contenu client : il n'apparaît dans l'éditeur QUE si
      `photos.admin.sliderEditable: true` (ouverture au cas par cas). Par défaut, seule la galerie
      est éditable. Ce gabarit statique nommait le slider en dur ET sans condition — il ne pouvait
      donc pas respecter le verrou. Un template unique, dérivé de la config, prend le relais. */
-  contact: {
-    title: 'Contact',
-    html: `
-      <p class="edit-intro">Renseignez vos coordonnées et vos réseaux sociaux.</p>
-      <div class="field-group">
-        <div class="field-group-title">Coordonnées</div>
-        <label class="field-label">Téléphone</label>
-        <input class="field-input" id="f-contact-tel" type="tel" placeholder="Ex. 06 12 34 56 78" />
-        <label class="field-label">Email</label>
-        <input class="field-input" id="f-contact-email" type="email" placeholder="Ex. contact@votre-commerce.fr" />
-        <label class="field-label">Adresse</label>
-        <input class="field-input" id="f-contact-adresse" type="text" placeholder="Ex. 12 rue de la République, Votre ville" />
-        <label class="field-label">Lien Google Maps</label>
-        <input class="field-input" id="f-contact-maps" type="url" placeholder="https://maps.google.com/..." />
-      </div>
-      <div class="field-group">
-        <div class="field-group-title">Réseaux sociaux</div>
-        <label class="field-label">Instagram</label>
-        <input class="field-input" id="f-contact-instagram" type="text" placeholder="@votre_compte" />
-        <label class="field-label">Facebook</label>
-        <input class="field-input" id="f-contact-facebook" type="text" placeholder="facebook.com/votrepage" />
-      </div>
-      <button class="btn btn--block btn-save" onclick="saveSection()">Publier les modifications</button>
-    `
-  },
 };
 
 /* ── Du jour (éditeur) ── */
@@ -6471,7 +6405,12 @@ function nomDeLEcran(section){
 function ecranDe(section){
   const bloc = blocDeLEcran(section);
   if (bloc && TYPES_DE_BLOC[bloc.type]) return { title: bloc.label, html: ecranBlocHTML(bloc) };
-  if (bloc && bloc.type === 'categories')  return { title: bloc.label, html: feuilleCadreHTML(section, bloc), feuille: true };
+  if (bloc && bloc.type === 'categories')  return { title: bloc.label, html: feuilleCadreHTML(section, cadreCarte(bloc)), feuille: true };
+  /* Bout 7a : horaires et contact sont des feuilles, dérivées de celle de la carte (même cadre, même bouton). */
+  if (EDITEURS_INFOS[section]){
+    const titre = nomDeLEcran(section) || EDITEURS_INFOS[section].titre;
+    return { title: titre, html: feuilleCadreHTML(section, { ...EDITEURS_INFOS[section].cadre, titre }), feuille: true };
+  }
   if (section === 'photos') return { title: (bloc && bloc.label) || 'Photos', html: ecranPhotosHTML(bloc) };   // slider conditionné par config
   /* ⚠️ LE TITRE VIENT DE LA CONFIG, PLUS DE LA TABLE. `editScreens` porte des titres ÉCRITS EN DUR :
      l'écran de `contact` s'intitulait « Contact » pendant que sa card disait « Infos » — DEUX NOMS
@@ -6612,8 +6551,15 @@ function trouverLigne(id){
 const SVG_POIGNEE = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1.4"/><circle cx="11" cy="3" r="1.4"/><circle cx="5" cy="8" r="1.4"/><circle cx="11" cy="8" r="1.4"/><circle cx="5" cy="13" r="1.4"/><circle cx="11" cy="13" r="1.4"/></svg>';
 const SVG_CROIX = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2 2 12"/></svg>';
 
-/* Le cadre de l'écran : tête (retour, état, surtitre, titre), explication (desktop), bouton, la feuille. */
-function feuilleCadreHTML(section, bloc){
+/* Le cadre de l'écran : tête (retour, état, surtitre, titre), explication (desktop), bouton, la feuille.
+   Commun aux feuilles (carte, horaires, contact) : opts = { titre, explic: [3 phrases], repos }. */
+function cadreCarte(bloc){
+  return { titre: bloc.label || 'La carte', repos: 'Modifiez un plat et le bouton s’allume.', explic: [
+    'Touchez un nom, une précision ou un prix, et tapez.',
+    'La poignée à gauche d’un plat change son ordre dans la catégorie.',
+    'Rien ne part sans le bouton Publier.'] };
+}
+function feuilleCadreHTML(section, opts){
   const tuiles = (typeof tuilesDuSite === 'function') ? tuilesDuSite() : [];
   const i = tuiles.findIndex(t => t.edit === section);
   const num = i >= 0 ? String(i + 1).padStart(2, '0') + ' · ' : '';
@@ -6625,17 +6571,15 @@ function feuilleCadreHTML(section, bloc){
         <span class="chip chip--en-ligne" id="feuilleEtat">En ligne</span>
       </div>
       <p class="f-sur">${_eT(num + mot + ' · sur la page d’accueil')}</p>
-      <h1 class="f-titre">${_eT(bloc.label || 'La carte')}</h1>
+      <h1 class="f-titre">${_eT(opts.titre)}</h1>
     </div>
     <div class="f-explic">
-      <p>Touchez un nom, une précision ou un prix, et tapez.</p>
-      <p>La poignée à gauche d’un plat change son ordre dans la catégorie.</p>
-      <p>Rien ne part sans le bouton Publier.</p>
+      ${opts.explic.map(p => '<p>' + _eT(p) + '</p>').join('')}
       <button type="button" class="f-annuler-tout" id="feuilleAnnuler" onclick="annulerFeuille()" disabled>Annuler mes changements</button>
     </div>
     <div class="f-pub">
       <button type="button" class="btn btn--block btn-pub pub--en-ligne" id="btnFeuille" onclick="saveSection()" disabled>Tout est en ligne</button>
-      <p class="lelab-delai" id="feuillePhrase">Modifiez un plat et le bouton s’allume.</p>
+      <p class="lelab-delai" id="feuillePhrase">${_eT(opts.repos)}</p>
     </div>
     <div class="f-droite">
       <div class="feuille grain-papier" id="feuille"></div>
@@ -6644,24 +6588,41 @@ function feuilleCadreHTML(section, bloc){
   </div>`;
 }
 
+/* L'ÉDITEUR OUVERT (bout 7a) : la feuille de la carte et celles des infos partagent le cadre, le bouton
+   Publier, la garde de sortie et saveSection(). Chacune se décrit : fichier public, modèle, lecture,
+   nombre de changements, lignes à compléter, phrases. */
+let editeur = null;
+const EDITEUR_CARTE = {
+  fichier: 'carte',
+  pret: () => !!feuille,
+  init(racine){ feuille = modeleFeuille(sassyData.carte || {}); ecouterFeuille(racine); renderFeuille(); },
+  annuler(){ feuille = modeleFeuille(sassyData.carte || {}); renderFeuille(); },
+  changements: () => changementsFeuille(),
+  aCompleter: () => aCompleterFeuille(),
+  lire: () => lireFeuille(),
+  rendre: () => renderFeuille(),
+  apres(data, visible){ sassyData.carte = data; if (visible){ feuille = modeleFeuille(data); renderFeuille(); } },
+  repos: 'Modifiez un plat et le bouton s’allume.',
+  manque: m => [m + ' ligne' + (m > 1 ? 's' : '') + ' à compléter', 'Il manque un nom : rien ne part tant qu’un plat n’en a pas.'],
+};
+function editeurDe(section){ return estFeuille(section) ? EDITEUR_CARTE : (EDITEURS_INFOS[section] || null); }
 function initFeuille(section){
   const racine = document.getElementById('feuille');
   if (!racine) return;
-  if (!donneeChargee(section)){
-    feuille = null;
+  editeur = editeurDe(section);
+  if (!editeur || !donneeChargee(section)){
+    feuille = null; if (editeur && editeur.vider) editeur.vider();
     racine.innerHTML = '<p class="f-alerte" role="alert">' + _eT(messageDonneeAbsente(section)) + '</p>';
     etatPublier('pub--en-ligne', 'Lecture impossible', 'Rechargez la page avant de modifier.', false, IDS_FEUILLE);
+    editeur = null;
     return;
   }
-  feuille = modeleFeuille(sassyData.carte || {});
-  ecouterFeuille(racine);
-  renderFeuille();
+  editeur.init(racine);
   etatFeuille();
 }
 function annulerFeuille(){
-  if (!feuille) return;
-  feuille = modeleFeuille(sassyData.carte || {});
-  renderFeuille(); etatFeuille();
+  if (!editeur || !editeur.pret()) return;
+  editeur.annuler(); etatFeuille();
 }
 
 function ligneHTML(l){
@@ -6700,20 +6661,19 @@ function renderFeuille(focus){
 }
 /* L'état autour de la feuille : chip, bouton, phrase, « Annuler mes changements », et la garde de sortie. */
 function etatFeuille(){
-  if (!feuille) return;
-  const n = changementsFeuille(), m = aCompleterFeuille();
+  if (!editeur || !editeur.pret()) return;
+  const n = editeur.changements(), m = editeur.aCompleter();
   editDirty = n > 0;   // la garde (#quitConfirm) ne protège QUE de vrais changements
   const chip = document.getElementById('feuilleEtat');
   /* Envoyé sans preuve (en cours ou délai long) : ni la puce ni le bouton ne disent « en ligne ». */
-  const envoyeSansPreuve = !!statutPublication.carte;
+  const envoyeSansPreuve = !!statutPublication[editeur.fichier];
   if (chip){ chip.className = 'chip ' + (n ? 'chip--a-voir' : 'chip--en-ligne'); chip.textContent = n ? 'Pas encore publié' : (envoyeSansPreuve ? 'Envoyé' : 'En ligne'); }
   const annuler = document.getElementById('feuilleAnnuler');
   if (annuler) annuler.disabled = n === 0;
-  if (n === 0 && publicationAffichee('carte')) return;
+  if (n === 0 && publicationAffichee(editeur.fichier)) return;
   if (n === 0 && envoyeSansPreuve) etatPublier('pub--en-ligne', 'Envoyé', 'Envoyé. La mise en ligne prend plus de temps que d’habitude, elle se fera seule.', false, IDS_FEUILLE);
-  else if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', 'Modifiez un plat et le bouton s’allume.', false, IDS_FEUILLE);
-  else if (m > 0) etatPublier('pub--a-voir', m + ' ligne' + (m > 1 ? 's' : '') + ' à compléter',
-    'Il manque un nom : rien ne part tant qu’un plat n’en a pas.', false, IDS_FEUILLE);
+  else if (n === 0) etatPublier('pub--en-ligne', 'Tout est en ligne', editeur.repos, false, IDS_FEUILLE);
+  else if (m > 0){ const [lib, ph] = editeur.manque(m); etatPublier('pub--a-voir', lib, ph, false, IDS_FEUILLE); }
   else etatPublier('pub--a-voir', 'Publier', n + ' changement' + (n > 1 ? 's' : '') + ' · en ligne en moins d’une minute', true, IDS_FEUILLE);
 }
 
@@ -6808,69 +6768,221 @@ function ecouterFeuille(racine){
   });
 }
 
+/* ═══ LES FEUILLES DES INFOS — horaires et contact (bout 7a, LELAB-DESIGN §4) ═══════════════════════════
+   Dérivées de la feuille de la carte : même cadre, même bouton Publier, même garde. Le contenu s'écrit SUR
+   PLACE, une ligne à filet par jour ou par information, --surlignage sur la ligne active.
+   ⚠️ LE FORMAT NE CHANGE PAS, ET RIEN N'EST REFORMATÉ :
+      horaires.json = { jours: [{ jour, ouvert, heures }], note } — « heures » reste la chaîne du client
+      (« 10h30 – 23h00 », écrite comme elle s'affiche) ; plusieurs services séparés par « / » deviennent des
+      plages côte à côte, recollées avec le même séparateur. « Fermé » bascule `ouvert` et MASQUE les plages
+      sans les effacer : rouvrir un jour rend ses heures.
+      general.json = { telephone, email, adresse, maps_url, instagram, facebook } — toutes les clés sont
+      renvoyées, y compris celles que la feuille ne montre pas (maps_url) ; une clé absente du fichier
+      n'apparaît que si on la remplit. Publier sans rien changer réécrit le fichier à l'octet (test-infos). */
+function ecouterSurlignage(racine){
+  racine.addEventListener('focusin', e => {
+    const li = e.target.closest('.f-ligne');
+    racine.querySelectorAll('.f-ligne--active').forEach(x => { if (x !== li) x.classList.remove('f-ligne--active'); });
+    if (li && !li.classList.contains('f-ligne--retiree')) li.classList.add('f-ligne--active');
+  });
+  racine.addEventListener('focusout', e => {
+    const li = e.target.closest('.f-ligne');
+    if (li && !li.contains(e.relatedTarget)) li.classList.remove('f-ligne--active');
+  });
+}
+/* Le jour même, repéré par un point --en-ligne (lundi = 0, comme le fichier). */
+const JOURS_SEMAINE = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+function estAujourdhui(nomJour, maintenant){
+  const d = maintenant || new Date();
+  const norm = String(nomJour || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return norm === JOURS_SEMAINE[(d.getDay() + 6) % 7];
+}
+
+let horairesF = null;   // { origine, jours: [{ origine, ouvert, plages, sep }], note, base }
+const SEP_SERVICES = ' / ';
+function modeleHoraires(h){
+  const src = h || {};
+  const jours = (Array.isArray(src.jours) ? src.jours : []).map(j => {
+    const heures = typeof j.heures === 'string' ? j.heures : '';
+    const sep = heures.includes(SEP_SERVICES) ? SEP_SERVICES : null;
+    return { origine: j, ouvert: j.ouvert !== false, plages: sep ? heures.split(sep) : [heures], sep };
+  });
+  const m = { origine: src, jours, note: typeof src.note === 'string' ? src.note : '' };
+  m.base = jours.map(j => ({ ouvert: j.ouvert, heures: heuresDe(j) })).concat([{ note: m.note }]);
+  return m;
+}
+function heuresDe(j){ return j.plages.join(j.sep || ''); }
+function lireHoraires(){
+  const m = horairesF;
+  const jours = m.jours.map(j => {
+    const o = { ...j.origine };
+    if ('ouvert' in o || !j.ouvert) o.ouvert = j.ouvert;
+    const heures = heuresDe(j);
+    if ('heures' in o || heures) o.heures = heures;
+    return o;
+  });
+  const out = { ...m.origine, jours };
+  if ('note' in m.origine || m.note) out.note = m.note;
+  return out;
+}
+function changementsHoraires(){
+  const m = horairesF; let n = 0;
+  m.jours.forEach((j, i) => { const b = m.base[i]; if (j.ouvert !== b.ouvert || heuresDe(j) !== b.heures) n++; });
+  if (m.note !== m.base[m.base.length - 1].note) n++;
+  return n;
+}
+/* Un jour ouvert sans aucune heure ne part pas (même mécanisme que « Il manque le nom »). */
+function joursSansHeures(){ return horairesF ? horairesF.jours.filter(j => j.ouvert && !j.plages.some(p => p.trim())).length : 0; }
+function jourHTML(j, i){
+  const nom = j.origine.jour || '';
+  const auj = estAujourdhui(nom);
+  const manque = j.ouvert && !j.plages.some(p => p.trim());
+  const plages = j.plages.map((p, k) => `<input class="f-champ f-plage" data-k="${k}" value="${_eA(p)}" placeholder="10h – 22h"
+      aria-label="Heures du ${_eA(nom.toLowerCase())}${j.plages.length > 1 ? ', service ' + (k + 1) : ''}" autocomplete="off">`).join('');
+  return `<li class="f-ligne f-jour${j.ouvert ? '' : ' f-jour--ferme'}${manque ? ' f-ligne--manque' : ''}" data-i="${i}">
+    <span class="f-j-nom">${_eT(nom)}${auj ? '<span class="f-auj" aria-hidden="true"></span><span class="sr-only"> (aujourd’hui)</span>' : ''}</span>
+    <div class="f-plages">${plages}</div>
+    <label class="f-ferme"><input type="checkbox" role="switch" data-action="ferme"${j.ouvert ? '' : ' checked'} aria-label="Fermé le ${_eA(nom.toLowerCase())}">
+      <span class="f-ferme-piste" aria-hidden="true"></span><span class="f-ferme-mot">Fermé</span></label>
+    <span class="f-manque">Il manque les heures</span>
+  </li>`;
+}
+function rendreHoraires(){
+  const racine = document.getElementById('feuille');
+  if (!racine || !horairesF) return;
+  racine.innerHTML = `<ul class="f-lignes f-semaine">${horairesF.jours.map(jourHTML).join('')}</ul>
+    <ul class="f-lignes f-sous"><li class="f-ligne f-info">
+      <label class="f-role" for="fNoteHoraires">Sous les horaires</label>
+      <textarea class="f-champ f-info-texte" id="fNoteHoraires" data-champ="note" rows="1" placeholder="Une précision : cuisine, fermeture exceptionnelle…">${_eT(horairesF.note)}</textarea>
+    </li></ul>`;
+  racine.querySelectorAll('textarea').forEach(autoGrowTextarea);
+}
+function ecouterHoraires(racine){
+  ecouterSurlignage(racine);
+  racine.addEventListener('input', e => {
+    if (e.target.dataset.champ === 'note'){ horairesF.note = e.target.value; autoGrowTextarea(e.target); return etatFeuille(); }
+    const li = e.target.closest('.f-jour'); if (!li || !e.target.classList.contains('f-plage')) return;
+    const j = horairesF.jours[+li.dataset.i];
+    j.plages[+e.target.dataset.k] = e.target.value;   // ⚠️ tel que tapé : jamais reformaté
+    li.classList.toggle('f-ligne--manque', j.ouvert && !j.plages.some(p => p.trim()));
+    etatFeuille();
+  });
+  racine.addEventListener('change', e => {
+    if (e.target.dataset.action !== 'ferme') return;
+    const li = e.target.closest('.f-jour'), j = horairesF.jours[+li.dataset.i];
+    j.ouvert = !e.target.checked;                     // les plages restent dans le modèle : masquées, pas effacées
+    li.classList.toggle('f-jour--ferme', !j.ouvert);
+    li.classList.toggle('f-ligne--manque', j.ouvert && !j.plages.some(p => p.trim()));
+    etatFeuille();
+  });
+}
+
+let contactF = null;   // { origine, vals: {cle: valeur}, base }
+/* Une ligne par information, avec le RÔLE du texte sur le site, jamais le nom du champ. */
+const LIGNES_CONTACT = [
+  { cle: 'adresse',   role: 'Où vous trouver', ph: 'Numéro, rue, code postal, ville', mode: 'text', auto: 'street-address' },
+  { cle: 'telephone', role: 'Pour réserver par téléphone', ph: '04 91 00 00 00', mode: 'tel', auto: 'tel' },
+  { cle: 'email',     role: 'Pour vous écrire', ph: 'contact@votre-commerce.fr', mode: 'email', auto: 'email' },
+  { cle: 'instagram', role: 'Instagram', groupe: 'Vos réseaux', ph: 'https://www.instagram.com/…', mode: 'url', auto: 'url' },
+  { cle: 'facebook',  role: 'Facebook', groupe: 'Vos réseaux', ph: 'https://www.facebook.com/…', mode: 'url', auto: 'url' },
+];
+/* On ne valide que l'évident, et on ne bloque JAMAIS : un format étranger est averti, pas refusé. */
+function avertissementContact(cle, v){
+  const t = String(v || '').trim();
+  if (!t) return '';
+  if (cle === 'telephone'){
+    const chiffres = t.replace(/\D/g, '');
+    return (chiffres.length === 10 && !t.startsWith('+')) ? '' : 'Ce numéro n’a pas 10 chiffres. S’il est étranger, gardez-le tel quel.';
+  }
+  if (cle === 'email') return t.includes('@') ? '' : 'Il manque le @ de l’adresse e-mail.';
+  if (cle === 'instagram' || cle === 'facebook')
+    return /^https?:\/\//i.test(t) ? '' : 'Collez l’adresse complète, qui commence par https:// : sinon le bouton ne s’affiche pas.';
+  return '';
+}
+function modeleContact(g){
+  const src = g || {};
+  const vals = Object.fromEntries(LIGNES_CONTACT.map(l => [l.cle, typeof src[l.cle] === 'string' ? src[l.cle] : '']));
+  return { origine: src, vals, base: { ...vals } };
+}
+function lireContact(){
+  const out = { ...contactF.origine };
+  LIGNES_CONTACT.forEach(l => { const v = contactF.vals[l.cle]; if (l.cle in out || v) out[l.cle] = v; });
+  return out;
+}
+function changementsContact(){ return LIGNES_CONTACT.filter(l => contactF.vals[l.cle] !== contactF.base[l.cle]).length; }
+function infoHTML(l){
+  const v = contactF.vals[l.cle], av = avertissementContact(l.cle, v);
+  const type = l.mode === 'tel' ? 'tel' : 'text';   // type=email/url ferait valider (et réécrire) par le navigateur
+  return `<li class="f-ligne f-info${av ? ' f-ligne--manque' : ''}" data-cle="${l.cle}">
+    <label class="f-role" for="fi-${l.cle}">${_eT(l.role)}</label>
+    <input class="f-champ f-info-val" id="fi-${l.cle}" type="${type}" inputmode="${l.mode}" autocomplete="${l.auto}"
+      value="${_eA(v)}" placeholder="${_eA(l.ph)}" spellcheck="false">
+    <span class="f-manque">${_eT(av)}</span>
+  </li>`;
+}
+function rendreContact(){
+  const racine = document.getElementById('feuille');
+  if (!racine || !contactF) return;
+  const seuls = LIGNES_CONTACT.filter(l => !l.groupe), groupes = [...new Set(LIGNES_CONTACT.filter(l => l.groupe).map(l => l.groupe))];
+  racine.innerHTML = `<ul class="f-lignes">${seuls.map(infoHTML).join('')}</ul>` + groupes.map(g =>
+    `<section class="f-cat"><h2 class="f-cat-titre f-cat-titre--info">${_eT(g)}</h2>
+      <ul class="f-lignes">${LIGNES_CONTACT.filter(l => l.groupe === g).map(infoHTML).join('')}</ul></section>`).join('');
+}
+function ecouterContact(racine){
+  ecouterSurlignage(racine);
+  racine.addEventListener('input', e => {
+    const li = e.target.closest('.f-info'); if (!li || !li.dataset.cle) return;
+    contactF.vals[li.dataset.cle] = e.target.value;   // tel que tapé
+    const av = avertissementContact(li.dataset.cle, e.target.value);
+    li.classList.toggle('f-ligne--manque', !!av);
+    li.querySelector('.f-manque').textContent = av;
+    etatFeuille();
+  });
+}
+
+const EDITEURS_INFOS = {
+  horaires: {
+    titre: 'Horaires', fichier: 'horaires',
+    cadre: { repos: 'Modifiez un horaire et le bouton s’allume.', explic: [
+      'Touchez les heures d’un jour et tapez-les comme elles doivent s’afficher.',
+      'L’interrupteur ferme un jour sans effacer ses heures : rouvrez-le, elles reviennent.',
+      'Rien ne part sans le bouton Publier.'] },
+    pret: () => !!horairesF,
+    vider(){ horairesF = null; },
+    init(racine){ horairesF = modeleHoraires(sassyData.horaires); ecouterHoraires(racine); rendreHoraires(); },
+    annuler(){ horairesF = modeleHoraires(sassyData.horaires); rendreHoraires(); },
+    changements: () => changementsHoraires(),
+    aCompleter: () => joursSansHeures(),
+    lire: () => lireHoraires(),
+    rendre: () => rendreHoraires(),
+    apres(data, visible){ sassyData.horaires = data; if (visible){ horairesF = modeleHoraires(data); rendreHoraires(); } },
+    get repos(){ return this.cadre.repos; },
+    manque: m => [m + ' jour' + (m > 1 ? 's' : '') + ' sans heures', 'Un jour ouvert sans heures ne part pas : tapez-les, ou fermez le jour.'],
+  },
+  contact: {
+    titre: 'Infos', fichier: 'general',
+    cadre: { repos: 'Modifiez une information et le bouton s’allume.', explic: [
+      'Touchez une information et tapez.',
+      'Le téléphone et l’adresse s’affichent partout sur le site ; la carte suit l’adresse.',
+      'Rien ne part sans le bouton Publier.'] },
+    pret: () => !!contactF,
+    vider(){ contactF = null; },
+    init(racine){ contactF = modeleContact(sassyData.general); ecouterContact(racine); rendreContact(); },
+    annuler(){ contactF = modeleContact(sassyData.general); rendreContact(); },
+    changements: () => changementsContact(),
+    aCompleter: () => 0,   // on avertit, on ne bloque jamais
+    lire: () => lireContact(),
+    rendre: () => rendreContact(),
+    apres(data, visible){ sassyData.general = data; if (visible){ contactF = modeleContact(data); rendreContact(); } },
+    get repos(){ return this.cadre.repos; },
+    manque: () => ['', ''],
+  },
+};
+
 /* ── Pré-remplir avec les vrais JSON (sassyData défini au bloc 6) ── */
 function prefillSection(section){
-  const { general, horaires, carte } = sassyData;
+  const { carte } = sassyData;
 
-  if (section === 'contact' && general){
-    setTimeout(() => {
-      const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      set('f-contact-tel', general.telephone);
-      set('f-contact-email', general.email);
-      set('f-contact-adresse', general.adresse);
-      set('f-contact-maps', general.maps_url);
-      set('f-contact-instagram', general.instagram);
-      set('f-contact-facebook', general.facebook);
-    }, 50);
-  }
-
-  if (section === 'horaires' && horaires && horaires.jours){
-    setTimeout(() => {
-      /* ⚠️ BUG DE DONNÉES corrigé ici. C'était :
-             document.querySelector(`.hours-row:nth-child(${i+1}) …`)
-         nth-child compte parmi TOUS les frères — et le premier enfant du groupe est le TITRE, pas
-         une ligne. Donc nth-child(1) ne matchait RIEN (Lundi n'était jamais rempli) et chaque jour
-         recevait les horaires du jour SUIVANT. Le client qui enregistrait écrivait des horaires
-         DÉCALÉS D'UN JOUR dans son site. Invisible : l'état visuel venait du gabarit statique, pas
-         des données — les deux ne se contredisaient jamais à l'écran.
-         On indexe la COLLECTION des lignes : elle ne dépend d'aucun frère. */
-      const rows = document.querySelectorAll('.hours-row');
-      horaires.jours.forEach((j, i) => {
-        const row = rows[i];
-        if (!row) return;
-        const checkbox = row.querySelector('input[type="checkbox"]');
-        const inputs = row.querySelectorAll('.hours-input');
-        if (checkbox){
-          checkbox.checked = j.ouvert;
-          row.classList.toggle('is-closed', !j.ouvert);   // l'état VISUEL suit la donnée, pas le gabarit
-        }
-        row.dataset.origine = j.heures || '';   // ⚠️ l'écriture EXACTE du client (« 8h – 19h » ou « 7h30 – 19h30 »)
-        if (inputs[0] && j.heures){
-          /* 🐛 BUG DE DONNÉES. C'était : s.trim().replace('h', ':') → « 8h » devenait « 8:00 »… non :
-             « 8h » devenait « 8: », et « 7h30 » devenait « 7:30 ». Or un <input type="time"> exige
-             HH:MM ZÉRO-PADÉ : « 7:30 » est INVALIDE, le navigateur le REJETTE EN SILENCE et le champ
-             reste VIDE. TOUTE HEURE AVANT 10h était effacée — et le garde-fou « heures manquantes »
-             bloquait alors la publication, sans que le client comprenne.
-             ⚠️ Corrigé chez Masa le 13/07 (une boulangerie ouvre à 7h30) et JAMAIS REMONTÉ AU MASTER.
-             Trouvé par l'aller-retour neutre : l'éditeur d'horaires ne postait RIEN. */
-          const versInput = (x) => {
-            const [h, m] = x.trim().replace('h', ':').split(':');
-            return h.padStart(2, '0') + ':' + (m || '00').padStart(2, '0');   // « 7h30 » → « 07:30 »
-          };
-          const parts = j.heures.split('–').filter(x => x.trim());
-          if (parts[0]) inputs[0].value = versInput(parts[0]);
-          if (parts[1]) inputs[1].value = versInput(parts[1]);
-        }
-      });
-      const note = document.querySelector('#edit-body textarea');
-      if (note && horaires.note) note.value = horaires.note;
-    }, 50);
-  }
-
-  /* ⚠️ CETTE BRANCHE NOMMAIT LES TROIS CATÉGORIES D'UN RESTAURANT — et les repérait PAR INDEX
-     (sections[0], [1], [2]). Elle réécrivait aussi le HTML de chaque groupe, en dupliquant le
-     gabarit de menuItem(). Elle appelle désormais prefillCarte(), qui ne connaît que ce que la
-     config déclare, et qui repère chaque groupe par SA CLÉ (data-cat), jamais par sa position. */
   if (section === 'menu' && carte && !estFeuille(section)){   // la feuille se remplit elle-même (initFeuille)
     setTimeout(() => {
       prefillCarte();
@@ -6952,11 +7064,12 @@ async function saveSection(){
   }
   /* LA FEUILLE (bout 5) : un plat sans nom n'est PAS publié — la ligne le dit, le bouton compte les lignes
      à compléter, et rien ne part. Sinon, le bouton à états passe à « Publication… ». */
-  const enFeuille = estFeuille(currentSection) && !!feuille;
+  const enFeuille = !!editeur && editeur === editeurDe(currentSection) && editeur.pret();
   if (enFeuille){
-    if (aCompleterFeuille() > 0){ renderFeuille(); etatFeuille(); return; }
+    if (editeur.aCompleter() > 0){ editeur.rendre(); etatFeuille(); return; }
   }
-  const pub = enFeuille ? debutPublication('carte', IDS_FEUILLE) : null;
+  const ed = enFeuille ? editeur : null;   // l'éditeur qui envoie (on peut en ouvrir un autre pendant l'envoi)
+  const pub = ed ? debutPublication(ed.fichier, IDS_FEUILLE) : null;
   const btn = enFeuille ? null : document.querySelector('#screen-edit .btn-save');
   const origLabel = btn ? btn.textContent : '';
   if (btn){ btn.textContent = 'Publication…'; btn.disabled = true; }
@@ -6966,59 +7079,10 @@ async function saveSection(){
 
     let data = {};
 
-    if (currentSection === 'contact'){
-      data = {
-        telephone: document.getElementById('f-contact-tel')?.value || '',
-        email: document.getElementById('f-contact-email')?.value || '',
-        adresse: document.getElementById('f-contact-adresse')?.value || '',
-        maps_url: document.getElementById('f-contact-maps')?.value || '',
-        instagram: document.getElementById('f-contact-instagram')?.value || '',
-        facebook: document.getElementById('f-contact-facebook')?.value || ''
-      };
-    }
-
-    if (currentSection === 'horaires'){
-      const rows = document.querySelectorAll('.hours-row');
-      // "12:00" → "12h00" · "07:30" → "7h30" : on RETIRE le zéro de tête que <input type="time">
-      // impose, pour réécrire EXACTEMENT le format d'origine du client. Sans ça, ouvrir l'écran et
-      // publier sans rien changer réécrirait « 8h – 19h » en « 08h – 19h » sur le site.
-      const toHhMM = t => t.replace(':', 'h').replace(/^0/, '');
-      let heuresManquantes = false;
-      /* ⚠️ <input type="time"> IMPOSE les minutes : « 8h » devient « 08:00 », qu'on réécrirait
-         « 8h00 ». Le client avait écrit « 8h ». Un champ qu'on N'A PAS TOUCHÉ doit se réécrire
-         TEL QUEL — sinon ouvrir un écran et publier sans rien changer réécrit son fichier, pollue
-         son historique git, et modifie le texte affiché sur son site. */
-      const versInput = (x) => {
-        const [h, m] = x.trim().replace('h', ':').split(':');
-        return h.padStart(2, '0') + ':' + (m || '00').padStart(2, '0');
-      };
-      const jours = Array.from(rows).map(row => {
-        const label = row.querySelector('.day-label')?.textContent || '';
-        const ouvert = row.querySelector('input[type="checkbox"]')?.checked || false;
-        const inputs = row.querySelectorAll('.hours-input');
-        const from = inputs[0]?.value || '';
-        const to = inputs[1]?.value || '';
-        if (ouvert && (!from || !to)) heuresManquantes = true;
-        if (!ouvert) return { jour: label, ouvert, heures: '' };
-        const origine = row.dataset.origine || '';
-        const p = origine.split('–').filter(x => x.trim());
-        const inchange = p.length === 2 && versInput(p[0]) === from && versInput(p[1]) === to;
-        return { jour: label, ouvert, heures: inchange ? origine : `${toHhMM(from)} – ${toHhMM(to)}` };
-      });
-      // Garde-fou : un jour ouvert doit avoir ses deux heures
-      if (heuresManquantes){
-        showToast('⚠️ Remplis les heures pour les jours ouverts');
-        if (btn){ btn.textContent = origLabel; btn.disabled = false; }
-        return;
-      }
-      const note = document.querySelector('#edit-body textarea')?.value || '';
-      data = { jours, note };
-    }
-
     /* ⚠️ LE CHEMIN QUI ÉCRIT SON FICHIER. Il écrivait { entrees, plats, desserts } EN DUR, lus PAR
        INDEX — et il DÉTRUISAIT toute clé d'un plat que l'éditeur n'affiche pas. lireCarte() émet
        les clés que la CONFIG déclare, dans l'ordre de la CONFIG, et réémet l'origine de chaque ligne. */
-    if (enFeuille) data = lireFeuille();
+    if (ed) data = ed.lire();
     else if (currentSection === 'menu'){
       data = lireCarte();
     }
@@ -7044,9 +7108,7 @@ async function saveSection(){
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erreur serveur');
 
-    if (currentSection === 'contact') sassyData.general = { ...sassyData.general, ...data };
-    if (currentSection === 'horaires') sassyData.horaires = data;
-    if (currentSection === 'menu' || enFeuille) sassyData.carte = data;
+    if (currentSection === 'menu' && !ed) sassyData.carte = data;
     if (blocEnCours && TYPES_DE_BLOC[blocEnCours.type]) sassyData[blocEnCours.cle] = data;
     if (currentSection === 'photos') sassyData.photos = data;
 
@@ -7068,9 +7130,8 @@ async function saveSection(){
        On ne ferme donc QUE si l'on est toujours sur l'écran qu'on vient d'enregistrer. */
     /* La feuille RESTE ouverte : « ✓ Envoyé » (écrit, pas encore visible), puis le repos après 3 s (§6).
        Elle repart de la carte qu'on vient d'envoyer : c'est la nouvelle référence. */
-    if (enFeuille){
-      feuille = modeleFeuille(data);
-      renderFeuille();
+    if (ed){
+      ed.apres(data, editeur === ed);  // sassyData ; et la feuille repart de l'envoi si elle est toujours ouverte
       publicationEnvoyee(pub, data);   // « Envoyé · mise en ligne… », puis la relecture du fichier public
       etatFeuille();
       return;
@@ -7218,7 +7279,7 @@ function debutPublication(fichier, ids){
   return pub;
 }
 function reposApres(pub){
-  if (pub.ids === IDS_FEUILLE){ if (feuille) etatFeuille(); }
+  if (pub.ids === IDS_FEUILLE){ if (editeur && editeur.fichier === pub.fichier) etatFeuille(); }
   else updateDirtyIndicator();
 }
 /* save-data a répondu 200 : on sait ce qui doit apparaître ; on va le constater. */
