@@ -1097,7 +1097,7 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-actions{display:flex;align-items:center;gap:12px;padding:8px 10px 5px;}
 .ig-actions svg{width:20px;height:20px;}
 .ig-likes{font-size:11.5px;font-weight:600;padding:0 10px;}
-.ig-likes.ig-time{font-weight:400;color:#8e8e8e;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}   /* horodatage honnête (plus de faux likes) */
+.ig-likes.ig-time{font-weight:400;color:#737373;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}   /* horodatage honnête (plus de faux likes) */
 /* ⚠️ L'APERÇU MENTAIT. Il recevait la légende ENTIÈRE, que .phone-screen (hauteur figée, overflow
    hidden) rognait SANS AUCUN SIGNE : jusqu'à 1612 px de texte simplement disparus. Le post final,
    lui, tronque proprement et propose un « … plus ». Un affichage doit dire la VÉRITÉ (LELAB.md) :
@@ -1340,6 +1340,27 @@ body[data-pas="3"] .studio-pas span{background:var(--en-ligne);}
 .sujet[aria-disabled="true"]{background:transparent;color:var(--texte);cursor:default;
   border:1.5px dashed var(--contour);border-color:color-mix(in srgb,var(--texte) 30%,transparent);}
 .sujet[aria-disabled="true"] .sujet-s{color:var(--texte-2);}
+/* ⚠️ LA NUIT, DANS LA PIÈCE JAUNE, LES TEXTES SECONDAIRES POSÉS SUR LE FOND PASSENT EN --texte (décidé le 28/10).
+   Mesure du 28/10 : sujets sans matière 3,18 à 3,85 en réel (le grain papier de leur carte en contour éclaircit le
+   fond) ; les autres passent en réel au repos (4,55 à 10,82) mais tombent à 3,48 sur la borne (cœur du flou jaune
+   .30 + grain p99), et le flou dérive. Aucun token ne change, le flou ne bouge pas ; le jour garde --texte-2. */
+body.ecran-insta .sujet[aria-disabled="true"] .sujet-s,
+body.ecran-insta #screen-studio .studio-sub,
+body.ecran-insta .studio-promesse,
+body.ecran-insta #screen-studio .slide-count,
+body.ecran-insta .apercu-legende{color:var(--texte);}
+html[data-chromie="jour"] body.ecran-insta .sujet[aria-disabled="true"] .sujet-s,
+html[data-chromie="jour"] body.ecran-insta #screen-studio .studio-sub,
+html[data-chromie="jour"] body.ecran-insta .studio-promesse,
+html[data-chromie="jour"] body.ecran-insta #screen-studio .slide-count,
+html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);}
+@media (prefers-color-scheme:light){
+  html:not([data-chromie]) body.ecran-insta .sujet[aria-disabled="true"] .sujet-s,
+  html:not([data-chromie]) body.ecran-insta #screen-studio .studio-sub,
+  html:not([data-chromie]) body.ecran-insta .studio-promesse,
+  html:not([data-chromie]) body.ecran-insta #screen-studio .slide-count,
+  html:not([data-chromie]) body.ecran-insta .apercu-legende{color:var(--texte-2);}
+}
 .sujet[aria-disabled="true"] .sujet-fleche{display:none;}
 
 /* Pas 2 — l'aperçu en grand (téléphone), ce qui le remplit */
