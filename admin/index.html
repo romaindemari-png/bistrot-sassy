@@ -1287,7 +1287,7 @@ body[data-pas="3"] .studio-pas span{background:var(--en-ligne);}
 .studio-entree{margin:0;padding-top:.12em;font:400 46px/.94 var(--serif);letter-spacing:-.025em;color:var(--texte);text-wrap:balance;}
 #screen-studio .studio-q{margin:0;padding-top:.12em;font:400 46px/.94 var(--serif);letter-spacing:-.025em;color:var(--texte);}   /* même taille que l'entrée (maquette) */
 .studio-k{display:none;}
-.sur-visuel{display:none;}   /* téléphone : le visuel seul ; « Modifier dans la carte » en lien sous lui */
+.studio-sub--desk{display:none;}   /* « Vos couleurs et votre typo… » : la colonne desktop seulement (canvas) */
 #screen-studio .studio-sub{margin:8px 0 0;font-size:14px;line-height:1.45;color:var(--texte-2);}
 .studio-note{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--texte-2);}
 
@@ -1343,6 +1343,53 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
 .apercu-place .phone-screen.story{aspect-ratio:9/16;width:min(calc(100vw - 32px),calc(var(--apercu-h,440px) * 9 / 16));}
 #screen-studio .slide-controls{margin-top:12px;}
 .phone-stage{position:relative;width:100%;display:flex;align-items:center;justify-content:center;}
+/* ═══ LE CADRE INSTAGRAM DE L'APERÇU (repris le 28/10) : desktop, en Post seulement ════════════════════════
+   Pseudo réel (ou nom du commerce), image, icônes, horodatage, légende — qui suit le texte au pas 3. En story, le
+   visuel seul plein écran ; dans le pas 2 du téléphone, le visuel seul. */
+.ig-top{display:flex;align-items:center;gap:8px;padding:10px 11px;}
+.ig-ava{width:28px;height:28px;border-radius:var(--r-round);background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2px;flex-shrink:0;}
+.ig-ava div{width:100%;height:100%;border-radius:var(--r-round);background:var(--gris-card) center/cover;border:1.5px solid #fff;}
+.ig-name{font-size:11.5px;font-weight:600;flex:1;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.ig-name .loc{font-size:10.5px;font-weight:400;color:#737373;}
+.ig-live-d{width:6px;height:6px;border-radius:var(--r-round);background:var(--green);flex-shrink:0;}
+.ig-more{color:#262626;font-size:16px;letter-spacing:1px;}
+.ig-dots{display:none;justify-content:center;gap:5px;padding:7px 0 3px;}
+.ig-dots .dot{width:6px;height:6px;border-radius:var(--r-round);background:#cfcfcf;cursor:pointer;transition:background .15s,transform .15s;}
+.ig-dots .dot.on{background:#1877F2;transform:scale(1.3);}
+.ig-actions{display:flex;align-items:center;gap:12px;padding:8px 10px 5px;}
+.ig-actions svg{width:20px;height:20px;}
+.ig-actions .sp{flex:1;}
+.ig-likes{font-size:11.5px;font-weight:600;padding:0 10px;}
+.ig-likes.ig-time{font-weight:400;color:#737373;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}   /* le gris d'Instagram, 4,74:1 */
+.ig-cap{font-size:11.5px;line-height:1.4;padding:4px 10px 10px;color:#262626;}
+.ig-cap b{font-weight:600;}
+.ig-cap b[hidden]{display:none;}   /* un display d'auteur bat `hidden` : la règle va avec l'attribut */
+.ig-more-lnk{color:#737373;cursor:pointer;}   /* « plus » : le même gris d'Instagram (#8e8e8e : 3,28:1) */
+.phone-screen.story .ig-top,.phone-screen.story .ig-actions,.phone-screen.story .ig-likes,.phone-screen.story .ig-cap,.phone-screen.story .ig-dots,
+.apercu-place .ig-top,.apercu-place .ig-actions,.apercu-place .ig-likes,.apercu-place .ig-cap,.apercu-place .ig-dots{display:none!important;}
+
+/* ═══ PAS 2 : LES MISES EN PAGE — silhouettes au format du post (canvas « Mon Instagram ») ══════════════════ */
+.mises{margin-top:16px;}
+.mises-rang{display:flex;gap:10px;justify-content:center;}
+.mise{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;background:none;border:0;color:var(--texte);font:inherit;cursor:default;}
+.silo{display:flex;flex-direction:column;gap:3px;height:82px;aspect-ratio:4/5;padding:7px;border-radius:9px;background:var(--encre);
+  border:2.5px solid transparent;box-sizing:border-box;position:relative;overflow:hidden;}
+.mises[data-fmt="story"] .silo{aspect-ratio:9/16;}
+.silo i{display:block;height:6px;border-radius:2px;background:var(--papier);width:100%;}
+.silo i.s-l{height:3px;width:60%;background:color-mix(in srgb,var(--papier) 60%,transparent);}
+.silo i.s-80{width:80%;} .silo i.s-90{width:90%;} .silo i.s-70{width:70%;} .silo i.s-40{width:40%;} .silo i.s-60{width:60%;}
+.silo i.s-bas{margin-top:auto;width:50%;}
+.silo .s-centre{margin:auto 0;display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;}
+.silo .s-photo{position:absolute;inset:6px;border-radius:5px;background:linear-gradient(160deg,var(--violet-encre),var(--a-voir));}
+.silo .s-pied{position:relative;margin-top:auto;display:flex;flex-direction:column;gap:3px;}
+.mise[aria-pressed="true"] .silo{border-color:var(--en-ligne);}
+/* Indisponible : la même règle que les sujets du pas 1 — contour en pointillés sur le fond, rien de peint dedans. */
+.mise[aria-disabled="true"] .silo{background:transparent;border:1.5px dashed var(--contour);border-color:color-mix(in srgb,var(--texte) 30%,transparent);}
+.mise[aria-disabled="true"] .silo i,.mise[aria-disabled="true"] .silo .s-photo{background:color-mix(in srgb,var(--texte) 22%,transparent);}
+.mise-n{font:500 13px/1.2 var(--sans);color:var(--texte);}
+.mise-b{font:500 11px/1.2 var(--sans);color:var(--texte);margin-top:-3px;}
+.mises-l{margin:12px 0 0;text-align:center;font:400 13px/1.4 var(--sans);color:var(--texte);}
+#screen-studio .mises .studio-note{text-align:center;color:var(--texte);}
 /* L'aperçu est un écran Instagram : son texte est celui d'Instagram, pas le crème du studio (hérité, il disparaissait sur le blanc). */
 #screen-studio .phone-screen{color:#262626;}
 #screen-studio .field{margin-top:18px;}
@@ -1414,25 +1461,23 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
   .studio-wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:72px;padding:0 32px;align-items:start;}
   .compose{max-width:640px;padding:16px 0 0;}
   .apercu-col{display:flex;flex-direction:column;align-items:center;gap:14px;position:sticky;top:24px;padding-top:16px;}
-  .apercu-col .phone{width:auto;padding:14px;border-radius:52px;background:#0E0B14;box-shadow:0 40px 80px -36px rgba(0,0,0,.9),inset 0 0 0 1px rgba(244,239,230,.1);}
+  /* Plus de cadre noir (28/10) : l'écran seul, coins arrondis, une ombre large et diffuse, aucune bordure. */
+  .apercu-col .phone{width:auto;padding:0;border-radius:0;background:none;box-shadow:none;}
   /* L'écran du téléphone : 590 px de haut au plus, moins si la fenêtre est basse (1280 × 800 : cadre, compteur et
      légende tiennent sans défiler) ; sa largeur suit le 9:16 de l'écran. */
   .apercu-col .phone-screen{--ecran-h:min(590px,calc(100vh - 250px));height:var(--ecran-h);width:calc(var(--ecran-h) * 9 / 16);
-    border-radius:40px;overflow:hidden;background:var(--encre);
+    border-radius:32px;overflow:hidden;background:var(--encre);box-shadow:0 50px 110px -30px rgba(0,0,0,.7);
     display:flex;flex-direction:column;justify-content:center;}
+  /* Post : l'écran Instagram (pseudo, image, icônes, légende), en haut, sur blanc. Story : le visuel seul, plein écran. */
+  .apercu-col .phone-screen:not(.story){background:#fff;justify-content:flex-start;}
   .apercu-col .phone-screen > .ig-img,.apercu-col .phone-screen > .ig-typo{width:100%;flex:none;}
   .studio-k{display:block;margin:0 0 10px;font:600 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--texte-2);}
-  .sur-visuel{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;
-    border-top:1px solid color-mix(in srgb,var(--texte) 18%,transparent);}
-  .sur-visuel[hidden]{display:none;}
-  .sv-ligne{display:flex;align-items:center;gap:14px;width:100%;min-height:52px;padding:10px 2px;background:none;border:0;cursor:pointer;text-align:left;
-    color:var(--texte);border-bottom:1px solid color-mix(in srgb,var(--texte) 18%,transparent);font:inherit;}
-  .sv-t{flex:1;min-width:0;font:400 22px/1.15 var(--serif);}
-  .sv-p{font:500 14px/1 var(--sans);}
-  .sv-ligne svg{width:14px;height:14px;flex:none;}
-  .sv-ligne:hover .sv-t{text-decoration:underline;text-underline-offset:3px;}
-  .sv-note{padding:14px 2px 0;font:400 14px/1.45 var(--sans);color:var(--texte);}
-  #screen-studio #studioModifier{display:none;}   /* desktop : les lignes ci-dessus mènent déjà à la carte */
+  .studio-sub--desk{display:block;font-size:17px;max-width:40ch;}
+  .mises{margin-top:26px;}
+  .mises-rang{gap:14px;justify-content:flex-start;}
+  .mises-l,#screen-studio .mises .studio-note{text-align:left;}
+  .mises .silo{height:128px;padding:10px;gap:5px;border-radius:12px;}
+  .mises .mise-n{font-size:14px;}
   .apercu-legende{margin:0;font-size:13px;color:var(--texte-2);}
   .studio-entree{font-size:72px;}
   #screen-studio .studio-q{font-size:72px;}
@@ -1587,10 +1632,31 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
           <!-- PAS 2 · LE VISUEL — l'aperçu en grand (téléphone) ; ce qui le remplit (photo, texte). -->
           <div class="step-block" data-step-id="page">
             <p class="studio-k">2 sur 3</p>
-            <h2 class="studio-q">Votre visuel.</h2>
+            <h2 class="studio-q">Quelle mise en page ?</h2>
+            <p class="studio-sub studio-sub--desk">Vos couleurs et votre typo ne changent pas. Seule la composition.</p>
             <div class="apercu-place" id="apercuPlace"></div>
-            <!-- Desktop : ce qui est sur le visuel, chaque ligne mène là où on le modifie (renderSurVisuel). -->
-            <ul class="sur-visuel" id="surVisuel" hidden></ul>
+            <!-- LES MISES EN PAGE (canvas « Mon Instagram », pas 2). Classique = la composition actuelle du moteur, choisie.
+                 Centré et Pleine photo : visibles, NON choisissables tant que le bout de DA des compositions n'est pas fait
+                 (aria-disabled, aucun effet au toucher, même règle que les sujets indisponibles). Le format (9:16 / 4:5)
+                 suit currentFmt (data-fmt, posé par renderStudio). -->
+            <div class="mises" id="mises" data-fmt="portrait">
+              <div class="mises-rang" role="group" aria-label="Mise en page">
+                <button type="button" class="mise" data-mise="classique" aria-pressed="true">
+                  <span class="silo silo--classique" aria-hidden="true"><i class="s-l"></i><i class="s-t"></i><i class="s-t s-80"></i><i class="s-l s-bas"></i></span>
+                  <span class="mise-n">Classique</span>
+                </button>
+                <button type="button" class="mise" data-mise="centre" aria-disabled="true">
+                  <span class="silo silo--centre" aria-hidden="true"><span class="s-centre"><i class="s-l s-40"></i><i class="s-t s-90"></i><i class="s-t s-70"></i></span></span>
+                  <span class="mise-n">Centré</span><span class="mise-b">Bientôt</span>
+                </button>
+                <button type="button" class="mise" data-mise="pleine" aria-disabled="true">
+                  <span class="silo silo--pleine" aria-hidden="true"><span class="s-photo"></span><span class="s-pied"><i class="s-t s-90"></i><i class="s-l s-60"></i></span></span>
+                  <span class="mise-n">Pleine photo</span><span class="mise-b">Bientôt</span>
+                </button>
+              </div>
+              <p class="mises-l">Classique · votre mise en page habituelle</p>
+              <p class="studio-note" id="storyNote" hidden>La suite ne tient pas dans une story : passez en Post pour toute la carte.</p>
+            </div>
 
             <!-- PHOTO (thèmes photo) -->
             <div id="photoZone" style="display:none;">
@@ -1669,6 +1735,11 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
             <button type="button" class="slide-arrow-m" id="slidePrevM" onclick="studioSlideNav(-1)" aria-label="Image précédente">‹</button>
             <div class="phone">
             <div class="phone-screen">
+              <div class="ig-top">
+                <div class="ig-ava"><div></div></div>
+                <div class="ig-name"><span class="loc"></span></div>
+                <div class="ig-more">···</div>
+              </div>
               <div class="ig-img" id="igPhoto" style="display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div><div class="ig-drag-hint" id="igDragHint">✥ Glissez pour cadrer</div></div>
               <!-- ⚠️ LE REPLI BRUYANT : si le moteur v2 ne peut pas peindre, on le DIT ici (accident du 31/07). -->
               <div class="v2-repli" id="v2Repli" hidden></div>
@@ -1680,6 +1751,16 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
                 </div>
               </div>
               <div class="ig-overlay" id="igOverlay"><span></span></div>
+              <div class="ig-dots" id="igDots"></div>
+              <div class="ig-actions" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1.1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                <span class="sp"></span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="ig-likes ig-time">À l'instant</div>
+              <div class="ig-cap"><b id="igCapName"></b> <span id="igCap"></span><span id="igMore" class="ig-more-lnk" onclick="expandPreviewCaption()"></span> <span id="igTags" style="color:#385185;"></span></div>
             </div>
             </div>
             <button type="button" class="slide-arrow-m" id="slideNextM" onclick="studioSlideNav(1)" aria-label="Image suivante">›</button>
@@ -2609,7 +2690,7 @@ function applyScreen(name) {
   /* TUNNEL : « on entre pour faire UNE chose, on sort par le ‹ ». Pose le pied d'action et efface la
      barre haute. applyScreen ne connaît que monsite/studio → aller sur Mon site SORT du tunnel. openEdit, lui, le pose (les éditeurs sont des tunnels aussi, cf. .lelab-foot). */
   document.body.classList.toggle('in-tunnel', name === 'studio');
-  if (name === 'studio'){ placerApercu(); mesurerPied(); adjustStepsHeight(); }   // hauteur du stepper (la reprise est désormais DIRECTE, cf. handlePlusClick)
+  if (name === 'studio'){ placerApercu(); mesurerPied(); adjustStepsHeight(); syncPreviewIdentity(); }   // le compte de l'aperçu : jamais « votre_compte »   // hauteur du stepper (la reprise est désormais DIRECTE, cf. handlePlusClick)
   if (name !== 'studio') document.body.classList.remove('studio-canreset');   // hors studio : jamais de « Recommencer »
 
   /* applyScreen est le point de passage UNIQUE des changements d'écran → le pied s'y recale.
@@ -3761,7 +3842,7 @@ function renderStudio(){
   updateSlideNav();      // contrôles carrousel (slides typo)
   adjustStepsHeight();   // la hauteur du contenu de l'étape a pu changer (zones, vignettes…)
   updateStudioPrimary(); // une photo ajoutée ou retirée change ce que le pied permet
-  renderSurVisuel();
+  majMises();
   const lg = document.getElementById('apercuLegende');
   if (lg) lg.textContent = 'Aperçu · ' + (currentFmt === 'story' ? 'Story 1080 × 1920' : 'Post 1080 × 1350');
   if (currentKind === 'typo' && currentFmt === 'story') mesurerStory();
@@ -3921,40 +4002,25 @@ function dimensionnerApercu(){
   /* « Modifier dans la carte » se lit sous le visuel, au-dessus du pied, sans défiler (28/10) : sa place est réservée. */
   const lien = document.getElementById('studioModifier');
   const reserveLien = (currentKind === 'typo' && lien && !lien.hidden) ? 54 : 0;
-  place.style.setProperty('--apercu-h', Math.max(200, Math.floor(bas - haut - compteur - reserveLien - 14)) + 'px');
+  /* Les silhouettes et leur légende se lisent aussi sans défiler, sous le visuel : leur hauteur réelle est réservée. */
+  const mises = document.getElementById('mises');
+  const reserveMises = mises ? mises.getBoundingClientRect().height + 16 : 0;
+  place.style.setProperty('--apercu-h', Math.max(160, Math.floor(bas - haut - compteur - reserveLien - reserveMises - 14)) + 'px');
 }
 window.addEventListener('resize', () => { if (currentStepId() === 'page') dimensionnerApercu(); });
 
-/* ═══ DESKTOP, PAS 2 : CE QUI EST SUR LE VISUEL, chaque ligne mène là où on le modifie (maquette) ═══════════
-   Les plats (vers leur source), ou le titre et la date de l'événement (vers la feuille Événements). La photo et
-   les textes du visuel se modifient sur place, dans les champs du pas 2 : pas de ligne pour eux. */
-function ouvrirSource(cle){
-  const bloc = tousLesBlocs().find(b => b.cle === cle);
-  const a = bloc && (Array.isArray(bloc.admin) ? bloc.admin[0] : bloc.admin);
-  if (a && a.edit) openEdit(a.edit);
-}
-function renderSurVisuel(){
-  const ul = document.getElementById('surVisuel');
-  if (!ul) return;
-  const e = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-  const fleche = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg>';
-  let lignes = [];
-  const src = currentCustomTheme && currentCustomTheme.prefill;
-  if (currentKind === 'typo'){
-    /* En story : les plats PEINTS (ce qui est sur l'image), pas toute la carte. */
-    const plats = currentFmt === 'story' ? ((studioSlides()[0] || {}).dishes || []) : currentDishRows().filter(d => (d.n || '').trim());
-    lignes = plats.map(d =>
-      `<li><button type="button" class="sv-ligne" onclick="modifierPlatsStudio()"><span class="sv-t">${e(d.n)}</span><span class="sv-p">${e(d.p)}</span>${fleche}</button></li>`);
-    const cap = currentFmt === 'story' && storyCapacite && storyCapacite.cle === cleStory(groupesDePlats()) ? storyCapacite : null;
-    if (cap && cap.peints < cap.total)
-      lignes.push('<li class="sv-note">La suite ne tient pas dans une story : passez en Post pour toute la carte.</li>');
-  } else if (src === 'event'){
-    const ev = prochainEvenementDuSite();
-    if (ev) lignes = [ev.titre || 'Événement', ev.date ? fmtEventWhen(ev) : ''].filter(Boolean).map(t =>
-      `<li><button type="button" class="sv-ligne" onclick="ouvrirSource('events')"><span class="sv-t">${e(t)}</span>${fleche}</button></li>`);
+/* ═══ PAS 2 : LES MISES EN PAGE (canvas « Mon Instagram ») ═════════════════════════════════════════════════
+   Classique est la seule composition du moteur : elle est choisie. Centré et Pleine photo attendent le bout de DA
+   des compositions (inertes). Les silhouettes prennent le format du post (9:16 en story, 4:5 en post). En story,
+   si la carte ne tient pas entière, on le dit ici. */
+function majMises(){
+  const m = document.getElementById('mises');
+  if (m) m.dataset.fmt = currentFmt === 'story' ? 'story' : 'portrait';
+  const note = document.getElementById('storyNote');
+  if (note){
+    const cap = currentKind === 'typo' && currentFmt === 'story' && storyCapacite && storyCapacite.cle === cleStory(groupesDePlats()) ? storyCapacite : null;
+    note.hidden = !(cap && cap.peints < cap.total);
   }
-  ul.innerHTML = lignes.join('');
-  ul.hidden = !lignes.length;
 }
 
 /* La réserve sous le pied fixe (téléphone) = SA hauteur réelle : la phrase du pas 3 l'allonge. */
@@ -4211,7 +4277,7 @@ function syncPreviewIdentity(){
     } else {
       /* Bout 8 : la connexion n'a plus de bouton (app Meta en développement) — l'aperçu ne demande donc plus
          de « connecter » : il montre le nom du commerce, à la place du compte. */
-      el.appendChild(document.createTextNode((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || 'votre_compte'));
+      el.appendChild(document.createTextNode((sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || ''));
     }
     if (loc) el.appendChild(loc);
   });

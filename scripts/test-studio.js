@@ -12,12 +12,17 @@
      S6. desktop : l'aperçu est à droite, dans un téléphone, aux trois pas.
      S7. pas 2, SANS DÉFILER : le visuel est entier dans la fenêtre — sous le titre et au-dessus du pied (390×844),
          dans le cadre et dans la fenêtre (1280×800) — en Story comme en Post (maquette, 28/10).
-     S8. l'aperçu est le visuel seul : aucun cadre Instagram (en-tête de compte, icônes, horodatage, légende).
+     S8. le cadre Instagram (en-tête de compte, icônes, horodatage, légende) : visible en desktop pour un Post
+         seulement ; en Story et dans le pas 2 du téléphone, le visuel seul.
      S9. un sujet indisponible : contour en pointillés, ni papier ni grain, texte en --texte (LELAB-DESIGN §2).
      S10. la carte en Story porte TOUS les plats de Sassy sur l'image (on compte les plats que le studio donne au
           moteur pour peindre l'export, pas une variable d'affichage).
      S11. téléphone 390×844, pas 2, carte : « Modifier dans la carte » est entier au-dessus du pied, sans défiler,
           en Story et en Post.
+     S12. pas 2 « Quelle mise en page ? » : trois silhouettes (Classique, Centré, Pleine photo) au format du post ;
+          Classique seule choisie ; Centré et Pleine photo inertes (aria-disabled, un toucher ne change rien) ;
+          tout se voit sans défiler (silhouettes et légende au-dessus du pied à 390×844 ; Continuer dans la fenêtre
+          à 1280×800).
    L'ENVOI (ce qui ENVOIE — rouge sur le code d'avant, vert après) :
      E1. desktop : l'image se télécharge (un fichier par visuel) et la légende + hashtags sont copiés ;
      E2. téléphone : la légende est copiée PUIS le partage du téléphone s'ouvre avec les fichiers, DANS le geste
@@ -198,7 +203,13 @@ function enregistreurs(telephone){
         return { desk, scroll: Math.round(scrollY), haut: Math.round(v.top), bas: Math.round(v.bottom), titre: Math.round(t.bottom), pied: Math.round(pied.top),
                  h: innerHeight, w: Math.round(v.width), legende: Math.round(document.getElementById('apercuLegende').getBoundingClientRect().bottom),
                  compteur: (() => { const c = document.getElementById('slideControls'); const q = c.getBoundingClientRect(); return getComputedStyle(c).display === 'none' ? null : Math.round(q.bottom); })(), visHaut: iv && Math.round(iv.top), visBas: iv && Math.round(iv.bottom),
-                 cadre: ['.ig-top', '.ig-name', '.ig-ava', '.ig-actions', '.ig-likes', '.ig-cap', '.ig-dots'].filter(q => document.querySelector('#apercu ' + q)).join(', ') };
+                 cadre: ['.ig-top', '.ig-actions', '.ig-likes', '.ig-cap'].filter(q => { const el = document.querySelector('#apercu ' + q); return el && el.getBoundingClientRect().height > 0; }),
+                 mises: (() => { const m = document.getElementById('mises').getBoundingClientRect(); return { haut: Math.round(m.top), bas: Math.round(m.bottom) }; })(),
+                 cta: Math.round(document.getElementById('studioPrimaryFoot').getBoundingClientRect().bottom),
+                 silos: [...document.querySelectorAll('#mises .mise')].map(m => ({ id: m.dataset.mise, n: m.querySelector('.mise-n').textContent,
+                   choisie: m.getAttribute('aria-pressed') === 'true', inerte: m.getAttribute('aria-disabled') === 'true',
+                   ratio: (() => { const r = m.querySelector('.silo').getBoundingClientRect(); return +(r.width / r.height).toFixed(2); })() })),
+                 legendeMises: (document.querySelector('#mises .mises-l') || {}).textContent || '' };
       });
       const nom = `${L}×${H} ${fmt === 'story' ? 'Story' : 'Post'}`;
       if (r.scroll) fails.push(`S7/ ${nom} : la page est défilée (${r.scroll} px) au pas 2`);
@@ -211,7 +222,23 @@ function enregistreurs(telephone){
         if (r.legende > r.h) fails.push(`S7/ ${nom} : « Aperçu en taille réelle » sort de la fenêtre (${r.legende} > ${r.h})`);
         if (r.visHaut < r.haut - 1 || r.visBas > r.bas + 1) fails.push(`S7/ ${nom} : le visuel déborde du cadre (${r.visHaut} → ${r.visBas} dans ${r.haut} → ${r.bas})`);
       }
-      if (r.cadre) fails.push(`S8/ ${nom} : l'aperçu porte encore un cadre Instagram (${r.cadre})`);
+      const cadreAttendu = r.desk && fmt === 'portrait';
+      if (cadreAttendu && r.cadre.length !== 4) fails.push(`S8/ ${nom} : le cadre Instagram du Post est incomplet (visibles : ${r.cadre.join(', ') || 'aucun'})`);
+      if (!cadreAttendu && r.cadre.length) fails.push(`S8/ ${nom} : un cadre Instagram est visible (${r.cadre.join(', ')}) — attendu : le visuel seul`);
+      // S12 — les silhouettes
+      const ids = r.silos.map(x => x.id).join(',');
+      if (ids !== 'classique,centre,pleine' || r.silos.map(x => x.n).join(',') !== 'Classique,Centré,Pleine photo') fails.push(`S12/ ${nom} : silhouettes « ${r.silos.map(x => x.n).join(', ')} »`);
+      if (r.silos.filter(x => x.choisie).map(x => x.id).join() !== 'classique') fails.push(`S12/ ${nom} : choisie(s) : ${r.silos.filter(x => x.choisie).map(x => x.id).join() || 'aucune'} (attendu Classique seule)`);
+      if (r.silos.filter(x => x.inerte).map(x => x.id).join() !== 'centre,pleine') fails.push(`S12/ ${nom} : inertes : ${r.silos.filter(x => x.inerte).map(x => x.id).join() || 'aucune'}`);
+      const attendu = fmt === 'story' ? 0.56 : 0.8;
+      if (r.silos.some(x => Math.abs(x.ratio - attendu) > 0.03)) fails.push(`S12/ ${nom} : silhouettes au rapport ${r.silos.map(x => x.ratio).join('/')} au lieu de ${attendu}`);
+      if (r.legendeMises.trim() !== 'Classique · votre mise en page habituelle') fails.push(`S12/ ${nom} : légende des silhouettes « ${r.legendeMises} »`);
+      if (!r.desk && r.mises.bas > r.pied + 1) fails.push(`S12/ ${nom} : les silhouettes passent sous le pied (${r.mises.bas} > ${r.pied})`);
+      if (r.desk && (r.mises.bas > r.h || r.cta > r.h)) fails.push(`S12/ ${nom} : silhouettes ou Continuer hors de la fenêtre (${r.mises.bas}, ${r.cta} > ${r.h})`);
+      const inerte = await p.evaluate(() => { const avant = [...document.querySelectorAll('#mises .mise')].map(m => m.outerHTML).join('');
+        document.querySelectorAll('#mises .mise[aria-disabled="true"]').forEach(m => m.click());
+        return avant === [...document.querySelectorAll('#mises .mise')].map(m => m.outerHTML).join(''); });
+      if (!inerte) fails.push(`S12/ ${nom} : toucher une silhouette indisponible a changé quelque chose`);
       if (L < 900){
         const lien = await p.evaluate(() => { const l = document.getElementById('studioModifier'), f = document.getElementById('studioFoot');
           const a = l.getBoundingClientRect(), b = f.getBoundingClientRect(); return { vu: !l.hidden && a.height > 0, bas: Math.round(a.bottom), pied: Math.round(b.top), haut: Math.round(a.top) }; });
@@ -269,13 +296,13 @@ function enregistreurs(telephone){
     for (const n of [1, 2, 3]){
       await au(p, n);
       const r = await p.evaluate(() => {
-        const col = document.getElementById('apercuCol'), ph = col.querySelector('.phone');
+        const col = document.getElementById('apercuCol'), ph = col.querySelector('.phone-screen');
         const c = document.querySelector('.compose').getBoundingClientRect(), a = col.getBoundingClientRect();
         return { dansCol: !!col.querySelector('#apercu .phone-screen'), adroite: a.left >= c.right, largeur: ph ? Math.round(ph.getBoundingClientRect().width) : 0,
                  vignette: (() => { const v = document.getElementById('studioVignette'); return v.getBoundingClientRect().width > 0; })() };
       });
       if (!r.dansCol || !r.adroite) fails.push(`S6/ desktop, pas ${n} : l'aperçu n'est pas dans la colonne de droite`);
-      if (r.largeur < 360) fails.push(`S6/ desktop 1280×900, pas ${n} : le téléphone de l'aperçu mesure ${r.largeur} px (attendu ≥ 360)`);
+      if (r.largeur < 330) fails.push(`S6/ desktop 1280×900, pas ${n} : l'écran de l'aperçu mesure ${r.largeur} px (attendu ≥ 330)`);
       if (r.vignette) fails.push(`S6/ desktop, pas ${n} : la vignette du téléphone est affichée (l'aperçu est déjà permanent)`);
     }
     /* ── E1. DESKTOP : télécharger l'image, copier la légende ── */
@@ -328,5 +355,5 @@ function enregistreurs(telephone){
 
   await b.close();
   if (fails.length){ console.error('\n❌ STUDIO — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 : le visuel seul, entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
+  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 « Quelle mise en page ? » : Classique choisie, Centré et Pleine photo inertes, tout visible sans défiler · cadre Instagram en desktop pour le Post seulement · le visuel entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
 })();

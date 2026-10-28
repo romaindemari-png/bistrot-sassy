@@ -462,7 +462,6 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     const actions = re => [...document.querySelectorAll('a,button')].some(el => vu(el) && re.test(el.textContent.trim()) && !el.closest('.confirm-overlay'));
     const lire = () => ({
       connecter: actions(/^connecter|connectez|reconnecter/i), deconnecter: actions(/d[ée]connecter/i),
-      cadre: ['.ig-top', '.ig-name', '.ig-ava', '.ig-actions', '.ig-likes', '.ig-cap'].filter(q => document.querySelector('#apercu ' + q)).join(', '),
       sortie: vu(document.getElementById('studioRetour')),
     });
     goStep(1);
@@ -478,10 +477,47 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (v.deconnecter) fails.push(`E/ ${k} : un « Déconnecter » est atteignable dans le studio (pas de bouton tant que l'app n'est pas en Live)`);
     if (!v.sortie)     fails.push(`E/ ${k} : le retour vers Mon site n'est pas visible au pas 1`);
   }
-  /* ⚠️ Depuis le 28/10 (maquette) l'aperçu est le VISUEL SEUL : plus d'en-tête de compte, d'icônes, d'horodatage ni
-     de légende Instagram. Les contrôles du pseudo affiché n'ont plus d'objet ; on exige l'absence du cadre. */
-  for (const [k, v] of Object.entries({ neuf: e.neuf, connecte: e.on, deconnecte: e.off }))
-    if (v.cadre) fails.push(`E/ ${k} : l'aperçu porte encore un cadre Instagram (${v.cadre})`);
+  /* ⚠️ LE CADRE INSTAGRAM (28/10, maquette) : sur téléphone, le pas 2 montre le VISUEL SEUL ; sur desktop, un POST
+     porte le cadre (pseudo, image, icônes, légende). On le vérifie aux deux largeurs : la sonde passe à 1280 le
+     temps de lire le cadre, puis revient à 390. Ce qu'il dit du compte : le pseudo réel connecté, le nom du commerce
+     sinon — jamais un faux « votre_compte » — et aucune image distante au repos ni après déconnexion. */
+  const cadreTel = await p.evaluate(() => { goStep(2);
+    return ['.ig-top', '.ig-actions', '.ig-likes', '.ig-cap'].filter(q => { const el = document.querySelector('#apercu ' + q); return el && el.getBoundingClientRect().height > 0; }); });
+  if (cadreTel.length) fails.push(`E/ téléphone, pas 2 : un cadre Instagram est visible (${cadreTel.join(', ')}) — attendu : le visuel seul`);
+  /* ⚠️ Une PAGE À PART pour le desktop : changer isMobile sur `p` la recharge (Puppeteer), et le studio n'y serait plus. */
+  const pd = await b.newPage();
+  await pd.setViewport({ width: 1280, height: 900 });
+  await pd.evaluateOnNewDocument(() => { window.__NO_DEV_BYPASS = true; });
+  await pd.goto(`http://localhost:${PORT}/admin/`, { waitUntil: 'networkidle0' });
+  const ed = await pd.evaluate(async () => {
+    document.body.classList.add('authed');
+    await loadSassyData(); applyPlan('lelab_plus'); studioReady = true; handlePlusClick();
+    await new Promise(r => setTimeout(r, 400));
+    const f = document.querySelector('#fmtRow .fmt[data-fmt="portrait"]'); if (f) f.click();
+    goStep(2);
+    const lire = () => ({
+      cadre: ['.ig-top', '.ig-actions', '.ig-likes', '.ig-cap'].filter(q => { const el = document.querySelector('#apercu ' + q); return el && el.getBoundingClientRect().height > 0; }).length,
+      nom: (document.querySelector('#apercu .ig-name') || {}).textContent || '',
+      nomLegende: (document.getElementById('igCapName') || {}).textContent || '',
+      point: !!document.querySelector('#apercu .ig-name .ig-live-d'),
+      avatar: getComputedStyle(document.querySelector('#apercu .ig-ava > div')).backgroundImage,
+    });
+    const out = { neuf: lire() };
+    igStatus = { connected: true, username: 'lestud13', user_id: '1', profile_picture_url: 'https://example.invalid/a.jpg' };
+    syncPreviewIdentity(); out.on = lire();
+    igStatus = { connected: false, username: null };
+    syncPreviewIdentity(); out.off = lire();
+    out.commerce = (sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '';
+    return out;
+  });
+  await pd.close();
+  if (ed.on.cadre !== 4)                        fails.push(`E/ desktop, Post : le cadre Instagram n'est pas complet (${ed.on.cadre}/4 parties visibles)`);
+  if (!/lestud13/.test(ed.on.nom) || !ed.on.point) fails.push(`E/ desktop connecté : l'aperçu ne porte pas le pseudo réel avec son point (« ${ed.on.nom} »)`);
+  if (!/lestud13/.test(ed.on.nomLegende))         fails.push(`E/ desktop connecté : la légende de l'aperçu ne porte pas le pseudo réel (« ${ed.on.nomLegende} »)`);
+  if (ed.off.nom.trim() !== ed.commerce)          fails.push(`E/ desktop déconnecté : l'aperçu dit « ${ed.off.nom} » au lieu du nom du commerce (« ${ed.commerce} »)`);
+  if (/votre_compte/.test(ed.off.nomLegende + ed.neuf.nom)) fails.push(`E/ desktop : un faux pseudo « votre_compte » est affiché`);
+  if (/http/i.test(ed.neuf.avatar || ''))         fails.push(`E/ l'avatar de l'aperçu porte une image DISTANTE au repos : ${ed.neuf.avatar}`);
+  if (/http/i.test(ed.off.avatar || ''))          fails.push(`E/ l'avatar garde une photo DISTANTE après déconnexion : ${ed.off.avatar}`);
 
   /* ── E-bis. AUCUNE IMAGE DISTANTE EN DUR DANS LA SOURCE (lu dans le FICHIER, pas le DOM) ── */
   const CDN_LEGITIMES = [/fonts\.googleapis\.com/, /fonts\.gstatic\.com/, /www\.w3\.org/,
