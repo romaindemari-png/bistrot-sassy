@@ -1338,11 +1338,25 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
 .apercu{display:flex;flex-direction:column;align-items:center;width:100%;}
 /* Téléphone, pas 2 : le visuel SEUL (plus de cadre Instagram), à la hauteur posée par dimensionnerApercu. */
 .apercu-place .phone{width:auto;background:none;padding:0;box-shadow:none;border-radius:0;}
-.apercu-place .phone-screen{height:auto;overflow:hidden;border-radius:18px;box-shadow:0 22px 48px -22px rgba(0,0,0,.7);
+.apercu-place .phone-screen{height:auto;overflow:hidden;border-radius:20px;box-shadow:var(--ig-ombre);background:var(--ig-fond);
   aspect-ratio:4/5;width:min(calc(100vw - 32px),calc(var(--apercu-h,440px) * 4 / 5));}
 .apercu-place .phone-screen.story{aspect-ratio:9/16;width:min(calc(100vw - 32px),calc(var(--apercu-h,440px) * 9 / 16));}
 #screen-studio .slide-controls{margin-top:12px;}
 .phone-stage{position:relative;width:100%;display:flex;align-items:center;justify-content:center;}
+/* Les couleurs d'Instagram suivent la chromie : sombre la nuit, clair le jour (variante A). */
+#screen-studio{--ig-fond:#000;--ig-texte:#F5F5F5;--ig-gris:#A8A8A8;--ig-lien:#E0F1FF;--ig-fleche-fond:rgba(0,0,0,.55);
+  --ig-ombre:0 0 0 1px rgba(244,239,230,.08),0 40px 110px -30px rgba(202,180,255,.45);}
+html[data-chromie="jour"] #screen-studio{--ig-fond:#FFF;--ig-texte:#0C1014;--ig-gris:#737373;--ig-lien:#00376B;--ig-fleche-fond:rgba(255,255,255,.9);
+  --ig-ombre:0 30px 80px -30px rgba(26,21,38,.28);}
+@media (prefers-color-scheme:light){ html:not([data-chromie]) #screen-studio{--ig-fond:#FFF;--ig-texte:#0C1014;--ig-gris:#737373;--ig-lien:#00376B;
+  --ig-fleche-fond:rgba(255,255,255,.9);--ig-ombre:0 30px 80px -30px rgba(26,21,38,.28);} }
+.ig-progres,.ig-quand{display:none;}
+.ig-cap[hidden]{display:none;}
+#screen-studio .ig-name,#screen-studio .ig-more,#screen-studio .ig-cap{color:var(--ig-texte);}
+#screen-studio .ig-likes.ig-time,#screen-studio .ig-more-lnk,#screen-studio .ig-name .loc{color:var(--ig-gris);}
+#screen-studio .ig-actions svg{stroke:var(--ig-texte);}
+#screen-studio #igTags{color:var(--ig-lien)!important;}
+#screen-studio .ig-ava div{border-color:var(--ig-fond);}
 /* ═══ LE CADRE INSTAGRAM DE L'APERÇU (repris le 28/10) : desktop, en Post seulement ════════════════════════
    Pseudo réel (ou nom du commerce), image, icônes, horodatage, légende — qui suit le texte au pas 3. En story, le
    visuel seul plein écran ; dans le pas 2 du téléphone, le visuel seul. */
@@ -1393,7 +1407,7 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
 .mises-l{margin:12px 0 0;text-align:center;font:400 13px/1.4 var(--sans);color:var(--texte);}
 #screen-studio .mises .studio-note{text-align:center;color:var(--texte);}
 /* L'aperçu est un écran Instagram : son texte est celui d'Instagram, pas le crème du studio (hérité, il disparaissait sur le blanc). */
-#screen-studio .phone-screen{color:#262626;}
+#screen-studio .phone-screen{color:var(--ig-texte);}
 #screen-studio .field{margin-top:18px;}
 #screen-studio .field-lbl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font:600 13px/1.3 var(--sans);color:var(--texte);}
 #screen-studio .upload{display:flex;flex-direction:column;align-items:center;gap:4px;padding:18px;border-radius:20px;cursor:pointer;
@@ -1463,16 +1477,39 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
   .studio-wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:72px;padding:0 32px;align-items:start;}
   .compose{max-width:640px;padding:16px 0 0;}
   .apercu-col{display:flex;flex-direction:column;align-items:center;gap:14px;position:sticky;top:24px;padding-top:16px;}
-  /* Plus de cadre noir (28/10) : l'écran seul, coins arrondis, une ombre large et diffuse, aucune bordure. */
+  /* ═══ L'APERÇU EN CARTE INSTAGRAM (variante A du canvas « Studio · aperçu desktop », 28/10) ═══════════════
+     Plus de téléphone dessiné. Post : une carte à la hauteur de son contenu (en-tête, visuel 4:5, icônes, « À
+     l'instant », légende). Story : une carte 9:16, barre de progression et compte en haut, sur l'image. Instagram
+     sombre la nuit, clair le jour ; profondeur : liseré + halo violet la nuit, ombre douce le jour. */
   .apercu-col .phone{width:auto;padding:0;border-radius:0;background:none;box-shadow:none;}
-  /* L'écran du téléphone : 590 px de haut au plus, moins si la fenêtre est basse (1280 × 800 : cadre, compteur et
-     légende tiennent sans défiler) ; sa largeur suit le 9:16 de l'écran. */
-  .apercu-col .phone-screen{--ecran-h:min(590px,calc(100vh - 250px));height:var(--ecran-h);width:calc(var(--ecran-h) * 9 / 16);
-    border-radius:32px;overflow:hidden;background:var(--encre);box-shadow:0 50px 110px -30px rgba(0,0,0,.7);
-    display:flex;flex-direction:column;justify-content:center;}
-  /* Post : l'écran Instagram (pseudo, image, icônes, légende), en haut, sur blanc. Story : le visuel seul, plein écran. */
-  .apercu-col .phone-screen:not(.story){background:#fff;justify-content:flex-start;}
+  .apercu-col .phone-stage{width:auto;}
+  .apercu-col .phone-screen{--ecran-h:min(590px,calc(100vh - 250px));width:min(360px,calc(var(--ecran-h) * 0.62));height:auto;
+    border-radius:20px;overflow:hidden;background:var(--ig-fond);color:var(--ig-texte);
+    box-shadow:var(--ig-ombre);display:flex;flex-direction:column;justify-content:flex-start;}
+  .apercu-col .phone-screen.story{height:var(--ecran-h);width:calc(var(--ecran-h) * 9 / 16);justify-content:center;background:#000;}
   .apercu-col .phone-screen > .ig-img,.apercu-col .phone-screen > .ig-typo{width:100%;flex:none;}
+  .apercu-col .ig-count{display:none!important;}   /* un seul indicateur : les points */
+  /* Story : la barre fine et le compte, posés sur l'image (comme une story). */
+  .apercu-col .phone-screen.story .ig-progres{display:block;position:absolute;top:10px;left:10px;right:10px;z-index:6;height:2px;border-radius:1px;
+    background:rgba(245,245,245,.35);}
+  .apercu-col .phone-screen.story .ig-progres span{display:block;width:38%;height:100%;border-radius:inherit;background:#F5F5F5;}
+  .apercu-col .phone-screen.story .ig-top{display:flex!important;position:absolute;top:16px;left:0;right:0;z-index:6;padding:8px 12px 18px;
+    background:linear-gradient(rgba(0,0,0,.42),transparent);color:#F5F5F5;}
+  /* ⚠️ #screen-studio en tête : la couleur générale du cadre (#screen-studio .ig-name, l'encre Instagram du JOUR) l'emportait,
+     et le nom passait en sombre sur l'image d'une story (mesuré : 1,10:1). Sur l'image, le texte est toujours clair. */
+  #screen-studio .apercu-col .phone-screen.story .ig-name,#screen-studio .apercu-col .phone-screen.story .ig-more{color:#F5F5F5;flex:none;}
+  .apercu-col .phone-screen.story .ig-quand{display:inline;color:rgba(245,245,245,.85);font-size:11px;margin-right:auto;}
+  /* La navigation : les points seuls sous la carte ; flèches rondes et discrètes sur l'image, au survol et au focus. */
+  .apercu-col .slide-controls .slide-arrow,.apercu-col .slide-count{display:none!important;}
+  .apercu-col .slide-arrow-m{display:none;}
+  .apercu-col .phone-stage.has-carousel .slide-arrow-m{display:grid;place-items:center;position:absolute;top:50%;z-index:8;width:32px;height:32px;
+    margin-top:-16px;border-radius:50%;border:0;cursor:pointer;font:400 20px/1 var(--sans);opacity:0;transition:opacity .15s;
+    background:var(--ig-fleche-fond);color:var(--ig-texte);}
+  .apercu-col .phone-stage.has-carousel #slidePrevM{left:10px;}
+  .apercu-col .phone-stage.has-carousel #slideNextM{right:10px;}
+  .apercu-col .phone-stage:hover .slide-arrow-m,.apercu-col .slide-arrow-m:focus-visible{opacity:1;}
+  .apercu-col .slide-arrow-m:disabled{visibility:hidden;}
+  @media (prefers-reduced-motion:reduce){ .apercu-col .slide-arrow-m{transition:none;} }
   .studio-k{display:block;margin:0 0 10px;font:600 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--texte-2);}
   .studio-sub--desk{display:block;font-size:17px;max-width:40ch;}
   .mises{margin-top:26px;}
@@ -1737,9 +1774,11 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
             <button type="button" class="slide-arrow-m" id="slidePrevM" onclick="studioSlideNav(-1)" aria-label="Image précédente">‹</button>
             <div class="phone">
             <div class="phone-screen">
+              <div class="ig-progres" aria-hidden="true"><span></span></div>
               <div class="ig-top">
                 <div class="ig-ava"><div></div></div>
                 <div class="ig-name"><span class="loc"></span></div>
+                <span class="ig-quand">1 min</span>
                 <div class="ig-more">···</div>
               </div>
               <div class="ig-img" id="igPhoto" style="display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div><div class="ig-drag-hint" id="igDragHint">✥ Glissez pour cadrer</div></div>
@@ -3803,6 +3842,9 @@ function renderStudio(){
 
   const cap = document.getElementById('caption').value;
   setPreviewCaption(cap);
+  /* La carte s'arrête après « À l'instant » quand il n'y a encore ni légende ni hashtag (variante A, 28/10). */
+  const boiteCap = document.querySelector('#apercu .ig-cap');
+  if (boiteCap) boiteCap.hidden = !(cap.trim() || studioHashtags.length);
   const capCountEl = document.getElementById('capCount');
   if (capCountEl){ capCountEl.textContent = cap.length + '/2200'; capCountEl.classList.toggle('over', cap.length > 2200); }
 

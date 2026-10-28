@@ -511,7 +511,8 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     return out;
   });
   await pd.close();
-  if (ed.on.cadre !== 4)                        fails.push(`E/ desktop, Post : le cadre Instagram n'est pas complet (${ed.on.cadre}/4 parties visibles)`);
+  /* 3 parties sans légende (en-tête, icônes, « À l'instant ») : la carte s'arrête là tant qu'il n'y a pas de légende. */
+  if (ed.on.cadre < 3)                          fails.push(`E/ desktop, Post : le cadre Instagram n'est pas complet (${ed.on.cadre} parties visibles sur 3 au moins)`);
   if (!/lestud13/.test(ed.on.nom) || !ed.on.point) fails.push(`E/ desktop connecté : l'aperçu ne porte pas le pseudo réel avec son point (« ${ed.on.nom} »)`);
   if (!/lestud13/.test(ed.on.nomLegende))         fails.push(`E/ desktop connecté : la légende de l'aperçu ne porte pas le pseudo réel (« ${ed.on.nomLegende} »)`);
   if (ed.off.nom.trim() !== ed.commerce)          fails.push(`E/ desktop déconnecté : l'aperçu dit « ${ed.off.nom} » au lieu du nom du commerce (« ${ed.commerce} »)`);

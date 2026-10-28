@@ -12,8 +12,8 @@
      S6. desktop : l'aperçu est à droite, dans un téléphone, aux trois pas.
      S7. pas 2, SANS DÉFILER : le visuel est entier dans la fenêtre — sous le titre et au-dessus du pied (390×844),
          dans le cadre et dans la fenêtre (1280×800) — en Story comme en Post (maquette, 28/10).
-     S8. le cadre Instagram (en-tête de compte, icônes, horodatage, légende) : visible en desktop pour un Post
-         seulement ; en Story et dans le pas 2 du téléphone, le visuel seul.
+     S8. le cadre Instagram (en-tête de compte, icônes, horodatage, légende) : complet en desktop pour un Post ; en
+         Story desktop, le compte seul en haut de l'image (variante A) ; dans le pas 2 du téléphone, le visuel seul.
      S9. un sujet indisponible : contour en pointillés, ni papier ni grain, texte en --texte (LELAB-DESIGN §2).
      S10. la carte en Story porte TOUS les plats de Sassy sur l'image (on compte les plats que le studio donne au
           moteur pour peindre l'export, pas une variable d'affichage).
@@ -27,6 +27,9 @@
           travail — la règle « Recommencer = le travail saisi, jamais le pas atteint », à 390 et 1280.
      S14. le cadre Instagram (desktop, Post) : l'avatar n'est jamais un rond vide — le logo du commerce sur sa
           couleur, ou son initiale.
+     S15. l'aperçu desktop en carte Instagram (variante A) : la nuit, aucun blanc #FFFFFF dans la carte (hors visuel) ;
+          un Post a la hauteur de son contenu (pas de vide sous la dernière ligne, avec ou sans légende) ; un seul
+          indicateur de pagination visible.
    L'ENVOI (ce qui ENVOIE — rouge sur le code d'avant, vert après) :
      E1. desktop : l'image se télécharge (un fichier par visuel) et la légende + hashtags sont copiés ;
      E2. téléphone : la légende est copiée PUIS le partage du téléphone s'ouvre avec les fichiers, DANS le geste
@@ -227,8 +230,11 @@ function enregistreurs(telephone){
         if (r.visHaut < r.haut - 1 || r.visBas > r.bas + 1) fails.push(`S7/ ${nom} : le visuel déborde du cadre (${r.visHaut} → ${r.visBas} dans ${r.haut} → ${r.bas})`);
       }
       const cadreAttendu = r.desk && fmt === 'portrait';
-      if (cadreAttendu && r.cadre.length !== 4) fails.push(`S8/ ${nom} : le cadre Instagram du Post est incomplet (visibles : ${r.cadre.join(', ') || 'aucun'})`);
-      if (!cadreAttendu && r.cadre.length) fails.push(`S8/ ${nom} : un cadre Instagram est visible (${r.cadre.join(', ')}) — attendu : le visuel seul`);
+      if (cadreAttendu && ['.ig-top', '.ig-actions', '.ig-likes'].some(q => !r.cadre.includes(q))) fails.push(`S8/ ${nom} : le cadre Instagram du Post est incomplet (visibles : ${r.cadre.join(', ') || 'aucun'})`);
+      /* Story desktop (variante A) : le compte en haut, sur l'image — l'en-tête seul, jamais icônes ni légende. */
+      const permis = (r.desk && fmt === 'story') ? ['.ig-top'] : [];
+      if (r.desk && fmt === 'story' && !r.cadre.includes('.ig-top')) fails.push(`S8/ ${nom} : le compte (avatar, nom, « 1 min ») n'est pas en haut de la story`);
+      if (!cadreAttendu && r.cadre.some(q => !permis.includes(q))) fails.push(`S8/ ${nom} : un cadre Instagram est visible (${r.cadre.join(', ')}) — attendu : le visuel seul${permis.length ? ' et son compte' : ''}`);
       // S12 — les silhouettes
       const ids = r.silos.map(x => x.id).join(',');
       if (ids !== 'classique,centre,pleine' || r.silos.map(x => x.n).join(',') !== 'Classique,Centré,Pleine photo') fails.push(`S12/ ${nom} : silhouettes « ${r.silos.map(x => x.n).join(', ')} »`);
@@ -324,6 +330,42 @@ function enregistreurs(telephone){
     }
   });
 
+  /* ── S15. LA CARTE INSTAGRAM (desktop, nuit) ── */
+  await essai('S15', async () => {
+    for (const [fmt, pas] of [['portrait', 2], ['portrait', 3], ['story', 3]]){
+      const ctx = await b.createBrowserContext(); const p = await ctx.newPage();
+      await p.setViewport({ width: 1280, height: 800 });
+      await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: 'dark' }]);
+      await p.evaluateOnNewDocument(enregistreurs, false);
+      await p.evaluateOnNewDocument(() => document.addEventListener('DOMContentLoaded', () => { document.documentElement.dataset.chromie = 'nuit'; }));
+      await p.setRequestInterception(true);
+      p.on('request', r => /generate-caption/.test(r.url()) ? r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ caption: LEGENDE, hashtags: TAGS }) }) : r.continue());
+      await p.goto(BASE, { waitUntil: 'networkidle0' });
+      await p.evaluate(() => handlePlusClick()); await wait(600);
+      await p.evaluate((f, n) => { document.querySelector('#fmtRow .fmt[data-fmt="' + f + '"]').click(); goStep(n); }, fmt, pas);
+      await wait(pas === 3 ? 3000 : 1500);
+      const r = await p.evaluate(() => {
+        const ecran = document.querySelector('#apercuCol .phone-screen');
+        const vu = el => { const q = el.getBoundingClientRect(); const cs = getComputedStyle(el); return q.width > 0 && q.height > 0 && cs.visibility !== 'hidden' && +cs.opacity > 0; };
+        const dansVisuel = el => !!el.closest('.ig-img, .ig-typo');
+        const blancs = [ecran, ...ecran.querySelectorAll('*')].filter(el => !dansVisuel(el) && vu(el)).flatMap(el => {
+          const cs = getComputedStyle(el), out = [];
+          if (cs.backgroundColor === 'rgb(255, 255, 255)') out.push((el.className || el.tagName) + ' (fond)');
+          if (el.childNodes && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && cs.color === 'rgb(255, 255, 255)') out.push((el.className || el.tagName) + ' (texte)');
+          return out; });
+        const enfants = [...ecran.children].filter(vu).map(el => el.getBoundingClientRect().bottom);
+        const vide = Math.round(ecran.getBoundingClientRect().bottom - Math.max(...enfants));
+        const indic = ['#slideDots', '#igDots', '#igCount', '#slideCount'].filter(q => { const el = document.querySelector('#apercuCol ' + q); return el && vu(el) && el.getBoundingClientRect().height > 0 && (el.children.length || el.textContent.trim()); });
+        return { blancs, vide, indic, story: ecran.classList.contains('story') };
+      });
+      const nom = `${fmt === 'story' ? 'Story' : 'Post'}, pas ${pas}`;
+      if (r.blancs.length) fails.push(`S15/ ${nom}, nuit : du blanc #FFFFFF dans la carte (${[...new Set(r.blancs)].join(', ')})`);
+      if (!r.story && r.vide > 12) fails.push(`S15/ ${nom} : ${r.vide} px de vide sous la dernière ligne de la carte (hauteur ≠ contenu)`);
+      if (r.indic.length > 1) fails.push(`S15/ ${nom} : ${r.indic.length} indicateurs de pagination visibles (${r.indic.join(', ')})`);
+      await ctx.close();
+    }
+  });
+
   /* ── S6. DESKTOP : l'aperçu à droite, dans un téléphone, aux trois pas ── */
   await essai('S6-E1', async () => {
     const { p, ctx } = await page(1280, { donnees: { 'events.json': [] } });
@@ -389,5 +431,5 @@ function enregistreurs(telephone){
 
   await b.close();
   if (fails.length){ console.error('\n❌ STUDIO — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 « Quelle mise en page ? » : Classique choisie, Centré et Pleine photo inertes, tout visible sans défiler · cadre Instagram en desktop pour le Post seulement, avatar au logo du commerce · Recommencer = le travail saisi · le visuel entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
+  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 « Quelle mise en page ? » : Classique choisie, Centré et Pleine photo inertes, tout visible sans défiler · cadre Instagram en desktop pour le Post seulement, avatar au logo du commerce · carte Instagram aux couleurs de la chromie, hauteur = contenu, un seul indicateur · Recommencer = le travail saisi · le visuel entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
 })();
