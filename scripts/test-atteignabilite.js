@@ -280,7 +280,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     handlePlusClick();
     goStep(stepNum('page'));                                    // au visuel (pas 2), SANS rien saisir
     const step3NoWork = document.body.classList.contains('studio-canreset');
-    const rowHidden = getComputedStyle(document.querySelector('.studio-reset-row')).display === 'none';
+    const rowHidden = getComputedStyle(document.querySelector('.studio-tete .studio-reset-link')).display === 'none';   // 28/10 : à côté du retour
     const cap = document.getElementById('caption');
     if (cap) cap.value = 'Fournée du matin';                    // un champ LIBRE = travail incontestable
     renderStudio();                                             // rafraîchit refreshStudioCanReset
@@ -462,10 +462,7 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     const actions = re => [...document.querySelectorAll('a,button')].some(el => vu(el) && re.test(el.textContent.trim()) && !el.closest('.confirm-overlay'));
     const lire = () => ({
       connecter: actions(/^connecter|connectez|reconnecter/i), deconnecter: actions(/d[ée]connecter/i),
-      nom: (document.querySelector('#studio-unlocked .ig-name') || {}).textContent || '',
-      nomLegende: (document.getElementById('igCapName') || {}).textContent || '',
-      point: !!document.querySelector('#studio-unlocked .ig-name .ig-live-d'),
-      avatar: getComputedStyle(document.querySelector('#studio-unlocked .ig-ava > div')).backgroundImage,
+      cadre: ['.ig-top', '.ig-name', '.ig-ava', '.ig-actions', '.ig-likes', '.ig-cap'].filter(q => document.querySelector('#apercu ' + q)).join(', '),
       sortie: vu(document.getElementById('studioRetour')),
     });
     goStep(1);
@@ -474,7 +471,6 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     syncPreviewIdentity(); out.on = lire();
     igStatus = { connected: false, username: null };
     syncPreviewIdentity(); out.off = lire();
-    out.commerce = (sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '';
     return out;
   });
   for (const [k, v] of Object.entries({ neuf: e.neuf, connecte: e.on, deconnecte: e.off })){
@@ -482,12 +478,10 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
     if (v.deconnecter) fails.push(`E/ ${k} : un « Déconnecter » est atteignable dans le studio (pas de bouton tant que l'app n'est pas en Live)`);
     if (!v.sortie)     fails.push(`E/ ${k} : le retour vers Mon site n'est pas visible au pas 1`);
   }
-  if (!/lestud13/.test(e.on.nom) || !e.on.point) fails.push(`E/ connecté : l'aperçu ne porte pas le pseudo réel avec son point (« ${e.on.nom} »)`);
-  if (!/lestud13/.test(e.on.nomLegende))           fails.push(`E/ connecté : la légende de l'aperçu ne porte pas le pseudo réel (« ${e.on.nomLegende} »)`);
-  if (e.off.nom.trim() !== e.commerce)             fails.push(`E/ déconnecté : l'aperçu dit « ${e.off.nom} » au lieu du nom du commerce (« ${e.commerce} »)`);
-  if (/votre_compte/.test(e.off.nomLegende))       fails.push(`E/ déconnecté : la légende affiche le faux pseudo « ${e.off.nomLegende} »`);
-  if (/http/i.test(e.neuf.avatar || ''))           fails.push(`E/ l'avatar de l'aperçu porte une image DISTANTE au repos : ${e.neuf.avatar}`);
-  if (/http/i.test(e.off.avatar || ''))            fails.push(`E/ l'avatar garde une photo DISTANTE après déconnexion : ${e.off.avatar}`);
+  /* ⚠️ Depuis le 28/10 (maquette) l'aperçu est le VISUEL SEUL : plus d'en-tête de compte, d'icônes, d'horodatage ni
+     de légende Instagram. Les contrôles du pseudo affiché n'ont plus d'objet ; on exige l'absence du cadre. */
+  for (const [k, v] of Object.entries({ neuf: e.neuf, connecte: e.on, deconnecte: e.off }))
+    if (v.cadre) fails.push(`E/ ${k} : l'aperçu porte encore un cadre Instagram (${v.cadre})`);
 
   /* ── E-bis. AUCUNE IMAGE DISTANTE EN DUR DANS LA SOURCE (lu dans le FICHIER, pas le DOM) ── */
   const CDN_LEGITIMES = [/fonts\.googleapis\.com/, /fonts\.gstatic\.com/, /www\.w3\.org/,

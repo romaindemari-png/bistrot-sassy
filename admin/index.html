@@ -700,8 +700,6 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 /* ── STUDIO LELAB+ ─────────────────────────────────────── */
 /* Recommencer — action la plus RARE : lien-texte fin, encre atténuée, JAMAIS un bouton plein.
    Rouge SEULEMENT au survol/appui (signal destructif au dernier moment). Masqué < étape 3 et à l'écran final. */
-.studio-reset-row{display:none;justify-content:flex-end;margin:-6px 0 12px;}
-body.studio-canreset .studio-reset-row{display:flex;}
 .studio-reset-link{background:none;border:none;padding:4px 4px;cursor:pointer;color:var(--ink-2);font-family:inherit;font-size:12px;font-weight:500;}
 .studio-reset-link:hover{color:var(--red);}
 /* Confirmation « Recommencer » — modale sobre (DA studio), l'action destructive n'est jamais un tap sec. */
@@ -1035,9 +1033,6 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .phone-screen.story .ig-img{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;}
 .phone-screen.story .ig-typo{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;}
 .phone-screen.story .ig-typo canvas{width:100%!important;height:100%!important;object-fit:cover;display:block;}
-.phone-screen.story .ig-top{position:absolute;top:0;left:0;right:0;z-index:2;background:linear-gradient(rgba(0,0,0,.5),transparent);padding:12px 12px 22px;}
-.phone-screen.story .ig-name,.phone-screen.story .ig-name .loc,.phone-screen.story .ig-more{color:#fff;}
-.phone-screen.story .ig-actions,.phone-screen.story .ig-likes,.phone-screen.story .ig-cap{display:none;}
 /* texte en overlay (story uniquement) */
 .ig-overlay{display:none;}
 .phone-screen.story .ig-overlay{display:flex;position:absolute;inset:0;z-index:2;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;}
@@ -1049,21 +1044,6 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .ig-count svg{width:12px;height:12px;stroke:#fff;}
 .ig-sample{display:none;position:absolute;top:8px;left:8px;z-index:3;background:rgba(0,0,0,.55);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:var(--r-sm);}
 .phone-screen.story .ig-count{display:none!important;}
-.ig-dots{display:none;justify-content:center;gap:5px;padding:7px 0 3px;}
-.ig-dots .dot{width:6px;height:6px;border-radius:var(--r-round);background:#cfcfcf;cursor:pointer;transition:background .15s,transform .15s;}
-.ig-dots .dot.on{background:#1877F2;transform:scale(1.3);}
-.ig-top{display:flex;align-items:center;gap:8px;padding:10px 11px;}
-.ig-ava{width:28px;height:28px;border-radius:var(--r-round);background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2px;flex-shrink:0;}
-/* ⚠️ IL Y AVAIT ICI LA PHOTO D'UN INCONNU, EN DUR : une image Unsplash (photo-1517248135467) servait
-   d'avatar par défaut. Un client non connecté voyait donc le visage d'un mannequin à la place de son
-   compte — un prefill démo, interdit par la charte, et un aperçu qui dépendait d'un CDN externe.
-   Défaut = disque neutre LOCAL. La vraie photo n'arrive QUE de syncPreviewIdentity (profile_picture_url). */
-.ig-ava div{width:100%;height:100%;border-radius:var(--r-round);background:var(--gris-card) center/cover;border:1.5px solid #fff;}
-.ig-name{font-size:11.5px;font-weight:600;flex:1;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
-/* Connecté : le point vert VIT AVEC LE PSEUDO (6px). C'est le seul signal en desktop — le rail
-   d'aperçu est permanent, il n'y a rien à poser ailleurs. */
-.ig-live-d{width:6px;height:6px;border-radius:var(--r-round);background:var(--green);flex-shrink:0;}
-.ig-cap b[hidden]{display:none;}   /* un display d'auteur bat `hidden` : la règle va avec l'attribut */
 .ig-img{width:100%;aspect-ratio:1;background-size:cover;background-position:center;background-color:#f0f0f0;}
 .ig-img.portrait{aspect-ratio:4/5;}
 .ig-img.story{aspect-ratio:9/16;}
@@ -1094,18 +1074,6 @@ textarea.inp, .field-textarea{resize:vertical;min-height:80px;line-height:1.5;}
 .ty-dish:last-child{border-bottom:none;}
 .ty-n{font-size:12px;font-weight:600;color:var(--blue);}
 .ty-p{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;}
-.ig-actions{display:flex;align-items:center;gap:12px;padding:8px 10px 5px;}
-.ig-actions svg{width:20px;height:20px;}
-.ig-likes{font-size:11.5px;font-weight:600;padding:0 10px;}
-.ig-likes.ig-time{font-weight:400;color:#737373;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}   /* horodatage honnête (plus de faux likes) */
-/* ⚠️ L'APERÇU MENTAIT. Il recevait la légende ENTIÈRE, que .phone-screen (hauteur figée, overflow
-   hidden) rognait SANS AUCUN SIGNE : jusqu'à 1612 px de texte simplement disparus. Le post final,
-   lui, tronque proprement et propose un « … plus ». Un affichage doit dire la VÉRITÉ (LELAB.md) :
-   l'aperçu suit désormais exactement la même règle.
-   Et une fois déplié, le téléphone DÉFILE — comme un vrai téléphone. Rien n'est perdu. */
-.ig-cap{font-size:11.5px;line-height:1.4;padding:4px 10px 10px;color:#262626;}
-.ig-more-lnk{color:#8e8e8e;cursor:pointer;}
-.ig-cap b{font-weight:600;}
 
 /* ── POPUP PUBLICATION (LeLab basique) ─────────────────── */
 /* Modale au langage refonte : surface crème (plus de blanc pur posé sur crème), radius modal.
@@ -1257,7 +1225,7 @@ body.dev-local::after{
 
 /* ════ STUDIO LeLab+ — compléments (montée de version lelab-studio) ════ */
 /* (Bandeau de reprise supprimé — la reprise est désormais DIRECTE, cf. handlePlusClick ; « Recommencer »
-   vit dans le studio, cf. .studio-reset-row.) */
+   vit dans la tête du studio, à côté du retour.) */
 .upload .u-ico{width:44px;height:44px;border-radius:var(--r-sm);background:var(--gris-card);
   display:flex;align-items:center;justify-content:center;}
 .upload .u-ico svg{width:22px;height:22px;stroke:var(--ink-2);}
@@ -1282,9 +1250,6 @@ body.dev-local::after{
   display:flex;align-items:center;justify-content:center;}
 
 .ia-hint .spark{color:var(--on-jaune);}
-.ig-name .loc{font-size:10.5px;font-weight:400;color:#737373;}
-.ig-more{color:#262626;font-size:16px;letter-spacing:1px;}
-.ig-actions .sp{flex:1;}
 
 /* ═══ MON INSTAGRAM — LE STUDIO EN TROIS PAS (bout 8, LELAB-DESIGN §5 point 4) ═══════════════════════════════
    La pièce jaune : même charte que Mon site (charte.css), le jaune y mène (§1 : jaune .30 + violet .16 la nuit ;
@@ -1301,6 +1266,10 @@ body.ecran-insta .flou-violet{top:auto;left:-20vmax;bottom:-30vmax;width:55vmax;
 .compose{flex:1;min-width:0;display:flex;flex-direction:column;padding:8px 16px 0;}
 .apercu-col{display:none;}
 .studio-tete{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;}
+.tete-g{display:flex;align-items:center;gap:6px;min-width:0;}
+/* « Recommencer » : à côté du retour, en lien discret, seulement s'il y a du travail (body.studio-canreset). */
+.studio-tete .studio-reset-link{display:none;}
+body.studio-canreset .studio-tete .studio-reset-link{display:inline-flex;align-items:center;}
 .studio-retour{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 12px;border-radius:999px;
   border:1px solid var(--contour);border-color:color-mix(in srgb,var(--texte) 22%,transparent);background:transparent;
   color:var(--texte);font:500 14px/1 var(--sans);cursor:pointer;}
@@ -1316,7 +1285,9 @@ body[data-pas="2"] .studio-pas span:nth-child(-n+2),
 body[data-pas="3"] .studio-pas span{background:var(--en-ligne);}
 #screen-studio .steps-viewport{margin-top:22px;}
 .studio-entree{margin:0;padding-top:.12em;font:400 46px/.94 var(--serif);letter-spacing:-.025em;color:var(--texte);text-wrap:balance;}
-#screen-studio .studio-q{margin:0;padding-top:.12em;font:400 40px/.94 var(--serif);letter-spacing:-.025em;color:var(--texte);}
+#screen-studio .studio-q{margin:0;padding-top:.12em;font:400 46px/.94 var(--serif);letter-spacing:-.025em;color:var(--texte);}   /* même taille que l'entrée (maquette) */
+.studio-k{display:none;}
+.sur-visuel{display:none;}   /* téléphone : le visuel seul ; « Modifier dans la carte » en lien sous lui */
 #screen-studio .studio-sub{margin:8px 0 0;font-size:14px;line-height:1.45;color:var(--texte-2);}
 .studio-note{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--texte-2);}
 
@@ -1339,23 +1310,22 @@ body[data-pas="3"] .studio-pas span{background:var(--en-ligne);}
 .sujet-fleche svg{width:14px;height:14px;}
 .sujet[aria-disabled="true"]{background:transparent;color:var(--texte);cursor:default;
   border:1.5px dashed var(--contour);border-color:color-mix(in srgb,var(--texte) 30%,transparent);}
-.sujet[aria-disabled="true"] .sujet-s{color:var(--texte-2);}
+.sujet[aria-disabled="true"] .sujet-s{color:var(--texte);}   /* indisponible : contour seul, texte en --texte (§2) */
 /* ⚠️ LA NUIT, DANS LA PIÈCE JAUNE, LES TEXTES SECONDAIRES POSÉS SUR LE FOND PASSENT EN --texte (décidé le 28/10).
-   Mesure du 28/10 : sujets sans matière 3,18 à 3,85 en réel (le grain papier de leur carte en contour éclaircit le
-   fond) ; les autres passent en réel au repos (4,55 à 10,82) mais tombent à 3,48 sur la borne (cœur du flou jaune
-   .30 + grain p99), et le flou dérive. Aucun token ne change, le flou ne bouge pas ; le jour garde --texte-2. */
-body.ecran-insta .sujet[aria-disabled="true"] .sujet-s,
+   Mesure du 28/10 : ces textes passent en réel au repos (4,55 à 10,82) mais tombent à 3,48 sur la borne (cœur du
+   flou jaune .30 + grain p99), et le flou dérive. (Le sous-titre d'un sujet indisponible est en --texte partout.) Aucun token ne change, le flou ne bouge pas ; le jour garde --texte-2. */
+body.ecran-insta #screen-studio .studio-k,
 body.ecran-insta #screen-studio .studio-sub,
 body.ecran-insta .studio-promesse,
 body.ecran-insta #screen-studio .slide-count,
 body.ecran-insta .apercu-legende{color:var(--texte);}
-html[data-chromie="jour"] body.ecran-insta .sujet[aria-disabled="true"] .sujet-s,
+html[data-chromie="jour"] body.ecran-insta #screen-studio .studio-k,
 html[data-chromie="jour"] body.ecran-insta #screen-studio .studio-sub,
 html[data-chromie="jour"] body.ecran-insta .studio-promesse,
 html[data-chromie="jour"] body.ecran-insta #screen-studio .slide-count,
 html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);}
 @media (prefers-color-scheme:light){
-  html:not([data-chromie]) body.ecran-insta .sujet[aria-disabled="true"] .sujet-s,
+  html:not([data-chromie]) body.ecran-insta #screen-studio .studio-k,
   html:not([data-chromie]) body.ecran-insta #screen-studio .studio-sub,
   html:not([data-chromie]) body.ecran-insta .studio-promesse,
   html:not([data-chromie]) body.ecran-insta #screen-studio .slide-count,
@@ -1366,9 +1336,12 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
 /* Pas 2 — l'aperçu en grand (téléphone), ce qui le remplit */
 .apercu-place{display:flex;justify-content:center;margin-top:18px;}
 .apercu{display:flex;flex-direction:column;align-items:center;width:100%;}
-.apercu-place .phone{width:min(100%,320px);background:none;padding:0;box-shadow:none;border-radius:0;}
-.apercu-place .phone-screen{height:auto;overflow:hidden;border-radius:18px;box-shadow:0 22px 48px -22px rgba(0,0,0,.7);}
-.apercu-place .phone-screen.story{aspect-ratio:9/16;}
+/* Téléphone, pas 2 : le visuel SEUL (plus de cadre Instagram), à la hauteur posée par dimensionnerApercu. */
+.apercu-place .phone{width:auto;background:none;padding:0;box-shadow:none;border-radius:0;}
+.apercu-place .phone-screen{height:auto;overflow:hidden;border-radius:18px;box-shadow:0 22px 48px -22px rgba(0,0,0,.7);
+  aspect-ratio:4/5;width:min(calc(100vw - 32px),calc(var(--apercu-h,440px) * 4 / 5));}
+.apercu-place .phone-screen.story{aspect-ratio:9/16;width:min(calc(100vw - 32px),calc(var(--apercu-h,440px) * 9 / 16));}
+#screen-studio .slide-controls{margin-top:12px;}
 .phone-stage{position:relative;width:100%;display:flex;align-items:center;justify-content:center;}
 /* L'aperçu est un écran Instagram : son texte est celui d'Instagram, pas le crème du studio (hérité, il disparaissait sur le blanc). */
 #screen-studio .phone-screen{color:#262626;}
@@ -1441,11 +1414,27 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
   .studio-wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:72px;padding:0 32px;align-items:start;}
   .compose{max-width:640px;padding:16px 0 0;}
   .apercu-col{display:flex;flex-direction:column;align-items:center;gap:14px;position:sticky;top:24px;padding-top:16px;}
-  .apercu-col .phone{width:360px;padding:14px;border-radius:52px;background:#0E0B14;box-shadow:0 40px 80px -36px rgba(0,0,0,.9),inset 0 0 0 1px rgba(244,239,230,.1);}
-  .apercu-col .phone-screen{height:590px;border-radius:40px;}
+  .apercu-col .phone{width:auto;padding:14px;border-radius:52px;background:#0E0B14;box-shadow:0 40px 80px -36px rgba(0,0,0,.9),inset 0 0 0 1px rgba(244,239,230,.1);}
+  /* L'écran du téléphone : 590 px de haut au plus, moins si la fenêtre est basse (1280 × 800 : cadre, compteur et
+     légende tiennent sans défiler) ; sa largeur suit le 9:16 de l'écran. */
+  .apercu-col .phone-screen{--ecran-h:min(590px,calc(100vh - 250px));height:var(--ecran-h);width:calc(var(--ecran-h) * 9 / 16);
+    border-radius:40px;overflow:hidden;background:var(--encre);
+    display:flex;flex-direction:column;justify-content:center;}
+  .apercu-col .phone-screen > .ig-img,.apercu-col .phone-screen > .ig-typo{width:100%;flex:none;}
+  .studio-k{display:block;margin:0 0 10px;font:600 11px/1.3 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--texte-2);}
+  .sur-visuel{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;
+    border-top:1px solid color-mix(in srgb,var(--texte) 18%,transparent);}
+  .sur-visuel[hidden]{display:none;}
+  .sv-ligne{display:flex;align-items:center;gap:14px;width:100%;min-height:52px;padding:10px 2px;background:none;border:0;cursor:pointer;text-align:left;
+    color:var(--texte);border-bottom:1px solid color-mix(in srgb,var(--texte) 18%,transparent);font:inherit;}
+  .sv-t{flex:1;min-width:0;font:400 22px/1.15 var(--serif);}
+  .sv-p{font:500 14px/1 var(--sans);}
+  .sv-ligne svg{width:14px;height:14px;flex:none;}
+  .sv-ligne:hover .sv-t{text-decoration:underline;text-underline-offset:3px;}
+  #screen-studio #studioModifier{display:none;}   /* desktop : les lignes ci-dessus mènent déjà à la carte */
   .apercu-legende{margin:0;font-size:13px;color:var(--texte-2);}
   .studio-entree{font-size:72px;}
-  #screen-studio .studio-q{font-size:64px;}
+  #screen-studio .studio-q{font-size:72px;}
   .vignette{display:none;}
   /* Desktop : le pied suit la colonne (canvas), il ne colle pas au bas de l'écran par-dessus les sujets. */
   body.in-tunnel #screen-studio .lelab-foot{position:static;margin-top:26px;align-items:flex-start;padding:0 0 48px;background:none;}
@@ -1573,7 +1562,10 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
       <div class="studio-wrap" id="studio-unlocked">
         <div class="compose">
           <div class="studio-tete">
-            <button type="button" class="studio-retour" id="studioRetour" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg><span id="studioRetourTxt">Mon site</span></button>
+            <div class="tete-g">
+              <button type="button" class="studio-retour" id="studioRetour" onclick="prevStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg><span id="studioRetourTxt">Mon site</span></button>
+              <button type="button" class="studio-reset-link" onclick="askRecommencer()">Recommencer</button>
+            </div>
             <span class="studio-chip" id="studioChip" hidden></span>
           </div>
           <div class="studio-pas" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -1581,6 +1573,7 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
           <div class="steps-viewport" id="stepsViewport">
           <!-- PAS 1 · QUOI — l'entrée : le sujet le plus frais du site est déjà choisi. -->
           <div class="step-block" data-step-id="quoi">
+            <p class="studio-k">1 sur 3</p>
             <h1 class="studio-entree" id="studioEntree">Qu’est-ce qu’on poste ?</h1>
             <div class="fmt-row" id="fmtRow" role="group" aria-label="Format">
               <button type="button" class="fmt" data-fmt="story" onclick="selectFmt(this)">Story</button>
@@ -1592,9 +1585,11 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
 
           <!-- PAS 2 · LE VISUEL — l'aperçu en grand (téléphone) ; ce qui le remplit (photo, texte). -->
           <div class="step-block" data-step-id="page">
+            <p class="studio-k">2 sur 3</p>
             <h2 class="studio-q">Votre visuel.</h2>
-            <p class="studio-sub" id="pageSub">Vos couleurs et votre typo, déjà posées.</p>
             <div class="apercu-place" id="apercuPlace"></div>
+            <!-- Desktop : ce qui est sur le visuel, chaque ligne mène là où on le modifie (renderSurVisuel). -->
+            <ul class="sur-visuel" id="surVisuel" hidden></ul>
 
             <!-- PHOTO (thèmes photo) -->
             <div id="photoZone" style="display:none;">
@@ -1634,6 +1629,7 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
           <div class="step-block" data-step-id="legende">
             <div class="leg-tete">
               <div>
+                <p class="studio-k">3 sur 3</p>
                 <h2 class="studio-q" id="legTitre">Et la légende.</h2>
                 <p class="studio-sub" id="legSous">Écrite pour vous, à relire.</p>
               </div>
@@ -1657,7 +1653,6 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
             </div>
           </div>
           </div><!-- /steps-viewport -->
-          <div class="studio-reset-row"><button type="button" class="studio-reset-link" onclick="askRecommencer()">Recommencer</button></div>
 
           <!-- LE PIED : une seule action, dite avant le clic (LELAB-DESIGN §7). -->
           <div class="lelab-foot" id="studioFoot">
@@ -1673,11 +1668,6 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
             <button type="button" class="slide-arrow-m" id="slidePrevM" onclick="studioSlideNav(-1)" aria-label="Image précédente">‹</button>
             <div class="phone">
             <div class="phone-screen">
-              <div class="ig-top">
-                <div class="ig-ava"><div></div></div>
-                <div class="ig-name">votre_compte<span class="loc"></span></div>
-                <div class="ig-more">···</div>
-              </div>
               <div class="ig-img" id="igPhoto" style="display:none;"><div class="ig-photo-inner" id="igPhotoInner"></div><img class="ig-habillage" id="igHabillage" alt=""><div class="ig-text" id="igText"><span></span></div><div class="ig-sample" id="igSample">Exemple</div><div class="ig-count" id="igCount"></div><div class="ig-drag-hint" id="igDragHint">✥ Glissez pour cadrer</div></div>
               <!-- ⚠️ LE REPLI BRUYANT : si le moteur v2 ne peut pas peindre, on le DIT ici (accident du 31/07). -->
               <div class="v2-repli" id="v2Repli" hidden></div>
@@ -1689,16 +1679,6 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
                 </div>
               </div>
               <div class="ig-overlay" id="igOverlay"><span></span></div>
-              <div class="ig-dots" id="igDots"></div>
-              <div class="ig-actions" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-4-1L3 20l1.1-4A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
-                <span class="sp"></span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-              </div>
-              <div class="ig-likes ig-time">À l'instant</div>
-              <div class="ig-cap"><b id="igCapName"></b> <span id="igCap"></span><span id="igMore" class="ig-more-lnk" onclick="expandPreviewCaption()"></span> <span id="igTags" style="color:#385185;"></span></div>
             </div>
             </div>
             <button type="button" class="slide-arrow-m" id="slideNextM" onclick="studioSlideNav(1)" aria-label="Image suivante">›</button>
@@ -1710,7 +1690,7 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
             <button type="button" class="slide-arrow" id="slideNext" onclick="studioSlideNav(1)" aria-label="Image suivante">›</button>
           </div>
           </div>
-          <p class="apercu-legende" id="apercuLegende">Aperçu en taille réelle</p>
+          <p class="apercu-legende" id="apercuLegende">Aperçu en taille réelle · Post 1080 × 1350</p>
         </aside>
 
         <!-- L'image seule, en plein écran (téléphone, pas 3) : fond encre, fermée d'un geste. -->
@@ -2897,13 +2877,16 @@ function renderCustomThemes(){
     const kind = RENDER_KIND[theme.type] || 'photo';       // kind de RENDU (annonce → infos : zéro nouveau moteur)
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'lelab-card sujet grain-papier';
+    const sansMatiere = sujetSansMatiere(theme);
+    /* Un sujet indisponible n'est pas une surface : contour en pointillés sur le fond, sans papier ni grain
+       (LELAB-DESIGN §2 — le contour dit « masqué / pas là »). Le grain papier sur un fond transparent le grisait. */
+    card.className = 'lelab-card sujet' + (sansMatiere ? '' : ' grain-papier');
     card.setAttribute('role', 'listitem');
     card.dataset.custom = '1';
     card.dataset.theme = 'custom:' + theme.id;
     card.dataset.kind = kind;
     card.dataset.variant = cardVariant(theme, kind);
-    if (sujetSansMatiere(theme)) card.setAttribute('aria-disabled', 'true');
+    if (sansMatiere) card.setAttribute('aria-disabled', 'true');
     card.setAttribute('onclick', 'selectTheme(this, true)');
     card.innerHTML =
       '<span class="sujet-txt"><span class="sujet-t tt">' + esc(nomCourtSujet(theme)) + '</span>' +
@@ -2975,13 +2958,6 @@ function selectTheme(btn, animate){
   const infosZoneEl = document.getElementById('infosZone'); if (infosZoneEl) infosZoneEl.style.display = isInfos ? 'block' : 'none';
   const isAnnonce = isInfos && isAnnonceTheme(currentCustomTheme);   // même zone que les infos, geste différent
   if (isInfos) applyInfosVariant(isAnnonce);
-  /* Le pas 2 dit ce qui remplit le visuel (bout 8). L'aperçu photo (photo d'exemple + gabarit) est peint par
-     renderStudio() → composeCustomPreview() ci-dessous. */
-  const sous = document.getElementById('pageSub');
-  if (sous) sous.textContent = 'Vos couleurs et votre typo, déjà posées. ' + (isTypo
-    ? 'Les plats viennent du site : on les modifie là où ils vivent.'
-    : isInfos ? (isAnnonce ? 'Écrivez l’annonce, l’IA la met en forme.' : 'Le texte, c’est vous, ou l’IA.')
-    : 'Ajoutez la photo, puis glissez-la pour la cadrer.');
 
   /* On ne détruit le travail du client QUE si son choix a RÉELLEMENT changé.
      Re-taper la MÊME card (« ai-je bien pris la carte ou le plat du jour ? ») n'est pas un changement :
@@ -3784,6 +3760,9 @@ function renderStudio(){
   updateSlideNav();      // contrôles carrousel (slides typo)
   adjustStepsHeight();   // la hauteur du contenu de l'étape a pu changer (zones, vignettes…)
   updateStudioPrimary(); // une photo ajoutée ou retirée change ce que le pied permet
+  renderSurVisuel();
+  const lg = document.getElementById('apercuLegende');
+  if (lg) lg.textContent = 'Aperçu en taille réelle · ' + (currentFmt === 'story' ? 'Story 1080 × 1920' : 'Post 1080 × 1350');
   if (currentStepId() === 'legende') preparerEnvoiPlusTard();   // l'image envoyée suit le visuel (pas la légende)
   saveStudioDraft();
 }
@@ -3927,6 +3906,47 @@ function placerApercu(){
 }
 matchMedia(APERCU_DESKTOP).addEventListener('change', placerApercu);
 
+/* ═══ TÉLÉPHONE, PAS 2 : LE VISUEL ENTIER ENTRE LE TITRE ET LE BOUTON, SANS DÉFILER (maquette) ═══════════════
+   La hauteur disponible = du haut de la place de l'aperçu au haut du pied fixe, moins le compteur d'une carte en
+   plusieurs images. Le visuel prend cette hauteur, et sa largeur suit son format (Story 9:16, Post 4:5), bornée
+   par la colonne. Mesuré page en haut (goStep remonte) ; recalculé au redimensionnement. */
+function dimensionnerApercu(){
+  const place = document.getElementById('apercuPlace'), pied = document.getElementById('studioFoot');
+  if (!place || !pied || matchMedia(APERCU_DESKTOP).matches) return;
+  const haut = place.getBoundingClientRect().top + window.scrollY;
+  const bas = pied.getBoundingClientRect().top + window.scrollY;
+  const compteur = (currentKind === 'typo' && currentFmt !== 'story' && studioSlides().length > 1) ? 50 : 0;
+  place.style.setProperty('--apercu-h', Math.max(200, Math.floor(bas - haut - compteur - 14)) + 'px');
+}
+window.addEventListener('resize', () => { if (currentStepId() === 'page') dimensionnerApercu(); });
+
+/* ═══ DESKTOP, PAS 2 : CE QUI EST SUR LE VISUEL, chaque ligne mène là où on le modifie (maquette) ═══════════
+   Les plats (vers leur source), ou le titre et la date de l'événement (vers la feuille Événements). La photo et
+   les textes du visuel se modifient sur place, dans les champs du pas 2 : pas de ligne pour eux. */
+function ouvrirSource(cle){
+  const bloc = tousLesBlocs().find(b => b.cle === cle);
+  const a = bloc && (Array.isArray(bloc.admin) ? bloc.admin[0] : bloc.admin);
+  if (a && a.edit) openEdit(a.edit);
+}
+function renderSurVisuel(){
+  const ul = document.getElementById('surVisuel');
+  if (!ul) return;
+  const e = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const fleche = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg>';
+  let lignes = [];
+  const src = currentCustomTheme && currentCustomTheme.prefill;
+  if (currentKind === 'typo'){
+    lignes = currentDishRows().filter(d => (d.n || '').trim()).map(d =>
+      `<li><button type="button" class="sv-ligne" onclick="modifierPlatsStudio()"><span class="sv-t">${e(d.n)}</span><span class="sv-p">${e(d.p)}</span>${fleche}</button></li>`);
+  } else if (src === 'event'){
+    const ev = prochainEvenementDuSite();
+    if (ev) lignes = [ev.titre || 'Événement', ev.date ? fmtEventWhen(ev) : ''].filter(Boolean).map(t =>
+      `<li><button type="button" class="sv-ligne" onclick="ouvrirSource('events')"><span class="sv-t">${e(t)}</span>${fleche}</button></li>`);
+  }
+  ul.innerHTML = lignes.join('');
+  ul.hidden = !lignes.length;
+}
+
 /* La réserve sous le pied fixe (téléphone) = SA hauteur réelle : la phrase du pas 3 l'allonge. */
 function mesurerPied(){
   const pied = document.getElementById('studioFoot');
@@ -3966,7 +3986,7 @@ function syncStudioScreens(prevStepN){
   /* ⚠️ Téléphone : l'aperçu vit DANS le pas 2. Peint pendant que ce pas était masqué (photo ajoutée, sujet choisi
      au pas 1), il a été mesuré à largeur 0 : calques du décor mal placés, cadrage au doigt inactif (le jeu de la
      photo valait 0). On le repeint une fois le pas 2 affiché. Trouvé par test-accroches-v2 (B2, D2). */
-  if (currentStepId() === 'page' && typeof studioReady !== 'undefined' && studioReady) renderStudio();
+  if (currentStepId() === 'page' && typeof studioReady !== 'undefined' && studioReady){ dimensionnerApercu(); renderStudio(); }
   if (currentStepId() !== 'legende') return;
   requestAnimationFrame(() => autoGrowTextarea(document.getElementById('caption')));
   preparerEnvoi();
@@ -4828,7 +4848,9 @@ function updateSlideNav(){
   const ctrl = document.getElementById('slideControls');
   if (!ctrl) return;
   const stage = document.getElementById('phoneStage');
-  const n = (currentKind === 'typo') ? studioSlides().length : 0;
+  /* Une story part en UNE image (bakeAllVisuals) : pas de navigation d'images en story — l'aperçu montre l'export. */
+  const n = (currentKind === 'typo' && currentFmt !== 'story') ? studioSlides().length : 0;
+  if (currentKind === 'typo' && currentFmt === 'story') studioSlideIdx = 0;
   if (n <= 1){ ctrl.style.display = 'none'; if (stage) stage.classList.remove('has-carousel'); return; }
   if (studioSlideIdx >= n) studioSlideIdx = n - 1;   // recale sur la slide précédente (catégorie supprimée)
   if (studioSlideIdx < 0) studioSlideIdx = 0;
@@ -5196,7 +5218,10 @@ function effacerRepli(){
 }
 /** Le rasteriseur v2 d'un thème, ou null. Une seule porte pour toutes les accroches. */
 function slideEvenement(){
-  const ev = ((typeof sassyData !== 'undefined' && sassyData.events) || [])[0];
+  /* 🐛 Il peignait events[0] — le PREMIER de la liste, passé ou non — alors que le pas 1 annonce le PROCHAIN à
+     venir (bout 8). Le visuel montre désormais celui que le sujet promet ; events[0] reste le repli. */
+  const ev = (typeof nextUpcomingEvent === 'function' && nextUpcomingEvent())
+          || ((typeof sassyData !== 'undefined' && sassyData.events) || [])[0];
   if (!ev) return null;
   const d = ev.date ? new Date(ev.date) : null;
   const MOIS = ['janv.','fevr.','mars','avr.','mai','juin','juil.','aout','sept.','oct.','nov.','dec.'];

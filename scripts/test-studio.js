@@ -10,6 +10,10 @@
      S4. téléphone, pas 2 : le pied ne masque jamais le bas de l'aperçu (constaté sur iPhone le 27/10) ;
      S5. téléphone, pas 3 : la vignette ouvre l'image seule en plein écran, fond encre, fermée d'un geste ;
      S6. desktop : l'aperçu est à droite, dans un téléphone, aux trois pas.
+     S7. pas 2, SANS DÉFILER : le visuel est entier dans la fenêtre — sous le titre et au-dessus du pied (390×844),
+         dans le cadre et dans la fenêtre (1280×800) — en Story comme en Post (maquette, 28/10).
+     S8. l'aperçu est le visuel seul : aucun cadre Instagram (en-tête de compte, icônes, horodatage, légende).
+     S9. un sujet indisponible : contour en pointillés, ni papier ni grain, texte en --texte (LELAB-DESIGN §2).
    L'ENVOI (ce qui ENVOIE — rouge sur le code d'avant, vert après) :
      E1. desktop : l'image se télécharge (un fichier par visuel) et la légende + hashtags sont copiés ;
      E2. téléphone : la légende est copiée PUIS le partage du téléphone s'ouvre avec les fichiers, DANS le geste
@@ -169,6 +173,64 @@ function enregistreurs(telephone){
     await ctx.close();
   });
 
+  /* ── S7 + S8 + S9 ── */
+  await essai('S7-S9', async () => {
+    for (const [L, H] of [[390, 844], [1280, 800]]) for (const fmt of ['story', 'portrait']){
+      const ctx = await b.createBrowserContext(); const p = await ctx.newPage();
+      await p.setViewport({ width: L, height: H, isMobile: L < 900, hasTouch: L < 900 });
+      await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+      await p.evaluateOnNewDocument(enregistreurs, L < 900);
+      await p.goto(BASE, { waitUntil: 'networkidle0' });
+      await p.evaluate(() => handlePlusClick()); await wait(700);
+      await p.evaluate(f => { const b = document.querySelector('#fmtRow .fmt[data-fmt="' + f + '"]'); if (b) b.click(); goStep(2); }, fmt);
+      await wait(900);
+      const r = await p.evaluate(() => {
+        const v = document.querySelector('#apercu .phone-screen').getBoundingClientRect();
+        const t = document.querySelector('[data-step-id="page"] .studio-q').getBoundingClientRect();
+        const pied = document.getElementById('studioFoot').getBoundingClientRect();
+        const desk = matchMedia('(min-width:961px)').matches;
+        const vis = [...document.querySelectorAll('#apercu .ig-img, #apercu .ig-typo')].find(x => getComputedStyle(x).display !== 'none');
+        const iv = vis ? vis.getBoundingClientRect() : null;
+        return { desk, scroll: Math.round(scrollY), haut: Math.round(v.top), bas: Math.round(v.bottom), titre: Math.round(t.bottom), pied: Math.round(pied.top),
+                 h: innerHeight, w: Math.round(v.width), legende: Math.round(document.getElementById('apercuLegende').getBoundingClientRect().bottom),
+                 compteur: (() => { const c = document.getElementById('slideControls'); const q = c.getBoundingClientRect(); return getComputedStyle(c).display === 'none' ? null : Math.round(q.bottom); })(), visHaut: iv && Math.round(iv.top), visBas: iv && Math.round(iv.bottom),
+                 cadre: ['.ig-top', '.ig-name', '.ig-ava', '.ig-actions', '.ig-likes', '.ig-cap', '.ig-dots'].filter(q => document.querySelector('#apercu ' + q)).join(', ') };
+      });
+      const nom = `${L}×${H} ${fmt === 'story' ? 'Story' : 'Post'}`;
+      if (r.scroll) fails.push(`S7/ ${nom} : la page est défilée (${r.scroll} px) au pas 2`);
+      if (!r.desk){
+        if (r.haut < r.titre - 1) fails.push(`S7/ ${nom} : le visuel passe sous le titre (${r.haut} < ${r.titre})`);
+        if (r.bas > r.pied + 1)   fails.push(`S7/ ${nom} : le visuel descend sous le pied (${r.bas} > ${r.pied}) — il faudrait défiler`);
+        if (r.compteur !== null && r.compteur > r.pied + 1) fails.push(`S7/ ${nom} : le compteur d'images passe sous le pied (${r.compteur} > ${r.pied})`);
+      } else {
+        if (r.bas > r.h || r.haut < 0) fails.push(`S7/ ${nom} : le cadre de l'aperçu sort de la fenêtre (${r.haut} → ${r.bas}, fenêtre ${r.h})`);
+        if (r.legende > r.h) fails.push(`S7/ ${nom} : « Aperçu en taille réelle » sort de la fenêtre (${r.legende} > ${r.h})`);
+        if (r.visHaut < r.haut - 1 || r.visBas > r.bas + 1) fails.push(`S7/ ${nom} : le visuel déborde du cadre (${r.visHaut} → ${r.visBas} dans ${r.haut} → ${r.bas})`);
+      }
+      if (r.cadre) fails.push(`S8/ ${nom} : l'aperçu porte encore un cadre Instagram (${r.cadre})`);
+      if (L < 900 && fmt === 'portrait'){
+        const s9 = await p.evaluate(() => {
+          goStep(1);
+          const c = document.querySelector('.sujet[aria-disabled="true"]');
+          if (!c) return null;
+          const cs = getComputedStyle(c), apres = getComputedStyle(c, '::after');
+          const texte = getComputedStyle(document.documentElement).getPropertyValue('--texte').trim();
+          const hex = x => '#' + x.match(/\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+          return { bord: cs.borderTopStyle, fond: cs.backgroundColor, grain: apres.content !== 'none' && apres.backgroundImage !== 'none',
+                   sous: hex(getComputedStyle(c.querySelector('.sujet-s')).color), texte: texte.toUpperCase() };
+        });
+        if (!s9) fails.push('S9/ aucun sujet indisponible à mesurer (setup KO)');
+        else {
+          if (s9.bord !== 'dashed') fails.push(`S9/ sujet indisponible : contour « ${s9.bord} » au lieu de pointillés`);
+          if (s9.fond !== 'rgba(0, 0, 0, 0)') fails.push(`S9/ sujet indisponible : un fond est posé (${s9.fond})`);
+          if (s9.grain) fails.push('S9/ sujet indisponible : le grain papier est posé dessus');
+          if (s9.sous !== s9.texte) fails.push(`S9/ sujet indisponible : sous-titre en ${s9.sous} au lieu de --texte ${s9.texte}`);
+        }
+      }
+      await ctx.close();
+    }
+  });
+
   /* ── S6. DESKTOP : l'aperçu à droite, dans un téléphone, aux trois pas ── */
   await essai('S6-E1', async () => {
     const { p, ctx } = await page(1280, { donnees: { 'events.json': [] } });
@@ -181,7 +243,7 @@ function enregistreurs(telephone){
                  vignette: (() => { const v = document.getElementById('studioVignette'); return v.getBoundingClientRect().width > 0; })() };
       });
       if (!r.dansCol || !r.adroite) fails.push(`S6/ desktop, pas ${n} : l'aperçu n'est pas dans la colonne de droite`);
-      if (r.largeur < 360) fails.push(`S6/ desktop, pas ${n} : le téléphone de l'aperçu mesure ${r.largeur} px (attendu ≥ 360)`);
+      if (r.largeur < 360) fails.push(`S6/ desktop 1280×900, pas ${n} : le téléphone de l'aperçu mesure ${r.largeur} px (attendu ≥ 360)`);
       if (r.vignette) fails.push(`S6/ desktop, pas ${n} : la vignette du téléphone est affichée (l'aperçu est déjà permanent)`);
     }
     /* ── E1. DESKTOP : télécharger l'image, copier la légende ── */
@@ -234,5 +296,5 @@ function enregistreurs(telephone){
 
   await b.close();
   if (fails.length){ console.error('\n❌ STUDIO — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
+  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 : le visuel seul, entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
 })();
