@@ -140,6 +140,47 @@
   const W_EXPORT = 1080;
 
   /** La zone réservée du format, RAMENÉE À L'ÉCHELLE de rendu demandée. `(fmt, W)`. */
+  /* ── COMBIEN DE PLATS TIENNENT ? (la carte en story, 28/10) ─────────────────────────────────────────
+     Mesuré, pas estimé : le corps est posé dans un iframe caché, AVEC le socle (polices embarquées) et le CSS du
+     template, à la taille du format. On retire des plats par la fin tant que la signature (.pied, collée en bas
+     de la colonne) sort de la colonne. ⚠️ Un iframe, pas un shadow root : Chrome ignore les @font-face déclarées
+     dans un shadow DOM — la mesure se ferait en police système. Rend { cats, peints, total }. */
+  function platsQuiTiennent(tpl, W, hab, slide, fmt) {
+    const H = Math.round(W * hab.naturalHeight / hab.naturalWidth);
+    const Z = zoneSure(fmt, W);
+    const cats = (slide && slide.cats) || [];
+    const total = cats.reduce(function (t, c) { return t + c.dishes.length; }, 0);
+    const couper = function (n) {
+      const out = []; let reste = n;
+      cats.forEach(function (c) { if (reste > 0) { out.push({ label: c.label, dishes: c.dishes.slice(0, reste) }); reste -= c.dishes.length; } });
+      return out;
+    };
+    return chargerAssets().then(function (A) {
+      const f = document.createElement('iframe');
+      f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1;
+      f.style.cssText = 'position:fixed;left:-30000px;top:0;width:' + W + 'px;height:' + H + 'px;border:0;visibility:hidden;pointer-events:none';
+      document.body.appendChild(f);
+      const d = f.contentDocument;
+      d.open();
+      d.write('<!doctype html><html><head><style>' + socleCSS(A) + tpl.css(A, W, H, fmt, Z, slide) + '</style></head><body style="margin:0"></body></html>');
+      d.close();
+      const tient = function (n) {
+        d.body.innerHTML = tpl.corps(A, W, H, fmt, Z, { cats: couper(n) });
+        const col = d.querySelector('.col'), pied = d.querySelector('.pied');
+        return !col || !pied || pied.getBoundingClientRect().bottom <= col.getBoundingClientRect().bottom + 0.5;
+      };
+      d.body.innerHTML = tpl.corps(A, W, H, fmt, Z, { cats: cats });
+      const polices = d.fonts ? Promise.all(["900 40px 'Canela'", "500 20px 'Elms'", "400 20px 'Elms'"].map(function (q) { return d.fonts.load(q).catch(function () {}); }))
+                                  .then(function () { return d.fonts.ready; }) : Promise.resolve();
+      return polices.then(function () {
+        let n = total;
+        while (n > 0 && !tient(n)) n--;
+        f.remove();
+        return { cats: couper(n), peints: n, total: total };
+      }, function (e) { f.remove(); throw e; });
+    });
+  }
+
   function zoneSure(fmt, W) {
     const Z = ZONE_SURE[fmt] || ZONE_SURE.portrait;
     const k = W / W_EXPORT;
@@ -492,16 +533,36 @@
         + signatureCSS(A, '.pied', c.creme, W);
     },
     corps: function (A, W, H, fmt, Z, slide) {
-      const plats = ((slide && slide.dishes) || []).filter(function (d) { return d.n; });
+      const rangeesDe = function (liste) {
+        return (liste || []).filter(function (d) { return d.n; }).map(function (d) {
+          const desc = d.desc ? '<p class="desc">' + xml(d.desc) + '</p>' : '';
+          return '<div class="plat"><div class="ligne">'
+               + '<span class="nom">' + xml(d.n) + '</span>'
+               + '<span class="dots"></span>'
+               + '<span class="prix">' + xml(d.p) + '</span>'
+               + '</div>' + desc + '</div>';
+        }).join('');
+      };
+      /* LA STORY PORTE TOUTE LA CARTE (28/10) : `slide.cats` = plusieurs catégories sur la MÊME image, chacune
+         avec son titre — mêmes règles qu'un post, la hauteur en plus sert à tout montrer. Sans `cats` (le post,
+         une catégorie par image), le rendu est celui d'avant, à l'octet. */
+      if (slide && Array.isArray(slide.cats)) {
+        const blocs = slide.cats.map(function (c) {
+          return '<div class="cat">' + (c.label ? '<div class="cat-t">' + xml(c.label) + '</div>' : '') + rangeesDe(c.dishes) + '</div>';
+        }).join('');
+        return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
+             +   '<div class="col">'
+             +     '<div class="tete"><div>'
+             +       '<span class="lbl">l\u2019ardoise</span>'
+             +       '<div class="titre">la carte</div>'
+             +     '</div><span class="tampon">cette semaine</span></div>'
+             +     '<div class="liste">' + blocs + '</div>'
+             +     signature(A, 'pied')
+             +   '</div>'
+             + '</div>';
+      }
       const label = (slide && slide.label) || '';
-      const rangees = plats.map(function (d) {
-        const desc = d.desc ? '<p class="desc">' + xml(d.desc) + '</p>' : '';
-        return '<div class="plat"><div class="ligne">'
-             + '<span class="nom">' + xml(d.n) + '</span>'
-             + '<span class="dots"></span>'
-             + '<span class="prix">' + xml(d.p) + '</span>'
-             + '</div>' + desc + '</div>';
-      }).join('');
+      const rangees = rangeesDe(slide && slide.dishes);
       return '<div xmlns="http://www.w3.org/1999/xhtml" class="page">'
            +   '<div class="col">'
            +     '<div class="tete"><div>'
@@ -1266,6 +1327,13 @@
     /** Le rasteriseur d'un thème, ou null si le canvas garde la main.
         `(W, hab, slide, fmt) → Promise<dataURL>`. Un rejet fait retomber l'admin
         sur son peintre canvas : le filet reste tendu. */
+    /** La carte en story : `(theme, W, hab, slide{cats}, fmt) → Promise<{ cats, peints, total }>`, ou null si
+        le thème n'a pas de template v2. */
+    platsQuiTiennent: function (theme, W, hab, slide, fmt) {
+      const tpl = theme && theme.template && TEMPLATES[theme.template];
+      return tpl ? platsQuiTiennent(tpl, W, hab, slide, fmt) : null;
+    },
+
     rasteriseur: function (theme) {
       const tpl = theme && theme.template && TEMPLATES[theme.template];
       if (!tpl) return null;                       // ← LA GARANTIE, en une ligne

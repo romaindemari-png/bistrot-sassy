@@ -1431,6 +1431,7 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
   .sv-p{font:500 14px/1 var(--sans);}
   .sv-ligne svg{width:14px;height:14px;flex:none;}
   .sv-ligne:hover .sv-t{text-decoration:underline;text-underline-offset:3px;}
+  .sv-note{padding:14px 2px 0;font:400 14px/1.45 var(--sans);color:var(--texte);}
   #screen-studio #studioModifier{display:none;}   /* desktop : les lignes ci-dessus mènent déjà à la carte */
   .apercu-legende{margin:0;font-size:13px;color:var(--texte-2);}
   .studio-entree{font-size:72px;}
@@ -1690,7 +1691,7 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
             <button type="button" class="slide-arrow" id="slideNext" onclick="studioSlideNav(1)" aria-label="Image suivante">›</button>
           </div>
           </div>
-          <p class="apercu-legende" id="apercuLegende">Aperçu en taille réelle · Post 1080 × 1350</p>
+          <p class="apercu-legende" id="apercuLegende">Aperçu · Post 1080 × 1350</p>
         </aside>
 
         <!-- L'image seule, en plein écran (téléphone, pas 3) : fond encre, fermée d'un geste. -->
@@ -3762,7 +3763,8 @@ function renderStudio(){
   updateStudioPrimary(); // une photo ajoutée ou retirée change ce que le pied permet
   renderSurVisuel();
   const lg = document.getElementById('apercuLegende');
-  if (lg) lg.textContent = 'Aperçu en taille réelle · ' + (currentFmt === 'story' ? 'Story 1080 × 1920' : 'Post 1080 × 1350');
+  if (lg) lg.textContent = 'Aperçu · ' + (currentFmt === 'story' ? 'Story 1080 × 1920' : 'Post 1080 × 1350');
+  if (currentKind === 'typo' && currentFmt === 'story') mesurerStory();
   if (currentStepId() === 'legende') preparerEnvoiPlusTard();   // l'image envoyée suit le visuel (pas la légende)
   saveStudioDraft();
 }
@@ -3916,7 +3918,10 @@ function dimensionnerApercu(){
   const haut = place.getBoundingClientRect().top + window.scrollY;
   const bas = pied.getBoundingClientRect().top + window.scrollY;
   const compteur = (currentKind === 'typo' && currentFmt !== 'story' && studioSlides().length > 1) ? 50 : 0;
-  place.style.setProperty('--apercu-h', Math.max(200, Math.floor(bas - haut - compteur - 14)) + 'px');
+  /* « Modifier dans la carte » se lit sous le visuel, au-dessus du pied, sans défiler (28/10) : sa place est réservée. */
+  const lien = document.getElementById('studioModifier');
+  const reserveLien = (currentKind === 'typo' && lien && !lien.hidden) ? 54 : 0;
+  place.style.setProperty('--apercu-h', Math.max(200, Math.floor(bas - haut - compteur - reserveLien - 14)) + 'px');
 }
 window.addEventListener('resize', () => { if (currentStepId() === 'page') dimensionnerApercu(); });
 
@@ -3936,8 +3941,13 @@ function renderSurVisuel(){
   let lignes = [];
   const src = currentCustomTheme && currentCustomTheme.prefill;
   if (currentKind === 'typo'){
-    lignes = currentDishRows().filter(d => (d.n || '').trim()).map(d =>
+    /* En story : les plats PEINTS (ce qui est sur l'image), pas toute la carte. */
+    const plats = currentFmt === 'story' ? ((studioSlides()[0] || {}).dishes || []) : currentDishRows().filter(d => (d.n || '').trim());
+    lignes = plats.map(d =>
       `<li><button type="button" class="sv-ligne" onclick="modifierPlatsStudio()"><span class="sv-t">${e(d.n)}</span><span class="sv-p">${e(d.p)}</span>${fleche}</button></li>`);
+    const cap = currentFmt === 'story' && storyCapacite && storyCapacite.cle === cleStory(groupesDePlats()) ? storyCapacite : null;
+    if (cap && cap.peints < cap.total)
+      lignes.push('<li class="sv-note">La suite ne tient pas dans une story : passez en Post pour toute la carte.</li>');
   } else if (src === 'event'){
     const ev = prochainEvenementDuSite();
     if (ev) lignes = [ev.titre || 'Événement', ev.date ? fmtEventWhen(ev) : ''].filter(Boolean).map(t =>
@@ -4165,6 +4175,7 @@ async function bakeAllVisuals(){
   if (!theme) return [];
   try {
     if (currentKind === 'typo'){
+      if (fmt === 'story') await mesurerStory();   // l'image d'une story = ce qui tient, mesuré
       const slides = studioSlides();
       const list = fmt === 'story' ? slides.slice(0, 1) : slides;   // story = 1 image, jamais un carrousel
       return await Promise.all(list.map(s => renderFinalCarte(theme, fmt, s)));
@@ -4795,7 +4806,50 @@ const MAX_PER_SLIDE = 5;
 
 // Modèle de slides (template menu) : 1 slide par catégorie non vide (max 5 plats → débordement « (suite) »).
 // Sans catégories (saisie générique) → 1 slide sans libellé. < 2 slides = post simple.
+/* ═══ LA CARTE EN STORY : TOUTE LA CARTE SUR UNE IMAGE (28/10) ═══════════════════════════════════════════
+   Une story part en UNE image. Elle portait la 1re catégorie seulement (3 plats, ~60 % de vide) : le reste était
+   perdu. Elle porte désormais TOUS les plats qui tiennent dans 1080×1920 (MOTEUR_V2.platsQuiTiennent, mesuré avec
+   les vraies polices). La mesure est mise en cache par contenu ; tant qu'elle n'est pas faite, l'image porte tout.
+   ⚠️ Le post ne passe jamais ici : une catégorie par image, comme avant. */
+function groupesDePlats(){
+  const rows = Array.from(document.querySelectorAll('#dishEdit .dish-row'));
+  const read = r => ({ n: (r.querySelector('.d-name').value || '').trim(), p: (r.querySelector('.d-price').value || '').trim() });
+  if (!rows.some(r => r.dataset.cat)){ const dishes = rows.map(read).filter(d => d.n); return dishes.length ? [{ label: '', dishes }] : []; }
+  return categoriesCarte().map(c => ({ label: c.label, dishes: rows.filter(r => r.dataset.cat === c.cle).map(read).filter(d => d.n) }))
+                          .filter(g => g.dishes.length);
+}
+let storyCapacite = null;      // { cle, cats, peints, total } — la dernière mesure
+let storyMesure = null;        // la mesure en vol : { cle, promesse }
+function cleStory(groupes){ return JSON.stringify([currentTheme, groupes]); }
+function mesurerStory(){
+  if (currentKind !== 'typo' || currentFmt !== 'story' || !currentCustomTheme || !window.MOTEUR_V2) return Promise.resolve(null);
+  const groupes = groupesDePlats(), cle = cleStory(groupes);
+  if (storyCapacite && storyCapacite.cle === cle) return Promise.resolve(storyCapacite);
+  if (storyMesure && storyMesure.cle === cle) return storyMesure.promesse;
+  const blk = customThemeFormat(currentCustomTheme, 'story');
+  if (!blk) return Promise.resolve(null);
+  const theme = currentCustomTheme;
+  const promesse = loadImage(blk.habillage)
+    .then(hab => MOTEUR_V2.platsQuiTiennent(theme, CLIENT_TOKENS.render.canvasW, hab, { cats: groupes }, 'story'))
+    .then(r => {
+      if (!r) return null;
+      const avant = storyCapacite && storyCapacite.peints;
+      storyCapacite = { cle, ...r };
+      if (storyMesure && storyMesure.cle === cle) storyMesure = null;
+      if (avant !== r.peints && currentFmt === 'story') renderStudio();   // l'image et la liste suivent la mesure
+      return storyCapacite;
+    }).catch(() => { storyMesure = null; return null; });
+  storyMesure = { cle, promesse };
+  return promesse;
+}
 function studioSlides(){
+  if (currentKind === 'typo' && currentFmt === 'story'){
+    const groupes = groupesDePlats();
+    if (!groupes.length) return [];
+    const cap = storyCapacite && storyCapacite.cle === cleStory(groupes) ? storyCapacite : null;
+    const cats = cap ? cap.cats : groupes;
+    return [{ label: '', cats, dishes: cats.reduce((t, c) => t.concat(c.dishes), []) }];
+  }
   const rows = Array.from(document.querySelectorAll('#dishEdit .dish-row'));
   const read = r => ({ n: (r.querySelector('.d-name').value || '').trim(), p: (r.querySelector('.d-price').value || '').trim() });
   const hasCat = rows.some(r => r.dataset.cat);

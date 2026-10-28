@@ -14,6 +14,10 @@
          dans le cadre et dans la fenêtre (1280×800) — en Story comme en Post (maquette, 28/10).
      S8. l'aperçu est le visuel seul : aucun cadre Instagram (en-tête de compte, icônes, horodatage, légende).
      S9. un sujet indisponible : contour en pointillés, ni papier ni grain, texte en --texte (LELAB-DESIGN §2).
+     S10. la carte en Story porte TOUS les plats de Sassy sur l'image (on compte les plats que le studio donne au
+          moteur pour peindre l'export, pas une variable d'affichage).
+     S11. téléphone 390×844, pas 2, carte : « Modifier dans la carte » est entier au-dessus du pied, sans défiler,
+          en Story et en Post.
    L'ENVOI (ce qui ENVOIE — rouge sur le code d'avant, vert après) :
      E1. desktop : l'image se télécharge (un fichier par visuel) et la légende + hashtags sont copiés ;
      E2. téléphone : la légende est copiée PUIS le partage du téléphone s'ouvre avec les fichiers, DANS le geste
@@ -208,6 +212,12 @@ function enregistreurs(telephone){
         if (r.visHaut < r.haut - 1 || r.visBas > r.bas + 1) fails.push(`S7/ ${nom} : le visuel déborde du cadre (${r.visHaut} → ${r.visBas} dans ${r.haut} → ${r.bas})`);
       }
       if (r.cadre) fails.push(`S8/ ${nom} : l'aperçu porte encore un cadre Instagram (${r.cadre})`);
+      if (L < 900){
+        const lien = await p.evaluate(() => { const l = document.getElementById('studioModifier'), f = document.getElementById('studioFoot');
+          const a = l.getBoundingClientRect(), b = f.getBoundingClientRect(); return { vu: !l.hidden && a.height > 0, bas: Math.round(a.bottom), pied: Math.round(b.top), haut: Math.round(a.top) }; });
+        if (!lien.vu) fails.push(`S11/ ${nom} : « Modifier dans la carte » n'est pas affiché`);
+        else if (lien.bas > lien.pied + 1) fails.push(`S11/ ${nom} : « Modifier dans la carte » passe sous le pied (bas ${lien.bas} > pied ${lien.pied}) — il faut défiler pour le lire`);
+      }
       if (L < 900 && fmt === 'portrait'){
         const s9 = await p.evaluate(() => {
           goStep(1);
@@ -229,6 +239,28 @@ function enregistreurs(telephone){
       }
       await ctx.close();
     }
+  });
+
+  /* ── S10. LA CARTE EN STORY : TOUS LES PLATS SUR L'IMAGE ── */
+  await essai('S10', async () => {
+    const carte = lire('carte.json');
+    const total = Object.values(carte).filter(Array.isArray).reduce((t, l) => t + l.filter(d => d && d.nom).length, 0);
+    const { p, ctx } = await page(390, { donnees: { 'events.json': [] } });
+    const n = await p.evaluate(async () => {
+      const vrai = MOTEUR_V2.rasteriseur, vus = [];
+      MOTEUR_V2.rasteriseur = th => { const f = vrai(th); return f && ((W, h, s, fmt) => { vus.push({ W, s, fmt }); return f(W, h, s, fmt); }); };
+      document.querySelector('#fmtRow .fmt[data-fmt="story"]').click();
+      await bakeAllVisuals();
+      MOTEUR_V2.rasteriseur = vrai;
+      const exp = vus.filter(v => v.fmt === 'story' && v.W >= 1000);
+      if (!exp.length) return { aucun: true };
+      const sl = exp[exp.length - 1].s;
+      const plats = sl.cats ? sl.cats.reduce((t, c) => t + c.dishes.length, 0) : (sl.dishes || []).length;
+      return { images: exp.length, plats };
+    });
+    if (n.aucun) fails.push('S10/ aucun export story rasterisé (setup KO)');
+    else if (n.plats !== total) fails.push(`S10/ la story de la carte peint ${n.plats} plat(s) sur ${total} — la carte de Sassy doit tenir entière`);
+    await ctx.close();
   });
 
   /* ── S6. DESKTOP : l'aperçu à droite, dans un téléphone, aux trois pas ── */
@@ -296,5 +328,5 @@ function enregistreurs(telephone){
 
   await b.close();
   if (fails.length){ console.error('\n❌ STUDIO — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 : le visuel seul, entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
+  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 : le visuel seul, entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
 })();
