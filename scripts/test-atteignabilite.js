@@ -516,8 +516,11 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
   if (!/lestud13/.test(ed.on.nomLegende))         fails.push(`E/ desktop connecté : la légende de l'aperçu ne porte pas le pseudo réel (« ${ed.on.nomLegende} »)`);
   if (ed.off.nom.trim() !== ed.commerce)          fails.push(`E/ desktop déconnecté : l'aperçu dit « ${ed.off.nom} » au lieu du nom du commerce (« ${ed.commerce} »)`);
   if (/votre_compte/.test(ed.off.nomLegende + ed.neuf.nom)) fails.push(`E/ desktop : un faux pseudo « votre_compte » est affiché`);
-  if (/http/i.test(ed.neuf.avatar || ''))         fails.push(`E/ l'avatar de l'aperçu porte une image DISTANTE au repos : ${ed.neuf.avatar}`);
-  if (/http/i.test(ed.off.avatar || ''))          fails.push(`E/ l'avatar garde une photo DISTANTE après déconnexion : ${ed.off.avatar}`);
+  /* ⚠️ « Distante » = hors de l'origine du site. Le navigateur rend le logo LOCAL du commerce (28/10) en adresse
+     complète (http://localhost:…/assets/logos/…) : un /http/ seul le prenait pour une image distante. */
+  const distante = u => [...String(u || '').matchAll(/url\("?([^")]+)"?\)/g)].some(m => /^https?:/i.test(m[1]) && !m[1].startsWith(`http://localhost:${PORT}/`));
+  if (distante(ed.neuf.avatar)) fails.push(`E/ l'avatar de l'aperçu porte une image DISTANTE au repos : ${ed.neuf.avatar}`);
+  if (distante(ed.off.avatar))  fails.push(`E/ l'avatar garde une photo DISTANTE après déconnexion : ${ed.off.avatar}`);
 
   /* ── E-bis. AUCUNE IMAGE DISTANTE EN DUR DANS LA SOURCE (lu dans le FICHIER, pas le DOM) ── */
   const CDN_LEGITIMES = [/fonts\.googleapis\.com/, /fonts\.gstatic\.com/, /www\.w3\.org/,

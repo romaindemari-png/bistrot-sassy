@@ -1349,6 +1349,8 @@ html[data-chromie="jour"] body.ecran-insta .apercu-legende{color:var(--texte-2);
 .ig-top{display:flex;align-items:center;gap:8px;padding:10px 11px;}
 .ig-ava{width:28px;height:28px;border-radius:var(--r-round);background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);padding:2px;flex-shrink:0;}
 .ig-ava div{width:100%;height:100%;border-radius:var(--r-round);background:var(--gris-card) center/cover;border:1.5px solid #fff;}
+.ig-ava div.ig-ava--marque{background-size:72% auto;background-repeat:no-repeat;background-position:center;}
+.ig-ava div.ig-ava--initiale{display:grid;place-items:center;font:700 11px/1 var(--sans);}
 .ig-name{font-size:11.5px;font-weight:600;flex:1;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
 .ig-name .loc{font-size:10.5px;font-weight:400;color:#737373;}
 .ig-live-d{width:6px;height:6px;border-radius:var(--r-round);background:var(--green);flex-shrink:0;}
@@ -4285,8 +4287,23 @@ function syncPreviewIdentity(){
   // Avatar : la VRAIE photo, ou rien. ⚠️ On EFFACE explicitement quand déconnecté — sinon la photo du
   // compte précédent survivrait à une déconnexion (le système garderait une certitude périmée).
   const pic = on && igStatus.profile_picture_url;
+  /* L'AVATAR N'EST JAMAIS UN ROND VIDE (28/10) : la photo du compte connecté ; sinon le logo du commerce sur sa couleur
+     (client-tokens : logos, accent) ; sans logo, son initiale en crème sur sa couleur. */
+  const tk = (typeof CLIENT_TOKENS !== 'undefined' && CLIENT_TOKENS) || {};
+  const couleurs = (tk.primitives && tk.primitives.color) || {};
+  const logo = tk.logos && Object.values(tk.logos)[0];
+  const nomCommerce = (sassyData.config && sassyData.config.commerce && sassyData.config.commerce.nom) || '';
   document.querySelectorAll('#studio-unlocked .ig-ava > div').forEach(d => {
-    d.style.backgroundImage = pic ? "url('" + pic.replace(/'/g, '%27') + "')" : '';
+    d.textContent = '';
+    d.classList.remove('ig-ava--marque', 'ig-ava--initiale');
+    d.style.backgroundColor = '';
+    if (pic){ d.style.backgroundImage = "url('" + pic.replace(/'/g, '%27') + "')"; return; }
+    d.style.backgroundColor = couleurs.accent || '';
+    if (logo){ d.style.backgroundImage = "url('" + logo.replace(/'/g, '%27') + "')"; d.classList.add('ig-ava--marque'); return; }
+    d.style.backgroundImage = '';
+    d.classList.add('ig-ava--initiale');
+    d.style.color = couleurs.creme || '#fff';
+    d.textContent = (nomCommerce.trim().charAt(0) || '·').toUpperCase();
   });
   /* Les DEUX actions du compte, symétriques et exclusives : on ne montre jamais que celle qui a du sens.
      ⚠️ « Déconnecter » vit ICI et nulle part ailleurs — c'est sa seule porte depuis que la carte a disparu. */

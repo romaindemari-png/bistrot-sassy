@@ -23,6 +23,10 @@
           Classique seule choisie ; Centré et Pleine photo inertes (aria-disabled, un toucher ne change rien) ;
           tout se voit sans défiler (silhouettes et légende au-dessus du pied à 390×844 ; Continuer dans la fenêtre
           à 1280×800).
+     S13. « Recommencer » au pas 2 : absent tant que rien n'est saisi, présent (à côté du retour) dès qu'il y a du
+          travail — la règle « Recommencer = le travail saisi, jamais le pas atteint », à 390 et 1280.
+     S14. le cadre Instagram (desktop, Post) : l'avatar n'est jamais un rond vide — le logo du commerce sur sa
+          couleur, ou son initiale.
    L'ENVOI (ce qui ENVOIE — rouge sur le code d'avant, vert après) :
      E1. desktop : l'image se télécharge (un fichier par visuel) et la légende + hashtags sont copiés ;
      E2. téléphone : la légende est copiée PUIS le partage du téléphone s'ouvre avec les fichiers, DANS le geste
@@ -290,6 +294,36 @@ function enregistreurs(telephone){
     await ctx.close();
   });
 
+  /* ── S13 + S14 ── */
+  await essai('S13-S14', async () => {
+    for (const L of [390, 1280]){
+      const { p, ctx } = await page(L, { donnees: { 'events.json': [] } });
+      await au(p, 2);
+      const r = await p.evaluate(async () => {
+        const lien = () => { const l = document.querySelector('.studio-tete .studio-reset-link'), t = document.getElementById('studioRetour');
+          const a = l.getBoundingClientRect(), b = t.getBoundingClientRect();
+          return { vu: getComputedStyle(l).display !== 'none' && a.width > 0, aCote: Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2) < 6 && a.left >= b.right - 1 }; };
+        const sans = lien();
+        const t = document.getElementById('photoTitle') && currentKind === 'photo' ? 'photoTitle' : 'caption';
+        const el = document.getElementById(t); el.value = 'TRAVAIL'; renderStudio();
+        const avec = lien();
+        const ava = document.querySelector('#apercu .ig-ava > div'), cs = getComputedStyle(ava);
+        return { sans, avec, desk: matchMedia('(min-width:961px)').matches,
+                 ava: { image: cs.backgroundImage, fond: cs.backgroundColor, texte: ava.textContent.trim(), vu: ava.getBoundingClientRect().width > 0 } };
+      });
+      if (r.sans.vu) fails.push(`S13/ ${L} px, pas 2 sans travail : « Recommencer » est affiché`);
+      if (!r.avec.vu) fails.push(`S13/ ${L} px, pas 2 avec du travail : « Recommencer » absent`);
+      else if (!r.avec.aCote) fails.push(`S13/ ${L} px, pas 2 : « Recommencer » n'est pas à côté du retour`);
+      if (r.desk){
+        const logo = /assets\/logos\//.test(r.ava.image), initiale = /^[A-ZÀ-Ý]$/.test(r.ava.texte);
+        if (!r.ava.vu) fails.push('S14/ desktop, Post : pas d\'avatar dans le cadre Instagram');
+        else if (!logo && !initiale) fails.push(`S14/ desktop, Post : l'avatar est un rond vide (image ${r.ava.image}, texte « ${r.ava.texte} »)`);
+        else if (r.ava.fond === 'rgba(0, 0, 0, 0)') fails.push('S14/ desktop, Post : le logo de l\'avatar n\'est pas posé sur la couleur du commerce');
+      }
+      await ctx.close();
+    }
+  });
+
   /* ── S6. DESKTOP : l'aperçu à droite, dans un téléphone, aux trois pas ── */
   await essai('S6-E1', async () => {
     const { p, ctx } = await page(1280, { donnees: { 'events.json': [] } });
@@ -355,5 +389,5 @@ function enregistreurs(telephone){
 
   await b.close();
   if (fails.length){ console.error('\n❌ STUDIO — ' + fails.length + ' échec(s)\n   ' + fails.join('\n   ') + '\n'); process.exit(1); }
-  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 « Quelle mise en page ? » : Classique choisie, Centré et Pleine photo inertes, tout visible sans défiler · cadre Instagram en desktop pour le Post seulement · le visuel entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
+  console.log('\n✅ STUDIO — trois pas · sujet d\'entrée lu dans les données (carte · événement · plat du jour) · sujets sans matière visibles, non choisissables · le pied ne masque pas l\'aperçu · vignette → plein écran encre, fermé d\'un geste · aperçu permanent à droite (desktop) · pas 2 « Quelle mise en page ? » : Classique choisie, Centré et Pleine photo inertes, tout visible sans défiler · cadre Instagram en desktop pour le Post seulement, avatar au logo du commerce · Recommencer = le travail saisi · le visuel entier sans défiler (390×844, 1280×800, Story et Post) · sujet indisponible en pointillés, sans grain · la carte entière en story · « Modifier dans la carte » au-dessus du pied · Envoyer : desktop télécharge + copie, téléphone copie puis partage dans le geste · une photo manquante ne part pas · rien n\'est publié ni écrit.\n');
 })();
