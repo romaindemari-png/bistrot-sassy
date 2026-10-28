@@ -1,6 +1,7 @@
 {
   "plan": "lelab_plus",
   "famille": "food",
+  "chromie": "nuit",
   "commerce": {
     "nom": "Bistrot Sassy",
     "type": "restaurant",

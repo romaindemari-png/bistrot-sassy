@@ -83,6 +83,9 @@ html[data-chromie="jour"]{
   }
 }
 
+/* ── ATTENTE DE LA CHROMIE (28/10) : posée par le script du <head> tant que la chromie du client n'est pas lue ── */
+html.chromie-attente{visibility:hidden}
+
 /* ── GRAIN — tuiles PNG 8 bits répétées (scripts/gen-grain.py), jamais un filtre SVG par élément ──
    ⚠️ SOFT-LIGHT PARTOUT : un gris à 128 n'y change rien, le bruit texture sans déplacer la luminance
       moyenne de la surface (±1,5 % max, mesuré par scripts/mesure-charte.js). Multiply et screen, eux,

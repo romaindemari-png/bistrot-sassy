@@ -7,6 +7,25 @@
 <title>LeLab — Interface client</title>
 <!-- La charte de l'app (LELAB-DESIGN §1, §3) : tokens nuit/jour, Instrument en woff2, grain, flous.
      ⚠️ AVANT le <style> de l'admin : l'ancien CSS des écrans pas encore refaits garde la main sur eux. -->
+<!-- LA CHROMIE AVANT LA PREMIÈRE IMAGE (28/10, comme BAPU B7). Ordre : le choix de l'appareil (« Nuit » du volet,
+     localStorage) → la valeur du client (config.json → "chromie") → le réglage du téléphone. Sans choix retenu, la
+     page reste masquée (html.chromie-attente, charte.css) le temps de lire config.json, 1,5 s au plus. -->
+<script>
+(function(){
+  var h = document.documentElement, choix = null;
+  try { choix = localStorage.getItem('lelab_chromie'); } catch (e) {}
+  if (choix === 'jour' || choix === 'nuit'){ h.setAttribute('data-chromie', choix); return; }
+  h.classList.add('chromie-attente');
+  var fini = false;
+  function poser(c){
+    if (fini) return; fini = true;
+    if (c === 'jour' || c === 'nuit') h.setAttribute('data-chromie', c);
+    h.classList.remove('chromie-attente');
+  }
+  fetch('/_data/config.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(c){ poser(c && c.chromie); }, function(){ poser(null); });
+  setTimeout(function(){ poser(null); }, 1500);
+})();
+</script>
 <link rel="stylesheet" href="/admin/charte.css">
 <link rel="stylesheet" href="/admin/composant-photo.css">
 
@@ -295,7 +314,7 @@ body.ecran-site .main::before,body.ecran-insta .main::before{display:none;}
   display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:14px 16px;}
 body.ecran-site .barre,body.ecran-insta .barre{background:transparent;}
 .barre-logo{display:flex;align-items:center;}
-.barre-logo img{height:34px;width:auto;display:block;}
+.barre-logo img{height:51px;width:auto;display:block;}   /* × 1,5 (28/10) : le PNG fourni, sans retouche */
 /* Le logo inchangé, dans la variante qui se lit sur le fond : blanc la nuit, noir le jour.
    ⚠️ Mêmes trois cas que charte.css (défaut nuit · attribut · prefers-color-scheme sans attribut). */
 .logo-jour{display:none!important;}
@@ -320,6 +339,15 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
   background:var(--papier);color:var(--encre);border-radius:20px;display:flex;flex-direction:column;gap:12px;}
 .volet-compte[hidden]{display:none;}
 .vc-nom{margin:0;font:400 22px/1.1 var(--serif);}
+/* « Nuit » dans le volet (28/10) : interrupteur sur papier, encre quand il est mis. */
+.vc-nuit{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer;font:600 15px/1 var(--sans);color:var(--encre);}
+.vc-nuit input{position:absolute;opacity:0;width:1px;height:1px;}
+.vc-nuit .vc-piste{width:44px;height:26px;border-radius:999px;border:1.5px solid var(--papier-2);position:relative;flex:none;}
+.vc-nuit .vc-piste::after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:var(--papier-2);transition:transform .2s;}
+.vc-nuit input:checked + .vc-piste{background:var(--encre);border-color:var(--encre);}
+.vc-nuit input:checked + .vc-piste::after{transform:translateX(18px);background:var(--papier);}
+.vc-nuit input:focus-visible + .vc-piste{outline:2px solid var(--violet-encre);outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){ .vc-nuit .vc-piste::after{transition:none;} }
 .vc-sortie{min-height:44px;padding:0 18px;border-radius:999px;background:transparent;color:var(--encre);
   border:1.5px solid var(--filet);border-color:color-mix(in srgb,var(--encre) 22%,transparent);font:500 14px/1 var(--sans);cursor:pointer;}
 
@@ -1596,6 +1624,8 @@ html[data-chromie="jour"] #screen-studio{--ig-fond:#FFF;--ig-texte:#0C1014;--ig-
                 aria-haspopup="true" aria-expanded="false" aria-controls="voletCompte" aria-label="Mon compte"></button>
         <div class="volet-compte" id="voletCompte" hidden>
           <p class="vc-nom" id="voletNom"></p>
+          <!-- « Nuit » : retenu sur cet appareil, prend le pas sur la chromie du client (28/10). -->
+          <label class="vc-nuit"><input type="checkbox" role="switch" id="voletNuit"><span class="vc-piste" aria-hidden="true"></span><span>Nuit</span></label>
           <button type="button" class="vc-sortie" onclick="fermerVoletCompte();doLogout()">Se déconnecter</button>
         </div>
       </div>
@@ -2662,7 +2692,24 @@ function ouvrirVoletCompte(){
   const v = document.getElementById('voletCompte'), a = document.getElementById('avatarInit');
   if (!v) return;
   v.hidden = false; if (a) a.setAttribute('aria-expanded', 'true');
+  majInterrupteurNuit();
 }
+/* ═══ LA CHROMIE — « Nuit » dans le volet (28/10, comme BAPU B7) ═══
+   Départ posé par le script du <head> (appareil → config.json → téléphone). L'interrupteur change tout de suite et
+   retient le choix sur l'appareil ; localStorage peut lever : le choix vaut alors pour la page. */
+function chromieEffective(){
+  const c = document.documentElement.dataset.chromie;
+  if (c === 'jour' || c === 'nuit') return c;
+  return matchMedia('(prefers-color-scheme: light)').matches ? 'jour' : 'nuit';
+}
+function majInterrupteurNuit(){ const i = document.getElementById('voletNuit'); if (i) i.checked = chromieEffective() === 'nuit'; }
+function choisirChromie(c){
+  document.documentElement.dataset.chromie = c;
+  document.documentElement.classList.remove('chromie-attente');
+  try { localStorage.setItem('lelab_chromie', c); } catch (e) {}
+  majInterrupteurNuit();
+}
+document.addEventListener('change', e => { if (e.target && e.target.id === 'voletNuit') choisirChromie(e.target.checked ? 'nuit' : 'jour'); });
 function fermerVoletCompte(){
   const v = document.getElementById('voletCompte'), a = document.getElementById('avatarInit');
   if (!v) return;
