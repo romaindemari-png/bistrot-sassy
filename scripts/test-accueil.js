@@ -12,7 +12,9 @@
       vous attendent. », chip « 2 à voir »).
    3. MASQUÉE GAGNE : un bloc `actif:false` (dujour chez Sassy) ne compte JAMAIS « à voir », même si une
       source le désigne. Masquée = strictement actif:false (§2).
-   4. LE SALUT : « Bonjour » jusqu'à 17 h 59, « Bonsoir » dès 18 h 00 ; le prénom s'ajoute s'il est rempli.
+   4. LE SALUT : « Bonjour » jusqu'à 17 h 59, « Bonsoir » dès 18 h 00 ; le prénom s'ajoute s'il est rempli ; une
+      virgule (« Bonsoir Vincent, »). C'est un SURTITRE (28/10) : hors du <h1>, au-dessus, Instrument Serif italique,
+      24 px (téléphone) / 36 px (desktop), couleur --texte ; le <h1> ne porte que l'état.
    5. L'AVATAR NE DÉCONNECTE PAS : il ouvre un volet ; dehors, Échap, second toucher le ferment ; seul
       « Se déconnecter » déconnecte.
    6. LE BOUTON PUBLIER (§6) : « Tout est en ligne » en contour, non cliquable, tant que rien ne change ;
@@ -96,14 +98,29 @@ catch (e){ console.error('puppeteer-core manquant → npm install'); process.exi
 
   // 4. Le salut
   const saluts = [
-    [[17, 59], '', 'Bonjour.'], [[18, 0], '', 'Bonsoir.'],
-    [[9, 0], 'Vincent', 'Bonjour Vincent.'], [[21, 30], 'Vincent', 'Bonsoir Vincent.'],
+    [[17, 59], '', 'Bonjour,'], [[18, 0], '', 'Bonsoir,'],
+    [[9, 0], 'Vincent', 'Bonjour Vincent,'], [[21, 30], 'Vincent', 'Bonsoir Vincent,'],
   ];
   for (const [h, prenom, attendu] of saluts){
     const r = await rendre(null, h, prenom);
     const ok = r.salut === attendu;
     lignes.push(`| salut ${String(h[0]).padStart(2, '0')}:${String(h[1]).padStart(2, '0')}${prenom ? ' · ' + prenom : ''} | ${r.salut} | — | ${ok ? '✅' : '❌'} |`);
     if (!ok) fails.push(`salut à ${h.join(':')} (prénom « ${prenom} ») : « ${r.salut} » au lieu de « ${attendu} »`);
+  }
+
+  // 4bis. Le salut est un surtitre
+  {
+    const s = await p.evaluate(() => {
+      const e = document.getElementById('accueilSalut'), h = document.querySelector('#screen-monsite h1.accueil');
+      const cs = e && getComputedStyle(e), texte = getComputedStyle(document.documentElement).getPropertyValue('--texte').trim();
+      const rgb = x => 'rgb(' + x.replace('#', '').match(/../g).map(v => parseInt(v, 16)).join(', ') + ')';
+      return { horsH1: !!e && !!h && !h.contains(e), avant: !!e && !!h && !!(e.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING),
+               italique: cs && cs.fontStyle, serif: cs && /Instrument Serif/.test(cs.fontFamily), taille: cs && parseFloat(cs.fontSize),
+               attendue: innerWidth <= 960 ? 24 : 36, couleur: cs && cs.color === rgb(texte), h1: h && h.textContent.trim() };
+    });
+    const ok = s.horsH1 && s.avant && s.italique === 'italic' && s.serif && s.taille === s.attendue && s.couleur && !/^Bon(jour|soir)/.test(s.h1 || '');
+    lignes.push(`| salut en surtitre | ${JSON.stringify(s)} | — | ${ok ? '✅' : '❌'} |`);
+    if (!ok) fails.push('salut en surtitre : ' + JSON.stringify(s));
   }
 
   /* 6. LE BOUTON PUBLIER — vrais clics sur les interrupteurs de Mon site. */

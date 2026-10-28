@@ -323,6 +323,8 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .vc-sortie{min-height:44px;padding:0 18px;border-radius:999px;background:transparent;color:var(--encre);
   border:1.5px solid var(--filet);border-color:color-mix(in srgb,var(--encre) 22%,transparent);font:500 14px/1 var(--sans);cursor:pointer;}
 
+/* Le salut en surtitre : italique, ~ la moitié du titre ; le titre (l'état) en dessous (28/10). */
+.accueil-salut{font:italic 400 24px/1.1 var(--serif);color:var(--texte);margin:0 0 6px;}
 .accueil{font:400 54px/.93 var(--serif);letter-spacing:-.028em;color:var(--texte);margin:0;}
 .accueil span{display:block;}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
@@ -382,6 +384,7 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
   .barre{padding:20px 32px;}
   .site-cadre{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;padding:0 32px;}
   .accueil-col{position:sticky;top:24px;align-self:start;padding:28px 0;}
+  .accueil-salut{font-size:36px;margin-bottom:10px;}
   .accueil{font-size:clamp(64px,6.4vw,92px);line-height:.92;}
   /* 28 px en tête (40 avant le 27/10) : à 1 280 × 800, les 6 cartes tiennent sous la barre sans défiler. */
   #screen-monsite .page{max-width:none;margin:0;padding:28px 0 60px;}
@@ -1605,7 +1608,9 @@ html[data-chromie="jour"] #screen-studio{--ig-fond:#FFF;--ig-texte:#0C1014;--ig-
       <div class="site-cadre">
       <div class="accueil-col">
         <!-- La phrase d'accueil remplace le titre et les statistiques (§4). Écrite par renderAccueil(). -->
-        <h1 class="accueil"><span id="accueilSalut">Bonjour.</span><span id="accueilEtat">Votre site est à jour.</span></h1>
+        <!-- Le salut est un SURTITRE (28/10, comme BAPU) ; le titre ne porte que l'état du site. -->
+        <p class="accueil-salut" id="accueilSalut">Bonjour,</p>
+        <h1 class="accueil"><span id="accueilEtat">Votre site est à jour.</span></h1>
         <div class="chips">
           <span class="chip chip--en-ligne">En ligne</span>
           <span class="chip chip--a-voir" id="chipAVoir" hidden></span>
@@ -2621,7 +2626,7 @@ function prenomDuProfil(){
 }
 function salutation(maintenant){
   const prenom = prenomDuProfil();
-  return (maintenant.getHours() < 18 ? 'Bonjour' : 'Bonsoir') + (prenom ? ' ' + prenom : '') + '.';
+  return (maintenant.getHours() < 18 ? 'Bonjour' : 'Bonsoir') + (prenom ? ' ' + prenom : '') + ',';
 }
 /* Initiales de l'avatar : le prénom s'il est rempli, sinon le nom du commerce (deux mots au plus). */
 function initialesAvatar(){
