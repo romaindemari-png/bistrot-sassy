@@ -12,6 +12,9 @@
       (jour sur un téléphone sombre, nuit sur un téléphone clair) ; sans clé, le téléphone décide.
    2. PAS DE FLASH : config.json servi avec 600 ms de retard → à la PREMIÈRE image, la page n'affiche
       aucune chromie (attente masquée), jamais l'autre ; puis la bonne.
+   2bis. 2e CHARGEMENT : la chromie lue dans config.json est gardée sur l'appareil (lelab_chromie_config, à part du
+      choix de l'utilisateur) et s'applique dès la première image au chargement suivant, sans masquer la page ;
+      le choix de l'utilisateur reste prioritaire.
    3. L'INTERRUPTEUR « Nuit » du volet compte bascule tout de suite, sans rechargement ; le choix est
       retenu (localStorage) et prend le pas sur config.json au rechargement.
    4. localStorage INDISPONIBLE (accès qui lève) : chromie de config.json, aucune erreur ; l'interrupteur
@@ -104,6 +107,25 @@ function ok(nom, cond, detail){ total++; if (!cond) echecs++; console.log((cond 
       ok(`puis « ${attendu} », page visible`, c.attr === attendu && !c.attente, JSON.stringify(c));
       await ctx.close();
     }
+  });
+
+  /* 2bis. 2e CHARGEMENT */
+  await section('2e chargement', async () => {
+    const { p, ctx } = await ouvrir({ config: cfg('nuit'), telephone: 'light', retard: 600 });
+    const garde = await p.evaluate(() => { try { return [localStorage.getItem('lelab_chromie_config'), localStorage.getItem('lelab_chromie')]; } catch (e){ return ['erreur']; } });
+    ok('1er chargement : la chromie de config.json est gardée sur l’appareil, à part du choix de l’utilisateur', garde[0] === 'nuit' && garde[1] === null, JSON.stringify(garde));
+    await p.close();
+    const second = await ouvrir({ config: cfg('nuit'), telephone: 'light', retard: 600, ctx });
+    const prem = await second.p.evaluate(() => window.__premiere);
+    ok('2e chargement : « nuit » dès la première image, page non masquée (config.json en retard)', prem && prem.chromie === 'nuit' && !prem.attente && prem.visible, JSON.stringify(prem));
+    await second.p.close();
+    /* Le choix de l'utilisateur reste prioritaire sur la chromie gardée. */
+    const pc = await ctx.newPage();
+    await pc.goto(BASE + '/admin/charte.html'); await pc.evaluate(() => localStorage.setItem('lelab_chromie', 'jour')); await pc.close();
+    const troisieme = await ouvrir({ config: cfg('nuit'), telephone: 'dark', retard: 600, ctx });
+    const prem3 = await troisieme.p.evaluate(() => window.__premiere);
+    ok('choix de l’utilisateur (« jour ») prioritaire sur la chromie gardée (« nuit »), dès la première image', prem3 && prem3.chromie === 'jour' && !prem3.attente, JSON.stringify(prem3));
+    await ctx.close();
   });
 
   /* 3. L'INTERRUPTEUR */

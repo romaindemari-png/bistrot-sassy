@@ -7,22 +7,30 @@
 <title>LeLab — Interface client</title>
 <!-- La charte de l'app (LELAB-DESIGN §1, §3) : tokens nuit/jour, Instrument en woff2, grain, flous.
      ⚠️ AVANT le <style> de l'admin : l'ancien CSS des écrans pas encore refaits garde la main sur eux. -->
-<!-- LA CHROMIE AVANT LA PREMIÈRE IMAGE (28/10, comme BAPU B7). Ordre : le choix de l'appareil (« Nuit » du volet,
-     localStorage) → la valeur du client (config.json → "chromie") → le réglage du téléphone. Sans choix retenu, la
-     page reste masquée (html.chromie-attente, charte.css) le temps de lire config.json, 1,5 s au plus. -->
+<!-- LA CHROMIE AVANT LA PREMIÈRE IMAGE (28-29/10, comme BAPU B7, d28eb64). Ordre : le choix de l'utilisateur (« Nuit »
+     du volet, lelab_chromie) → la valeur du client (config.json → "chromie") → le réglage du téléphone. La valeur du
+     client est GARDÉE sur l'appareil à chaque lecture de config.json (lelab_chromie_config, clé à part) : dès le 2e
+     chargement, elle s'applique tout de suite, sans masquer la page. Au tout premier chargement seulement, la page
+     reste masquée (html.chromie-attente, charte.css) le temps de lire config.json, 1,5 s au plus. try/catch partout. -->
 <script>
 (function(){
-  var h = document.documentElement, choix = null;
-  try { choix = localStorage.getItem('lelab_chromie'); } catch (e) {}
-  if (choix === 'jour' || choix === 'nuit'){ h.setAttribute('data-chromie', choix); return; }
-  h.classList.add('chromie-attente');
+  var h = document.documentElement, choix = null, garde = null;
+  var valide = function(c){ return c === 'jour' || c === 'nuit'; };
+  try { choix = localStorage.getItem('lelab_chromie'); garde = localStorage.getItem('lelab_chromie_config'); } catch (e) {}
+  if (valide(choix)) h.setAttribute('data-chromie', choix);
+  else if (valide(garde)) h.setAttribute('data-chromie', garde);
+  else h.classList.add('chromie-attente');
   var fini = false;
   function poser(c){
     if (fini) return; fini = true;
-    if (c === 'jour' || c === 'nuit') h.setAttribute('data-chromie', c);
+    if (!valide(choix) && valide(c)) h.setAttribute('data-chromie', c);   // le choix de l'utilisateur reste prioritaire
     h.classList.remove('chromie-attente');
   }
-  fetch('/_data/config.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(c){ poser(c && c.chromie); }, function(){ poser(null); });
+  fetch('/_data/config.json').then(function(r){ return r.ok ? r.json() : null; }).then(function(cfg){
+    var c = cfg && cfg.chromie;
+    try { if (valide(c)) localStorage.setItem('lelab_chromie_config', c); else if (cfg) localStorage.removeItem('lelab_chromie_config'); } catch (e) {}
+    poser(c);
+  }, function(){ poser(null); });
   setTimeout(function(){ poser(null); }, 1500);
 })();
 </script>
@@ -2546,6 +2554,12 @@ async function loadSassyData(){
   const ordreSite = chargerOrdreDuSite();   // ⚠️ PARTI ICI, en parallèle des JSON — attendu juste avant les tuiles
   try {
     const config = await _json('config');
+    /* À chaque lecture de config.json, sa chromie est gardée sur l'appareil (clé à part du choix de l'utilisateur) :
+       le script de tête l'applique au chargement suivant sans masquer la page (comme BAPU B7). */
+    try {
+      if (config && (config.chromie === 'jour' || config.chromie === 'nuit')) localStorage.setItem('lelab_chromie_config', config.chromie);
+      else if (config) localStorage.removeItem('lelab_chromie_config');
+    } catch (e) {}
     const b = (config && config.blocs) || {};
     const cles = Object.keys({ ...(b.socle || {}), ...(b.optionnels || {}) });
     const surMesure = ['general', 'horaires', 'carte', 'photos'];   // socle : leur fichier ne porte pas le nom du bloc
