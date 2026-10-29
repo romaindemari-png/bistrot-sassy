@@ -540,9 +540,9 @@ html[data-chromie="jour"] .logo-jour{display:block!important;}
 .f-explic{display:none;}
 .f-droite{grid-area:feuille;min-width:0;}
 .f-note{margin:10px 0 0;text-align:center;font:400 13px/1.4 var(--sans);color:var(--texte-2);}
-/* Le bouton en bas sur téléphone, collé au bord du pouce (sticky). Sans fond (29/10) : le --fond uni dessinait un rectangle. */
+/* Le bouton en bas sur téléphone, collé au bord du pouce (sticky), sur le fond de l'app. */
 .f-pub{grid-area:pub;position:sticky;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:stretch;gap:8px;
-  padding:12px 0 calc(12px + env(safe-area-inset-bottom));}
+  padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:var(--fond);}
 /* Téléphone : 7 + 13 + 12 = les 12 + 8 + 12 d'avant — le pied collant garde sa hauteur. Le bas reste à 12 : la cible
    d'« Annuler » (44 px centrés sur une ligne de 19 px) déborde de 12,6 px sous la ligne et doit tenir dans l'écran. */
 @media(max-width:960px){ .f-pub{padding:7px 0 calc(12px + env(safe-area-inset-bottom));} }
